@@ -1,0 +1,16 @@
+/* Store Lab: shared look for the made-up AudioDealz cart and checkout pages. */
+*{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#0f1111;background:#f3f3f3}
+.top{background:#131a22;color:#fff;display:flex;align-items:center;justify-content:space-between;padding:12px 22px}
+.logo{font-size:24px;font-weight:800;letter-spacing:-.5px;color:#fff;text-decoration:none}.logo span{color:#ff9f1c}
+.steps{display:flex;gap:6px;font-size:13px;color:#aab}.steps b{color:#fff}
+.wrap{display:grid;grid-template-columns:1fr 340px;gap:22px;max-width:1040px;margin:22px auto;padding:0 22px}
+.card{background:#fff;border-radius:10px;padding:20px;border:1px solid #e3e6e6}
+h1{font-size:22px;font-weight:500;margin:0 0 14px} label{display:block;font-size:13px;margin:10px 0 4px;color:#565959}
+input[type=text],select{width:100%;padding:9px 10px;border:1px solid #c7c7c7;border-radius:6px;font-size:14px;background:#fafafa}
+.opt{display:flex;gap:9px;align-items:center;border:1px solid #e3e6e6;border-radius:8px;padding:10px;margin:8px 0;font-size:14px}
+table.summary{width:100%;border-collapse:collapse;font-size:14px} .summary td{padding:7px 0;border-bottom:1px solid #f0f0f0}
+.summary td.amt{text-align:right;font-variant-numeric:tabular-nums} .summary tr.total td{font-weight:700;font-size:16px;border:0;padding-top:12px}
+.btn{display:block;text-align:center;width:100%;border:0;border-radius:20px;padding:11px;font-size:14px;margin-top:14px;cursor:pointer;
+     background:#ffd814;color:#0f1111;text-decoration:none}
+.btn.order{background:#ffa41c} .muted{color:#565959;font-size:12px;margin-top:10px}
+.lab{position:fixed;left:12px;bottom:12px;background:#111;color:#fff;font-size:11px;padding:5px 9px;border-radius:6px;opacity:.75}

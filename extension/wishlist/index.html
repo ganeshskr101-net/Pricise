@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pricise · Wishlist</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/page.css">
+  <style>
+    .grid { display: grid; grid-template-columns: 1fr 340px; gap: 18px; margin-top: 14px; }
+    .side { display: flex; flex-direction: column; gap: 18px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; font-size: 13.5px; }
+    th { font-size: 11.5px; color: var(--ink-3); font-weight: 700; text-transform: uppercase; letter-spacing: .4px; text-align: left; padding: 0 6px 8px; border-bottom: 1px solid var(--line); }
+    td { padding: 13px 6px; border-bottom: 1px solid var(--line-2); vertical-align: middle; }
+    tr:last-child td { border-bottom: 0; }
+    tr.flash td { animation: flash 1.6s ease-out; }
+    @keyframes flash { from { background: var(--good-bg); } to { background: transparent; } }
+    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
+    .stat { background: var(--bg); border-radius: 10px; padding: 12px 14px; }
+    .stat .n { font-size: 26px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .stat .l { font-size: 12px; color: var(--ink-3); }
+    .clock { display: flex; gap: 6px; align-items: center; margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
+    .day { border: 0; height: 28px; padding: 0 11px; border-radius: 8px; background: var(--line-2); font-weight: 700; font-size: 12px; color: var(--ink-2); }
+    .day.on { background: var(--mint-bg); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--mint); }
+    .privacy { list-style: none; padding: 0; margin: 8px 0 0; font-size: 13px; color: var(--ink-2); }
+    .privacy li { display: flex; gap: 8px; align-items: center; padding: 4px 0; }
+    .privacy svg.i { color: var(--ink-3); }
+    .toast { position: fixed; right: 22px; bottom: 22px; background: var(--ink); color: #fff; padding: 12px 16px; border-radius: 10px; font-size: 13px; box-shadow: 0 8px 24px rgba(15, 46, 43, .12); opacity: 0; transform: translateY(8px); transition: .25s; pointer-events: none; }
+    .toast.show { opacity: 1; transform: none; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <img class="logo" src="../icons/logo.svg" alt=""><b class="brandname">Pricise</b>
+    <nav class="nav"><a href="#" id="nav-evidence">Evidence</a><a class="on" href="#">Wishlist</a></nav>
+    <div class="clock">Demo clock <span id="days"></span></div>
+  </div>
+  <div class="wrap">
+    <div class="grid">
+      <section class="panel">
+        <div class="panel-head"><h2>Your wishlist</h2><span class="muted" id="count" style="margin-left:auto;font-size:12.5px"></span></div>
+        <table><thead><tr><th>Item</th><th>Your rule</th><th>Best true price</th><th>Status</th></tr></thead><tbody id="rows"></tbody></table>
+        <div class="note">Pricise only alerts you when a drop is genuine: same model and condition, a trusted store, no hidden fees, approved by the Skeptic.</div>
+      </section>
+      <div class="side">
+        <section class="panel"><h2>This week</h2><div class="stats" id="stats"></div><div class="note" id="not-alerted"></div></section>
+        <section class="panel"><h2>Privacy</h2><ul class="privacy" id="privacy">
+          <li data-icon="lock">Wishlist, purchases and cards: this laptop</li>
+          <li data-icon="upload">Sent out: anonymous price checks only</li>
+          <li data-icon="bell">Alerts: desktop notifications on this laptop</li></ul></section>
+      </div>
+    </div>
+  </div>
+  <div class="toast" id="toast"></div>
+  <script type="module" src="wishlist.js"></script>
+</body>
+</html>

@@ -1,0 +1,14 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Concert tickets checkout | TicketHub (test fixture)</title>
+<!-- Test fixture shaped like a typical real retailer page. NOT used in the scripted demo: the extension's own page-reading logic runs on it. -->
+<script type="application/ld+json">{"@context":"https://schema.org","@graph":[{"@type":"WebSite","name":"TicketHub"},{"@type":"Product","name":"Floor GA ticket - Summer Tour","sku":"GA-FLOOR","offers":{"@type":"AggregateOffer","lowPrice":"89.00","priceCurrency":"USD"}}]}</script>
+<style>body{font-family:system-ui,Arial;margin:0;color:#111}.h{background:#4b1d8f;color:#fff;padding:14px 24px;font-weight:800;font-size:20px}.w{max-width:760px;margin:24px auto;padding:0 20px}
+.box{border:1px solid #ddd;border-radius:12px;padding:18px;margin:14px 0}.r{display:flex;justify-content:space-between;padding:6px 0}.urg{background:#fff1f1;color:#a00;padding:8px 12px;border-radius:8px;display:inline-block}</style></head>
+<body><div class="h">TicketHub</div><div class="w"><h1>Floor GA ticket - Summer Tour</h1>
+<div class="price-block"><span class="price" style="font-size:28px;font-weight:700">$89.00</span> <del>$129.00</del> <span>Save 31%</span></div>
+<p class="urg">Tickets reserved for <span id="t">04:59</span></p> <p>12 people are viewing this event right now</p>
+<div class="box"><div class="r"><span>1 × Floor GA</span><span>$89.00</span></div>
+<div class="r"><span>Service fee</span><span>$18.50</span></div><div class="r"><span>Facility fee</span><span>$6.00</span></div>
+<div class="r"><span>Order processing fee</span><span>$4.25</span></div>
+<label style="display:flex;gap:8px;margin-top:10px"><input type="checkbox" checked> Add ticket insurance for $9.99</label>
+<label style="display:flex;gap:8px;margin-top:6px"><input type="checkbox" checked> Remember me on this device</label></div></div>
+<script>let s=299;setInterval(()=>{s--;document.getElementById('t').textContent=String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')},1000)</script></body></html>

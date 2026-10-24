@@ -1,0 +1,111 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="tokens.css"><style>
+body{background:#d9dfdd;padding:24px}
+.stage{display:flex;gap:28px;align-items:flex-start}
+.panel{width:380px;background:var(--surface);border-radius:12px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.hd{display:flex;align-items:center;gap:10px;padding:14px 16px 12px}
+.hd img{width:26px;height:26px}.hd .t{font-weight:650;font-size:14px;letter-spacing:-.1px}
+.hd .s{font-size:12px;color:var(--ink-3)}.hd .sp{flex:1}
+.ib{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;color:var(--ink-3);border:1px solid var(--line)}
+.meta{display:flex;gap:6px;align-items:center;padding:0 16px 12px;font-size:12px;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.meta .d{width:3px;height:3px;border-radius:50%;background:#b8c4c1}
+.verdict{padding:18px 16px 16px;background:linear-gradient(var(--bad-bg),#fff 85%);border-bottom:1px solid var(--line)}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.vt{font-size:22px;font-weight:700;letter-spacing:-.4px;color:var(--bad);margin:4px 0 2px}
+.vs{color:var(--ink-2);font-size:13px}
+.stats{display:grid;grid-template-columns:1.3fr 1fr 1fr;margin-top:14px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.stat{padding:9px 11px}.stat+.stat{border-left:1px solid var(--line)}
+.stat .k{font-size:11px;color:var(--ink-3)}.stat .v{font-size:17px;font-weight:650;letter-spacing:-.2px;margin-top:1px}
+.stat .v small{font-size:11.5px;font-weight:500;color:var(--ink-3);text-decoration:line-through;margin-left:4px}
+.alt{display:flex;align-items:center;gap:10px;margin-top:10px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:#fff}
+.alt .ic{width:28px;height:28px;border-radius:8px;background:var(--good-bg);color:var(--good);display:flex;align-items:center;justify-content:center}
+.alt .a1{font-weight:600}.alt .a2{font-size:12px;color:var(--ink-3)}.alt .sp{flex:1}
+.alt .go{color:var(--brand-2);font-weight:600;display:flex;align-items:center;gap:2px}
+.sec{padding:14px 16px;border-bottom:1px solid var(--line)}
+.sh{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.sh .ttl{font-weight:650;font-size:13.5px}.sh .st{margin-left:auto;font-size:12px;font-weight:600}
+.st.bad{color:var(--bad)}.st.good{color:var(--good)}
+.sh .ico{color:var(--ink-3)}
+.rows{list-style:none;margin:0;padding:0}
+.rows li{display:flex;gap:10px;padding:6px 0;color:var(--ink);align-items:baseline}
+.rows li+li{border-top:1px dashed var(--line-2)}
+.rows .m{width:6px;height:6px;border-radius:2px;flex:none;transform:translateY(-1px)}
+.m.bad{background:var(--bad)}.m.cau{background:var(--caution)}.m.good{background:var(--good)}
+.rows .tx{flex:1}.rows .pf{font-size:12px;color:var(--brand-2);font-weight:500;white-space:nowrap}
+.acts{display:flex;gap:8px;margin-top:10px}
+.btn{height:32px;padding:0 12px;border-radius:8px;font-size:12.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;color:var(--ink)}
+.btn.p{background:var(--brand);border-color:var(--brand);color:#fff}
+.agents{display:flex;align-items:center;gap:6px;padding:12px 16px;font-size:12px;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.ag{display:inline-flex;align-items:center;gap:4px;color:var(--ink-2)}.ag i{width:6px;height:6px;border-radius:50%;background:var(--brand-2)}
+.chat{padding:14px 16px 16px;background:var(--bg)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0 10px}
+.chip{font-size:12px;padding:5px 9px;border-radius:7px;border:1px solid var(--line);background:#fff;color:var(--ink-2)}
+.inp{display:flex;align-items:center;gap:8px;height:38px;padding:0 6px 0 12px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink-3)}
+.inp .sb{margin-left:auto;width:28px;height:28px;border-radius:7px;background:var(--brand);color:#fff;display:flex;align-items:center;justify-content:center}
+.ft{display:flex;gap:6px;align-items:center;padding:10px 16px 14px;font-size:11.5px;color:var(--ink-3);background:var(--bg)}
+.ft a{margin-left:auto;color:var(--brand-2);font-weight:500}
+/* quick cards */
+.qc{width:320px;background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:0 8px 24px rgba(15,46,43,.12),0 1px 2px rgba(15,46,43,.06);overflow:hidden;position:relative;margin-bottom:18px}
+.qc:before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px}
+.qc.bad:before{background:var(--bad)}.qc.good:before{background:var(--good)}.qc.cau:before{background:var(--caution)}
+.qh{display:flex;align-items:center;gap:7px;padding:10px 12px 0 15px;font-size:11.5px;color:var(--ink-3)}
+.qh img{width:16px;height:16px}.qh .x{margin-left:auto}
+.qb{padding:6px 15px 12px}
+.qt{font-size:15px;font-weight:650;letter-spacing:-.2px}
+.qc.bad .qt{color:var(--bad)}.qc.good .qt{color:var(--good)}.qc.cau .qt{color:var(--caution)}
+.qs{color:var(--ink-2);margin-top:2px}.qs b{color:var(--ink);font-weight:600}
+.qf{display:flex;align-items:center;gap:10px;padding:9px 15px;border-top:1px solid var(--line-2);font-size:12.5px}
+.qf .l{color:var(--brand-2);font-weight:600}.qf .r{margin-left:auto;color:var(--ink-3);font-size:11.5px}
+.cap{font-size:12px;color:#51625f;margin:0 0 6px 2px;font-weight:600}
+</style></head><body><div class="stage">
+<div class="panel">
+ <div class="hd"><img src="logo.svg"><div><div class="t">Pricise</div></div><div class="sp"></div>
+  <div class="ib"><svg class="i" viewBox="0 0 24 24"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg></div></div>
+ <div class="meta"><span>audiodealz-store.shop</span><span class="d"></span><span class="num">Checked in 6.6s</span><span class="d"></span><span>4 agents</span></div>
+ <div class="verdict">
+  <div class="lbl">Verdict</div>
+  <div class="vt">Don't buy here</div>
+  <div class="vs">Risky store and 3 tricks on this page.</div>
+  <div class="stats">
+   <div class="stat"><div class="k">Real total</div><div class="v num">$191.00<small>$149</small></div></div>
+   <div class="stat"><div class="k">Tricks</div><div class="v num" style="color:var(--bad)">3</div></div>
+   <div class="stat"><div class="k">Store risk</div><div class="v" style="color:var(--bad)">High</div></div>
+  </div>
+  <div class="alt"><div class="ic"><svg class="i" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg></div>
+   <div><div class="a1">Store C · <span class="num">$229.00</span></div><div class="a2">Trusted store · same model, new · warranty</div></div><div class="sp"></div>
+   <div class="go">View<svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M9 6l6 6-6 6"/></svg></div></div>
+ </div>
+ <div class="sec"><div class="sh"><svg class="i ico" viewBox="0 0 24 24"><path d="M3 9l1.5-5h15L21 9"/><path d="M4 9v11h16V9"/><path d="M9 20v-6h6v6"/></svg><span class="ttl">Shop safe?</span><span class="st bad">Risky</span></div>
+  <ul class="rows"><li><span class="m bad"></span><span class="tx">Domain registered 6 days ago</span><span class="pf">Proof</span></li>
+  <li><span class="m bad"></span><span class="tx">No address or company record</span><span class="pf">Proof</span></li>
+  <li><span class="m cau"></span><span class="tx">Product photos copied from another site</span><span class="pf">Proof</span></li></ul></div>
+ <div class="sec"><div class="sh"><svg class="i ico" viewBox="0 0 24 24"><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg><span class="ttl">Honest deal?</span><span class="st bad">3 tricks</span></div>
+  <ul class="rows"><li><span class="m bad"></span><span class="tx">"40% off" isn't real: $149 for 81 of the last 90 days</span><span class="pf">Chart</span></li>
+  <li><span class="m bad"></span><span class="tx">Countdown restarts on every visit</span><span class="pf">Replay</span></li>
+  <li><span class="m bad"></span><span class="tx"><span class="num">$37.01</span> in fees added at checkout step 4</span><span class="pf">Fees</span></li></ul>
+  <div class="acts"><span class="btn p">Untick $4.99 add-on</span><span class="btn">All evidence</span></div></div>
+ <div class="sec"><div class="sh"><svg class="i ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg><span class="ttl">Best safe price</span><span class="st good">Store C · $229</span></div>
+  <ul class="rows"><li><span class="m good"></span><span class="tx">Exact match: same model, new, 12-month warranty</span><span class="pf">Compare</span></li>
+  <li><span class="m good"></span><span class="tx num">$255 − $26 card offer · free shipping</span><span class="pf">Compare</span></li>
+  <li><span class="m cau"></span><span class="tx">Skipped Store B (refurbished) and Store D (scam signals)</span><span class="pf">Why</span></li></ul>
+  <div class="acts"><span class="btn">Go to Store C</span><span class="btn"><svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg>Watch price</span></div></div>
+ <div class="agents">Checked by <span class="ag"><i></i>Trust</span><span class="ag"><i></i>Deal</span><span class="ag"><i></i>Price</span><span class="ag"><i style="background:var(--caution)"></i>Skeptic · 2 challenges</span></div>
+ <div class="chat"><div class="lbl">Ask about this page</div>
+  <div class="chips"><span class="chip">Is this discount real?</span><span class="chip">What's the real total?</span><span class="chip">Cheaper safe option?</span></div>
+  <div class="inp">Ask a question…<div class="sb"><svg class="i" viewBox="0 0 24 24" style="width:14px"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div></div></div>
+ <div class="ft"><svg class="i" viewBox="0 0 24 24" style="width:13px"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>Analysed on this laptop<a>Wishlist</a></div>
+</div>
+<div>
+ <div class="cap">Quick card · tricks found</div>
+ <div class="qc bad"><div class="qh"><img src="logo.svg">Pricise<svg class="i x" viewBox="0 0 24 24" style="width:14px"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  <div class="qb"><div class="qt">3 tricks on this page</div><div class="qs">Real total <b class="num">$191.00</b>, not $149 · risky store</div>
+  <div class="qs" style="margin-top:6px">Safer: <b>Store C · $229</b></div></div>
+  <div class="qf"><span class="l">See details</span><span class="r">Don't show on this site</span></div></div>
+ <div class="cap">Quick card · nothing wrong</div>
+ <div class="qc good"><div class="qh"><img src="logo.svg">Pricise<svg class="i x" viewBox="0 0 24 24" style="width:14px"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  <div class="qb"><div class="qt">No tricks spotted</div><div class="qs">Listed <b class="num">$255.00</b> · no extra fees found</div></div>
+  <div class="qf"><span class="l">See details</span><span class="r">Don't show on this site</span></div></div>
+ <div class="cap">Quick card · claims to check</div>
+ <div class="qc cau"><div class="qh"><img src="logo.svg">Pricise<svg class="i x" viewBox="0 0 24 24" style="width:14px"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+  <div class="qb"><div class="qt">Check before you buy</div><div class="qs">"Was $129" can't be verified yet · countdown timer</div></div>
+  <div class="qf"><span class="l">See details</span><span class="r">Don't show on this site</span></div></div>
+</div></div></body></html>

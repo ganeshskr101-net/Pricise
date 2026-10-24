@@ -1,0 +1,27 @@
+page,trick,expected,note
+deal/fd-01.html,fake_discount,1,$99 on 3 of 90 days; $59 is the usual price
+deal/fd-02.html,fake_discount,1,$49.99 on 5 days
+deal/fd-03.html,fake_discount,1,$599 on 1 day
+deal/fd-04.html,fake_discount,1,$35 on 7 days (edge of rule)
+deal/fd-05.html,fake_discount,1,$150 never charged
+deal/fd-06.html,fake_discount,0,genuine: $80 for 75 days
+deal/fd-07.html,fake_discount,0,"$65 charged for 30 days, so not fake"
+deal/tm-01.html,resetting_timer,1,restarts at 09:59 on every load
+deal/tm-02.html,resetting_timer,1,restarts at 01:59:59 (hh:mm:ss)
+deal/tm-03.html,resetting_timer,1,per-session deadline: every new visitor gets a fresh 5 minutes
+deal/tm-04.html,resetting_timer,1,restarts at 14:59
+deal/tm-05.html,resetting_timer,0,honest: fixed deadline (midnight UTC)
+deal/tm-06.html,resetting_timer,0,honest: fixed 6-hour slots
+deal/df-01.html,drip_fees,1,two fees at step 3 of 3
+deal/df-02.html,drip_fees,1,messy fee labels at step 2
+deal/df-03.html,drip_fees,1,"fee already in cart, not on product page"
+deal/df-04.html,drip_fees,0,honest: only sales tax at the end
+deal/df-05.html,drip_fees,0,honest: total equals listed price
+deal/df-06.html,drip_fees,1,plain list markup (no data attributes)
+deal/df-07.html,drip_fees,1,unexplained cost added at the last step
+deal/ad-01.html,prechecked_addon,1,pre-ticked warranty
+deal/ad-02.html,prechecked_addon,1,pre-ticked gift wrap
+deal/ad-03.html,prechecked_addon,1,pre-ticked insurance
+deal/ad-04.html,prechecked_addon,1,pre-ticked donation
+deal/ad-05.html,prechecked_addon,0,honest: offered but not ticked
+deal/ad-06.html,prechecked_addon,0,pre-ticked opt-in with no cost

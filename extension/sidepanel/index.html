@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pricise</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="panel.css">
+</head>
+<body>
+  <header class="hd">
+    <img class="logo" src="../icons/logo.svg" alt="">
+    <span class="t">Pricise</span>
+    <button class="ib" id="recheck" type="button" title="Check this page again" aria-label="Check this page again"></button>
+  </header>
+  <div class="meta" id="meta" aria-live="polite"></div>
+
+  <main id="main">
+    <!-- Filled in by panel.js -->
+  </main>
+
+  <!-- Outside <main> so live re-renders of the check never wipe the conversation. Filled in by panel.js. -->
+  <section class="chat" id="ask" hidden aria-labelledby="ask-title">
+    <div class="lbl" id="ask-title">Ask about this page</div>
+    <div class="chips" id="ask-chips"></div>
+    <div class="thread" id="ask-thread" aria-live="polite"></div>
+    <form class="inp" id="ask-form">
+      <input id="ask-input" type="text" maxlength="300" autocomplete="off" placeholder="Ask a question…" aria-label="Ask about this page">
+      <button class="sb" type="submit" id="ask-send" aria-label="Send"></button>
+    </form>
+    <div class="note" id="ask-note"></div>
+  </section>
+
+  <footer class="ft">
+    <span class="lock" id="ft-lock"></span><span>Analysed on this laptop</span>
+    <span class="ft-links"><a href="#" id="card-setting">Quick card: on</a><a href="#" id="open-wishlist">Wishlist</a></span>
+  </footer>
+  <script type="module" src="panel.js"></script>
+</body>
+</html>
