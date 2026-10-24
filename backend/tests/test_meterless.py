@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import ast
 import json
 import logging
 import sys
@@ -191,3 +192,64 @@ def test_non_nemotron_model_is_flagged(
     assert record["non_nemotron"] is True
     assert record["requested_model"] == DEEP_MODEL
     assert "non-Nemotron" in caplog.text
+
+
+def _ok_handler(model: str):
+    def handler(_url: str, _payload: dict[str, Any], _headers: dict[str, str]) -> FakeResponse:
+        return FakeResponse(200, _ok_payload(model))
+
+    return handler
+
+
+@pytest.mark.parametrize(("call", "model"), [(meterless.fast, FAST_MODEL), (meterless.deep, DEEP_MODEL)])
+def test_default_timeout_is_30s_and_custom_timeout_is_used(
+    env: Path, monkeypatch: pytest.MonkeyPatch, call, model: str
+) -> None:
+    timeouts = _patch_client(monkeypatch, _ok_handler(model))
+    call([{"role": "user", "content": "hi"}])
+    call([{"role": "user", "content": "hi"}], timeout=4.5)
+
+    assert timeouts == [30.0, 4.5]
+
+
+def test_complete_uses_8s_timeout(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    timeouts = _patch_client(monkeypatch, _ok_handler(FAST_MODEL))
+
+    assert meterless.complete("hi") == "ok"
+    assert timeouts == [8.0]
+
+
+def test_timeout_is_not_sent_in_payload(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    payloads: list[dict[str, Any]] = []
+
+    def handler(_url: str, payload: dict[str, Any], _headers: dict[str, str]) -> FakeResponse:
+        payloads.append(payload)
+        return FakeResponse(200, _ok_payload(FAST_MODEL))
+
+    _patch_client(monkeypatch, handler)
+    meterless.fast([{"role": "user", "content": "hi"}], timeout=3.0, temperature=0)
+    meterless.complete("hi")
+
+    assert len(payloads) == 2
+    assert all("timeout" not in p for p in payloads)
+    assert payloads[0]["temperature"] == 0
+
+
+def test_timeout_error_shows_timeout_used(env: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def handler(_url: str, _payload: dict[str, Any], _headers: dict[str, str]) -> FakeResponse:
+        raise httpx.TimeoutException("timed out")
+
+    timeouts = _patch_client(monkeypatch, handler)
+    with pytest.raises(meterless.MeterlessError, match=r"timed out after 2\.5s") as exc_info:
+        meterless.fast([{"role": "user", "content": "hi"}], timeout=2.5)
+
+    assert timeouts == [2.5, 2.5]  # one attempt plus one retry
+    assert "30s" not in str(exc_info.value)
+    assert TOKEN not in str(exc_info.value)
+
+
+def test_env_value_is_defined_once() -> None:
+    tree = ast.parse(Path(meterless.__file__).read_text(encoding="utf-8"))
+    defs = [n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == "_env_value"]
+
+    assert len(defs) == 1

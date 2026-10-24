@@ -36,14 +36,20 @@ class MeterlessError(Exception):
     """Nightshift/Meterless call failed. Message never includes secrets."""
 
 
-def fast(messages: list[ChatMessage], **kw: Any) -> tuple[str, str]:
-    """Chat completion on NEMOTRON_FAST_MODEL. Returns (text, reported_model)."""
-    return _complete("fast", messages, **kw)
+def fast(messages: list[ChatMessage], timeout: float | None = None, **kw: Any) -> tuple[str, str]:
+    """Chat completion on NEMOTRON_FAST_MODEL. Returns (text, reported_model).
+
+    timeout: seconds per attempt (default 30 s); one retry on timeout or HTTP 5xx.
+    """
+    return _complete("fast", messages, timeout, **kw)
 
 
-def deep(messages: list[ChatMessage], **kw: Any) -> tuple[str, str]:
-    """Chat completion on NEMOTRON_DEEP_MODEL. Returns (text, reported_model)."""
-    return _complete("deep", messages, **kw)
+def deep(messages: list[ChatMessage], timeout: float | None = None, **kw: Any) -> tuple[str, str]:
+    """Chat completion on NEMOTRON_DEEP_MODEL. Returns (text, reported_model).
+
+    timeout: seconds per attempt (default 30 s); one retry on timeout or HTTP 5xx.
+    """
+    return _complete("deep", messages, timeout, **kw)
 
 
 def ping() -> tuple[str, str]:
@@ -51,7 +57,10 @@ def ping() -> tuple[str, str]:
     return fast([{"role": "user", "content": "ping"}])
 
 
-def _complete(lane: Lane, messages: list[ChatMessage], **kw: Any) -> tuple[str, str]:
+def _complete(
+    lane: Lane, messages: list[ChatMessage], timeout: float | None = None, **kw: Any
+) -> tuple[str, str]:
+    timeout_s = _TIMEOUT_S if timeout is None else float(timeout)
     settings = _settings()
     requested = settings["fast_model"] if lane == "fast" else settings["deep_model"]
     payload: dict[str, Any] = dict(kw)
@@ -77,7 +86,7 @@ def _complete(lane: Lane, messages: list[ChatMessage], **kw: Any) -> tuple[str, 
 
     try:
         raw, reported, prompt_tokens, completion_tokens = _post_with_retry(
-            url, headers, payload, settings["token"]
+            url, headers, payload, settings["token"], timeout_s
         )
         text = _message_text(raw)
         reported = reported or ""
@@ -117,14 +126,15 @@ def _post_with_retry(
     headers: dict[str, str],
     payload: dict[str, Any],
     token: str,
+    timeout: float = _TIMEOUT_S,
 ) -> tuple[dict[str, Any], str | None, int | None, int | None]:
     last_error: MeterlessError | None = None
     for attempt in range(_MAX_ATTEMPTS):
         try:
-            with httpx.Client(timeout=_TIMEOUT_S) as client:
+            with httpx.Client(timeout=timeout) as client:
                 response = client.post(url, json=payload, headers=headers)
         except httpx.TimeoutException:
-            last_error = MeterlessError("Meterless request timed out after 30s")
+            last_error = MeterlessError(f"Meterless request timed out after {timeout:g}s")
             if attempt == 0:
                 continue
             raise last_error from None
@@ -266,13 +276,7 @@ def _append_trace(record: dict[str, Any]) -> None:
 
 _LANE_ENV = {"fast": "NEMOTRON_FAST_MODEL", "deep": "NEMOTRON_DEEP_MODEL"}
 _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
-
-
-def _env_value(name: str) -> str:
-    """Env value, treating .env.example placeholders ("replace") as missing."""
-    _load_env()
-    value = os.environ.get(name, "").strip()
-    return "" if "replace" in value.lower() else value
+_COMPLETE_TIMEOUT_S = 8.0
 
 
 def configured(lane: str = "fast") -> bool:
@@ -291,6 +295,7 @@ def model_name(lane: str = "fast") -> str:
 def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
     """One chat completion on the given lane. Blocking; use asyncio.to_thread from async code.
 
+    Timeout: 8 s per attempt plus one retry, so the worst case is about 16 s.
     Returns "" if Nightshift is not configured or the call fails. Strips any
     <think>...</think> reasoning block the model puts in front of its answer.
     """
@@ -300,6 +305,7 @@ def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
     try:
         text, _ = call(
             [{"role": "user", "content": prompt}],
+            timeout=_COMPLETE_TIMEOUT_S,
             temperature=0,
             max_tokens=max_tokens,
         )
