@@ -1,0 +1,15 @@
+/* Layout shared by the full-page extension screens (evidence, wishlist). */
+.top { background: var(--surface); border-bottom: 1px solid var(--line); padding: 14px 28px; display: flex; align-items: center; gap: 12px; position: sticky; top: 0; z-index: 5; }
+.brandname { font-size: 17px; }
+.nav { display: flex; gap: 6px; margin-left: 22px; }
+.nav a { font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 9px; color: var(--ink-2); }
+.nav a:hover { background: var(--line-2); text-decoration: none; }
+.nav a.on { background: #eef2fb; color: var(--ink); }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 22px 28px 48px; }
+h1 { font-size: 22px; margin: 4px 0 2px; letter-spacing: -.3px; }
+h2 { font-size: 15.5px; margin: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; box-shadow: var(--shadow); }
+.panel-head { display: flex; align-items: center; gap: 10px; }
+.panel-head .pill { margin-left: auto; }
+.note { font-size: 12.5px; color: var(--ink-3); margin-top: 10px; }
+.empty-note { font-size: 13px; color: var(--ink-3); padding: 14px 0 4px; }
