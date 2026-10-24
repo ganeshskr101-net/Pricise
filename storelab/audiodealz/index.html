@@ -85,7 +85,7 @@
     <div style="color:#007600;font-size:17px">In Stock</div>
     <label class="addon" id="addon-row"><input type="checkbox" id="addon" checked>
       <span><b>Add 2-Year Protection Plan</b> for <b>$4.99</b><br><span style="color:#565959">Covers accidental damage</span></span></label>
-    <button class="btn cart">Add to Cart</button>
+    <button type="button" class="btn cart" id="add-to-cart">Add to Cart</button>
     <button class="btn now">Buy Now</button>
     <div class="secure">&#128274; Secure transaction · Returns: see policy at checkout</div>
   </div>
@@ -95,6 +95,10 @@
   // The trick: the "deal" timer starts at 09:59 on every page load.
   let s = 599; const el = document.getElementById('timer-value');
   setInterval(() => { s = Math.max(0, s - 1); el.textContent = String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0'); }, 1000);
+  // Cart and checkout (made-up): the add-on stays ticked unless the shopper unticks it.
+  document.getElementById('add-to-cart').addEventListener('click', () => {
+    location.href = 'cart.html?addon=' + (document.getElementById('addon').checked ? 1 : 0);
+  });
 </script>
 </body>
 </html>

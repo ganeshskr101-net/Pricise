@@ -22,6 +22,7 @@ export const api = {
   startCheck: (url, page) => call('/check', { method: 'POST', body: JSON.stringify({ url, page }) }),
   getCheck: (id) => call(`/check/${id}`),
   events: (id) => new EventSource(`${BACKEND}/check/${id}/events`),
+  chat: (check_id, question, history) => call('/chat', { method: 'POST', body: JSON.stringify({ check_id, question, history }) }),
   untick: (check_id, selector, amount) => call('/action/untick', { method: 'POST', body: JSON.stringify({ check_id, selector, amount }) }),
   wishlist: () => call('/wishlist'),
   addWishlist: (item) => call('/wishlist', { method: 'POST', body: JSON.stringify(item) }),
@@ -32,4 +33,3 @@ export const money = (v) => (v == null ? '—' : `$${Number(v).toLocaleString('e
 
 export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
-export const SHIELD = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M9 12l2 2 4-4"/></svg>';

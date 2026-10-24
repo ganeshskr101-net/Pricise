@@ -29,6 +29,17 @@ that exercises the real page-reading code).
 
 Run the backend tests: `python -m pip install pytest httpx && python -m pytest backend/tests`
 
+### Real Deal Agent (optional)
+
+```bash
+AGENT_DEAL=real TIMER_GAP_S=3 python -m uvicorn backend.stub_server:app --port 8787
+```
+
+`AGENT_DEAL=real` streams the real Deal Agent (`backend/agents/deal.py`) instead of the scripted deal findings; everything else stays
+scripted. On Store Lab pages it uses a hidden headless browser to walk the made-up checkout (it stops at payment and never clicks pay)
+and to visit the page 3 times for the timer test (`TIMER_GAP_S` seconds apart, default 20). On real store pages it only reads what the
+extension sent. Screenshots go to `traces/`. Deal bench: `python bench/run_deal.py` (26 labelled pages in `bench/deal/`).
+
 ## Team
 | Person | Part |
 |---|---|

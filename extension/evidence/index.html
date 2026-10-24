@@ -11,7 +11,7 @@
     .span2 { grid-column: 1 / -1; }
     .chart { width: 100%; height: 220px; display: block; margin-top: 10px; }
     .frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
-    .frame { border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; background: #fbfcfe; }
+    .frame { border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; background: var(--bg); }
     .frame .t { font-size: 12px; color: var(--ink-3); }
     .frame .v { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--bad); margin: 4px 0; }
     table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
@@ -27,7 +27,7 @@
 </head>
 <body>
   <div class="top">
-    <div class="logo" id="logo"></div><b class="brandname">Pricise</b>
+    <img class="logo" src="../icons/logo.svg" alt=""><b class="brandname">Pricise</b>
     <nav class="nav"><a class="on" href="#">Evidence</a><a href="../wishlist/index.html">Wishlist</a></nav>
     <span class="muted" id="page-url" style="margin-left:auto;font-size:12.5px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
   </div>

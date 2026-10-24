@@ -1,22 +1,22 @@
 // Pricise side panel: reads the current page, asks the local backend to check it, and fills in live as findings stream in.
-import { api, money, esc, SHIELD } from '../shared/api.js';
+import { api, money, esc } from '../shared/api.js';
+import { chatErrorText, followCheck, getSettings, saveSettings } from '../shared/check.js';
 
 const $ = (sel) => document.querySelector(sel);
 const main = $('#main');
-$('#logo').innerHTML = SHIELD;
 
 const AGENTS = [
-  { key: 'trust', name: 'Trust', color: '#7c4dff' },
-  { key: 'deal', name: 'Deal', color: '#e37400' },
-  { key: 'price', name: 'Price', color: '#137333' },
-  { key: 'skeptic', name: 'Skeptic', color: '#c5221f' },
+  { key: 'trust', name: 'Trust', color: '#5b6cf0' },
+  { key: 'deal', name: 'Deal', color: '#e08a1e' },
+  { key: 'price', name: 'Price', color: '#0e7a73' },
+  { key: 'skeptic', name: 'Skeptic', color: '#d64545' },
 ];
 const ICON = { bad: '✕', caution: '!', good: '✓', unknown: '?', pending: '…' };
 const TRICK_TYPES = new Set(['fake_discount', 'resetting_timer', 'prechecked_addon', 'drip_fees']);
 
 const PINNED_TAB = new URLSearchParams(location.search).get('tab'); // dev/testing: sidepanel/index.html?tab=<id>
 
-let state = null; // { tab, url, page, checkId, findings, card, startedAt, es, unticked, watching }
+let state = null; // { tab, url, page, checkId, findings, card, startedAt, stop, unticked, watching, chat, asking }
 
 // ------------------------------------------------------------------ boot
 $('#recheck').addEventListener('click', () => runCheck(true));
@@ -26,6 +26,7 @@ chrome.tabs.onActivated.addListener(() => runCheck());
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
   if (info.status === 'complete' && tab.active && state?.tab?.windowId === tab.windowId) runCheck();
 });
+chrome.storage.onChanged.addListener((changes) => { if (changes['pricise:settings']) renderCardSetting(); });
 runCheck();
 
 // ------------------------------------------------------------------ main flow
@@ -41,7 +42,7 @@ async function readPage(tab) {
   } catch (_) {
     // Tab was open before Pricise was installed: inject the content script once, then ask again.
     await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['content/content.css'] });
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content/quick-card.js', 'content/content.js'] });
     return chrome.tabs.sendMessage(tab.id, { type: 'pricise:read' });
   }
 }
@@ -50,8 +51,10 @@ async function runCheck(force = false) {
   const tab = await activeTab();
   if (!tab) return;
   if (!force && state && state.tab.id === tab.id && state.url === tab.url) return;
-  state?.es?.close();
-  state = { tab, url: tab.url, findings: [], card: null, startedAt: performance.now(), unticked: false, watching: false };
+  state?.stop?.();
+  state = { tab, url: tab.url, findings: [], card: null, startedAt: performance.now(), unticked: false, watching: false, chat: [], asking: false };
+  renderCardSetting();
+  renderThread();
 
   if (!/^https?:/.test(tab.url || '')) return renderIdle();
 
@@ -68,17 +71,17 @@ async function runCheck(force = false) {
     const page = await readPage(tab);
     if (mine !== state) return;
     state.page = page;
-    const { check_id } = await api.startCheck(tab.url, page);
-    state.checkId = check_id;
-    const es = api.events(check_id);
-    state.es = es;
-    es.onmessage = (ev) => {
-      if (mine !== state) return es.close();
-      const msg = JSON.parse(ev.data);
-      if (msg.kind === 'finding') { state.findings.push(msg.finding); render(); highlightOnPage(); }
-      if (msg.kind === 'final_card') { state.card = msg.card; es.close(); setChecking(false); render(); highlightOnPage(); setBadge(); }
-    };
-    es.onerror = () => { if (!state.card) { es.close(); setChecking(false); renderOffline(); } };
+    // The background runs the check (shared with the quick verdict card); reuse it if this page was already checked.
+    state.stop = followCheck({ tabId: tab.id, url: tab.url, page, force }, (snap) => {
+      if (mine !== state) return;
+      if (snap.error && !state.card) { setChecking(false); return renderOffline(); }
+      if (snap.findings.length < state.findings.length && !snap.card) return; // an older update arrived late
+      state.checkId = snap.checkId;
+      state.findings = state.unticked ? snap.findings.filter((x) => x.type !== 'prechecked_addon') : [...snap.findings];
+      if (snap.card && !state.card) { state.card = snap.card; setChecking(false); setBadge(); }
+      render();
+      highlightOnPage();
+    });
   } catch (err) {
     setChecking(false);
     renderError(err);
@@ -159,6 +162,7 @@ function render() {
   parts.push(agentsHtml());
   main.innerHTML = parts.join('');
   wire();
+  updateAsk();
 }
 
 function verdictHtml(c) {
@@ -228,13 +232,15 @@ function agentsHtml() {
 }
 
 function renderIdle() {
+  $('#ask').hidden = true;
   setChecking(false);
   $('#status').textContent = 'Waiting for a product page';
-  main.innerHTML = `<div class="card empty"><div class="logo" style="margin:0 auto">${SHIELD}</div>
+  main.innerHTML = `<div class="card empty"><img class="logo" src="../icons/logo.svg" alt="" style="margin:0 auto">
     <h2>Open a product page</h2><p>Pricise checks the page you are on: is the shop safe, is the deal honest, and is there a better safe price.</p></div>`;
 }
 
 function renderOffline() {
+  $('#ask').hidden = true;
   setChecking(false);
   $('#status').textContent = 'Backend not running';
   main.innerHTML = `<div class="card empty"><h2>Start the local backend</h2>
@@ -245,10 +251,84 @@ function renderOffline() {
 }
 
 function renderError(err) {
+  $('#ask').hidden = true;
   $('#status').textContent = 'Could not check this page';
   main.innerHTML = `<div class="card empty"><h2>Could not read this page</h2><p class="muted">${esc(err?.message || err)}</p>
     <button class="btn primary" id="retry">Try again</button></div>`;
   $('#retry').addEventListener('click', () => runCheck(true));
+}
+
+// ------------------------------------------------------------------ ask about this page
+// Answers come from POST /chat, which only uses this check's stored results. The thread lives outside <main>, so live
+// re-renders of the check don't wipe it; it resets when the panel moves to another page or re-checks.
+const SUGGESTIONS = ['Is this discount real?', "What's the real total?", 'Is there a cheaper safe option?'];
+
+$('#ask-form').addEventListener('submit', (e) => { e.preventDefault(); ask($('#ask-input').value); });
+$('#ask-input').addEventListener('input', updateAsk);
+
+function updateAsk() {
+  const ready = !!(state?.checkId && state.card);
+  $('#ask').hidden = !state?.checkId;
+  $('#ask-input').disabled = !ready;
+  $('#ask-send').disabled = !ready || state.asking || !$('#ask-input').value.trim();
+  $('#ask-chips').querySelectorAll('button').forEach((b) => { b.disabled = !ready || state.asking; });
+  $('#ask-note').textContent = ready ? '' : 'You can ask once the check finishes.';
+}
+
+function renderThread() {
+  const chips = $('#ask-chips');
+  chips.innerHTML = state?.chat.length ? '' : SUGGESTIONS.map((q) => `<button class="ask-chip" type="button">${esc(q)}</button>`).join('');
+  chips.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => ask(b.textContent)));
+  const seen = state?.chatShown || 0; // only messages added since the last draw get the fade-in
+  $('#ask-thread').innerHTML = (state?.chat || []).map((m, i) => {
+    const cls = (m.role === 'user' ? 'user' : `bot${m.pending ? ' pending' : ''}${m.error ? ' error' : ''}`) + (i >= seen ? ' new' : '');
+    const tags = m.sources?.length
+      ? `<div class="srcs">${m.sources.map((t) => `<span class="src-tag">${esc(t.replace(/_/g, ' '))}</span>`).join('')}</div>` : '';
+    return `<div class="msg ${cls}">${esc(m.text)}${tags}</div>`;
+  }).join('');
+  if (state) state.chatShown = state.chat.length;
+  updateAsk();
+}
+
+async function ask(text) {
+  const question = String(text || '').trim().slice(0, 300);
+  if (!question || !state?.checkId || !state.card || state.asking) return;
+  const mine = state;
+  const history = mine.chat.filter((m) => !m.pending && !m.error).slice(-6).map((m) => ({ role: m.role, content: m.text }));
+  const reply = { role: 'assistant', text: 'Checking…', pending: true };
+  mine.chat.push({ role: 'user', text: question }, reply);
+  mine.asking = true;
+  $('#ask-input').value = '';
+  renderThread();
+  $('#ask').scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  try {
+    const res = await api.chat(mine.checkId, question, history);
+    Object.assign(reply, { text: res.answer, sources: res.sources || [], pending: false });
+  } catch (err) {
+    Object.assign(reply, { text: chatErrorText(err), pending: false, error: true });
+  }
+  mine.asking = false;
+  if (mine !== state) return; // the panel moved to another page meanwhile
+  renderThread();
+  $('#ask').scrollIntoView({ block: 'end' });
+  $('#ask-input').focus();
+}
+
+// ------------------------------------------------------------------ quick verdict card setting (footer)
+async function renderCardSetting() {
+  const el = $('#card-setting');
+  const { card, neverSites } = await getSettings();
+  let host = '';
+  try { host = new URL(state?.url || '').host; } catch (_) { /* not a web page */ }
+  const offHere = host && neverSites.includes(host);
+  el.textContent = !card ? 'Quick card: off' : offHere ? 'Quick card: off on this site' : 'Quick card: on';
+  el.title = offHere ? 'Show the quick card on this site again' : card ? 'Stop showing the quick card on pages' : 'Show the quick card on product pages';
+  el.onclick = async (e) => {
+    e.preventDefault();
+    if (card && offHere) await saveSettings({ neverSites: neverSites.filter((h) => h !== host) });
+    else await saveSettings({ card: !card });
+    renderCardSetting();
+  };
 }
 
 // ------------------------------------------------------------------ actions

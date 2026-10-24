@@ -1,0 +1,28 @@
+/* Pricise quick verdict card. Lives inside a closed Shadow DOM; tokens.css is prepended (with :root -> :host) by the background. */
+:host { all: initial; }
+.qc {
+  position: fixed; top: 12px; right: 16px; z-index: 2147483647; width: 300px; max-width: calc(100vw - 32px);
+  font-family: var(--font); font-size: 13px; line-height: 1.4; color: var(--ink); -webkit-font-smoothing: antialiased;
+  padding: 10px 12px 12px; text-align: left;
+  animation: qc-in .22s ease-out both;
+}
+.qc.out { animation: qc-out .18s ease-in both; }
+@keyframes qc-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes qc-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+@media (prefers-reduced-motion: reduce) { .qc, .qc.out { animation: none; } }
+
+/* Header: logo · verdict · Details · close */
+.qc-head { display: flex; align-items: center; gap: 8px; flex: none; }
+.qc .logo { width: 22px; height: 22px; }
+.qc-verdict { flex: 1; min-width: 0; font-weight: 800; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qc-verdict.bad { color: var(--bad); } .qc-verdict.caution { color: var(--caution); }
+.qc-verdict.good { color: var(--good); } .qc-verdict.unknown { color: var(--unknown); }
+.qc-icon { flex: none; width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; background: none; color: var(--ink-3); border-radius: 7px; padding: 0; }
+.qc-icon:hover, .qc-icon:focus-visible { background: var(--line-2); color: var(--ink); outline: none; }
+.qc-icon svg { width: 15px; height: 15px; }
+
+.qc-reason { flex: none; margin: 4px 0 0 30px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.qc-foot { margin: 2px 0 0 30px; }
+.qc-never { font-size: 12px; color: var(--ink-3); }

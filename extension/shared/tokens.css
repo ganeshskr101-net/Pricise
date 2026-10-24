@@ -1,31 +1,36 @@
 /* Pricise design tokens: one stylesheet shared by every extension page. Colour only carries meaning. */
 :root {
-  --ink: #14213d;
-  --ink-2: #3c4557;
-  --ink-3: #6b7486;
-  --line: #e3e7ee;
-  --line-2: #eef1f5;
-  --bg: #f4f6fa;
+  --ink: #0f2e2b;          /* headings, body text (very dark teal) */
+  --ink-2: #3a504d;
+  --ink-3: #6a7d7a;
+  --line: #dfe8e6;
+  --line-2: #edf3f2;
+  --bg: #f3f7f6;
   --surface: #ffffff;
+  /* Brand (from icons/logo.svg). Never used for meaning: good / bad / caution below keep their own colours. */
+  --brand: #0b5f5a;        /* primary buttons, user chat bubbles, focus rings */
+  --brand-hover: #094c48;
+  --brand-2: #0e7a73;      /* links, proof links, info pill text */
+  --mint: #7ef0c4;         /* live dot, active chip ring, selected states */
+  --mint-bg: #e6f8f1;      /* info pill background, active nav */
   --good: #137333;   --good-bg: #e6f4ea;  --good-bg-2: #f1f8f3;
   --bad: #c5221f;    --bad-bg: #fde8e7;
   --caution: #b06000; --caution-bg: #fef3e2;
-  --info: #1a56b8;   --info-bg: #e8f0fe;
+  --info: var(--brand-2); --info-bg: var(--mint-bg);
   --unknown: #5a6475; --unknown-bg: #eef1f5;
   --radius: 14px;
   --radius-sm: 10px;
-  --shadow: 0 1px 2px rgba(20, 33, 61, .05), 0 4px 14px rgba(20, 33, 61, .05);
+  --shadow: 0 1px 2px rgba(15, 46, 43, .05), 0 4px 14px rgba(15, 46, 43, .05);
   --font: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { font-family: var(--font); color: var(--ink); background: var(--bg); font-size: 13.5px; line-height: 1.45; -webkit-font-smoothing: antialiased; }
 button { font: inherit; cursor: pointer; }
-a { color: var(--info); text-decoration: none; }
+a { color: var(--brand-2); text-decoration: none; }
 a:hover { text-decoration: underline; }
 
-.logo { width: 34px; height: 34px; border-radius: 10px; background: var(--ink); display: flex; align-items: center; justify-content: center; flex: none; }
-.logo svg { width: 18px; height: 18px; }
+.logo { width: 34px; height: 34px; display: block; flex: none; } /* <img src="icons/logo.svg">: the logo brings its own tile */
 
 .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 
@@ -38,13 +43,15 @@ a:hover { text-decoration: underline; }
 
 .btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); color: var(--ink);
   font-weight: 700; font-size: 13px; padding: 8px 13px; border-radius: 9px; transition: background .15s, border-color .15s, transform .05s; }
-.btn:hover { background: #f6f7fb; border-color: #d5dae3; }
+.btn:hover { background: var(--bg); border-color: var(--line); }
 .btn:active { transform: translateY(1px); }
-.btn.primary { background: var(--ink); color: #fff; border-color: var(--ink); }
-.btn.primary:hover { background: #1d2d52; }
+.btn.primary { background: var(--brand); color: #fff; border-color: var(--brand); }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
 .btn.go { background: var(--good); color: #fff; border-color: var(--good); }
 .btn.go:hover { background: #0f5f2a; }
 .btn:disabled { opacity: .55; cursor: default; }
+.btn.primary:disabled { opacity: 1; background: var(--line); border-color: var(--line); color: var(--ink-3); }
+input[type=text]:focus, input:not([type]):focus { outline: none; border-color: var(--brand-2); box-shadow: 0 0 0 3px var(--mint-bg); }
 
 .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; margin-top: 6px; background: var(--unknown); }
 .dot.good { background: var(--good); } .dot.bad { background: var(--bad); } .dot.caution { background: var(--caution); }

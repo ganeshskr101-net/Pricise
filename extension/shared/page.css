@@ -4,7 +4,7 @@
 .nav { display: flex; gap: 6px; margin-left: 22px; }
 .nav a { font-size: 13.5px; font-weight: 600; padding: 8px 14px; border-radius: 9px; color: var(--ink-2); }
 .nav a:hover { background: var(--line-2); text-decoration: none; }
-.nav a.on { background: #eef2fb; color: var(--ink); }
+.nav a.on { background: var(--mint-bg); color: var(--ink); }
 .wrap { max-width: 1180px; margin: 0 auto; padding: 22px 28px 48px; }
 h1 { font-size: 22px; margin: 4px 0 2px; letter-spacing: -.3px; }
 h2 { font-size: 15.5px; margin: 0; }

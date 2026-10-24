@@ -6,11 +6,15 @@ Run:  python -m uvicorn backend.stub_server:app --port 8787 --reload   (from the
 - Any other page (real stores): turns the signals the extension read from the page into careful, evidence-backed findings.
   Trust (domain age etc.) and Price (other stores) are marked "not connected yet" until Raj's and Josh's agents land.
 Nothing here calls a model. The real backend replaces these functions with agents that go through Meterless Nightshift.
+
+AGENT_DEAL=real streams the real Deal Agent (backend/agents/deal.py) in place of the scripted/heuristic deal findings;
+AGENT_DEAL=stub (default) keeps the scripted demo exactly as it was.
 """
 from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import uuid
 from pathlib import Path
@@ -34,10 +38,16 @@ from backend.contracts import (
     WishlistItem,
 )
 
+from backend.agents import chat as chat_agent
+from backend.agents.chat import ChatRequest, ChatResponse  # proposed for backend/contracts.py
+
 ROOT = Path(__file__).resolve().parent.parent
 app = FastAPI(title="Pricise stub backend", version="0.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/storelab", StaticFiles(directory=ROOT / "storelab", html=True), name="storelab")
+(ROOT / "traces").mkdir(exist_ok=True)
+app.mount("/traces", StaticFiles(directory=ROOT / "traces"), name="traces")  # Deal Agent screenshots (timer test, run-ahead)
+app.mount("/bench", StaticFiles(directory=ROOT / "bench", html=True), name="bench")  # labelled bench pages (made-up stores)
 
 CHECKS: dict[str, dict[str, Any]] = {}
 DEMO_DELAY = 0.55  # seconds between streamed findings on the demo page
@@ -55,6 +65,10 @@ def _f(check_id: str, agent: str, type_: str, status: str, summary: str, evidenc
 
 def _is_demo(url: str) -> bool:
     return "/storelab/audiodealz" in url
+
+
+def _deal_mode() -> str:
+    return "real" if os.environ.get("AGENT_DEAL", "stub").lower() == "real" else "stub"
 
 
 # ----------------------------------------------------------------------------- demo script (AudioDealz)
@@ -212,7 +226,7 @@ def _label(s) -> str:
 
 
 def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float) -> FinalCard:
-    tricks = [f for f in findings if f.type in TRICK_TYPES]
+    tricks = [f for f in findings if f.type in TRICK_TYPES and f.status != "unverified"]  # "couldn't check" is not a trick
     soft, seen_types = [], set()
     for f in findings:  # one line per kind of claim, so the card stays short
         if f.type in {"claimed_discount", "countdown", "scarcity"} and f.type not in seen_types:
@@ -266,7 +280,7 @@ def real_evidence(page: PageFacts) -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "mode": "stub", "checks": len(CHECKS)}
+    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "checks": len(CHECKS)}
 
 
 @app.get("/")
@@ -303,11 +317,14 @@ async def check_events(cid: str):
         findings = demo_findings(cid) if chk["demo"] else real_findings(cid, page)
         delay = DEMO_DELAY if chk["demo"] else 0.18
         chk["findings"] = []
-        for f in findings:
-            await asyncio.sleep(delay)
+        source = _with_real_deal(cid, chk, page, findings, delay) if _deal_mode() == "real" else _paced(findings, delay)
+        streamed = []
+        async for f in source:
             f.ts = time.time()
+            streamed.append(f)
             chk["findings"].append(f.model_dump())
             yield f"data: {json.dumps({'kind': 'finding', 'finding': f.model_dump()})}\n\n"
+        findings = streamed
         await asyncio.sleep(delay)
         elapsed = time.time() - chk["started"]
         card = demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed)
@@ -316,6 +333,49 @@ async def check_events(cid: str):
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+async def _paced(findings: list[Finding], delay: float):
+    for f in findings:
+        await asyncio.sleep(delay)
+        yield f
+
+
+async def _with_real_deal(cid: str, chk: dict, page: PageFacts, findings: list[Finding], delay: float):
+    """Scripted non-deal findings (Trust, Price, Skeptic, page) paced as before, merged with the real Deal Agent's live findings."""
+    from backend.agents import deal
+
+    queue: asyncio.Queue = asyncio.Queue()
+
+    async def scripted():
+        async for f in _paced([f for f in findings if f.agent != "deal"], delay):
+            await queue.put(f)
+
+    async def agent():
+        async for f in deal.iter_deal(cid, chk["url"], page):
+            await queue.put(f)
+
+    async def both():
+        await asyncio.gather(scripted(), agent(), return_exceptions=True)
+        await queue.put(None)  # end of stream
+
+    runner = asyncio.create_task(both())
+    try:
+        while (f := await queue.get()) is not None:
+            yield f
+        chk["evidence_data"].update(deal.EVIDENCE.get(cid, {}))  # real price history, timer frames, fee table for the evidence page
+    finally:
+        runner.cancel()
+        deal.EVIDENCE.pop(cid, None)
+
+
+@app.post("/chat")
+async def chat(req: ChatRequest) -> ChatResponse:
+    """Questions about one finished check. Answers only from what the check stored; never loads the page or any site."""
+    chk = CHECKS.get(req.check_id)
+    if not chk:
+        raise HTTPException(404, "unknown check")
+    return await asyncio.to_thread(chat_agent.answer, chk, req.question, req.history)
 
 
 class UntickReq(BaseModel):

@@ -15,12 +15,12 @@
     tr.flash td { animation: flash 1.6s ease-out; }
     @keyframes flash { from { background: var(--good-bg); } to { background: transparent; } }
     .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-    .stat { background: #f6f7fb; border-radius: 12px; padding: 12px 14px; }
+    .stat { background: var(--bg); border-radius: 12px; padding: 12px 14px; }
     .stat .n { font-size: 26px; font-weight: 800; margin-top: 2px; font-variant-numeric: tabular-nums; }
     .stat .l { font-size: 12px; color: var(--ink-3); }
     .clock { display: flex; gap: 6px; align-items: center; margin-left: auto; font-size: 12.5px; color: var(--ink-3); }
     .day { border: 0; padding: 6px 11px; border-radius: 999px; background: var(--line-2); font-weight: 700; font-size: 12px; color: var(--ink-2); }
-    .day.on { background: var(--ink); color: #fff; }
+    .day.on { background: var(--mint-bg); color: var(--ink); box-shadow: inset 0 0 0 1.5px var(--mint); }
     .privacy { font-size: 13px; line-height: 1.8; color: var(--ink-2); margin-top: 8px; }
     .toast { position: fixed; right: 22px; bottom: 22px; background: var(--ink); color: #fff; padding: 12px 16px; border-radius: 12px; font-size: 13px; box-shadow: 0 10px 30px rgba(0,0,0,.2); opacity: 0; transform: translateY(8px); transition: .25s; pointer-events: none; }
     .toast.show { opacity: 1; transform: none; }
@@ -28,7 +28,7 @@
 </head>
 <body>
   <div class="top">
-    <div class="logo" id="logo"></div><b class="brandname">Pricise</b>
+    <img class="logo" src="../icons/logo.svg" alt=""><b class="brandname">Pricise</b>
     <nav class="nav"><a href="#" id="nav-evidence">Evidence</a><a class="on" href="#">Wishlist</a></nav>
     <div class="clock">Demo clock <span id="days"></span></div>
   </div>

@@ -230,6 +230,36 @@
     return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
   }
 
+  // ---------------------------------------------------------------- automatic check on product pages
+  // A product page: JSON-LD Product, a price next to the main heading, or a trick signal that comes with money
+  // (pre-ticked paid add-on, ticking countdown, fee, or a was-price). Anything else: do nothing.
+  function priceNearH1() {
+    const h1 = [...document.querySelectorAll('h1')].find(visible);
+    let node = h1;
+    for (let i = 0; node && i < 4; i++, node = node.parentElement) {
+      const text = node.innerText || '';
+      if (text.length > 3000) break;
+      if (PRICE_RE.test(text.replace(h1.innerText || '', ''))) return true;
+    }
+    return false;
+  }
+
+  function isTrickSignal(s) {
+    if (['prechecked_addon', 'countdown', 'resetting_timer'].includes(s.type)) return true;
+    return ['drip_fees', 'claimed_discount'].includes(s.type) && s.amount != null; // "-5%" alone could be a news headline
+  }
+
+  async function autoCheck() {
+    if (window.top !== window) return;
+    const s = (await chrome.storage.local.get('pricise:settings'))['pricise:settings'] || {};
+    if ((s.neverSites || []).includes(location.host)) return;
+    const looksLikeProduct = !!readJsonLd() || priceNearH1();
+    const page = await readPage();
+    if (!looksLikeProduct && !page.signals.some(isTrickSignal)) return;
+    chrome.runtime.sendMessage({ type: 'pricise:auto-check', page }).catch(() => {});
+  }
+  autoCheck().catch(() => {});
+
   // ---------------------------------------------------------------- outlines on the page
   let marks = [];
   function clearMarks() {

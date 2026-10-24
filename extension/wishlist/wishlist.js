@@ -1,7 +1,6 @@
 // Wishlist page: items Pricise is watching, weekly stats, and the demo clock that fast-forwards time.
-import { api, money, esc, SHIELD } from '../shared/api.js';
+import { api, money, esc } from '../shared/api.js';
 
-document.getElementById('logo').innerHTML = SHIELD;
 document.getElementById('nav-evidence').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
 const DAYS = [1, 3, 5, 7, 9];
 let flashId = null;

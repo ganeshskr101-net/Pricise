@@ -1,7 +1,6 @@
 // Evidence page: the proof behind every line in the side panel.
-import { api, money, esc, SHIELD } from '../shared/api.js';
+import { api, money, esc } from '../shared/api.js';
 
-document.getElementById('logo').innerHTML = SHIELD;
 const grid = document.getElementById('grid');
 const id = new URLSearchParams(location.search).get('check');
 
@@ -43,9 +42,9 @@ function chartPanel(h, p) {
     <svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="90-day price history">
       <line x1="${pad}" x2="${W - pad}" y1="${y(h.claimed_was)}" y2="${y(h.claimed_was)}" stroke="#c5221f" stroke-dasharray="5 5" stroke-width="1.5"/>
       <text x="${W - pad}" y="${y(h.claimed_was) - 7}" text-anchor="end" font-size="12" fill="#c5221f" font-weight="700">"Was" ${money(h.claimed_was)}: ${h.days_at_claim} days</text>
-      <path d="${line}" fill="none" stroke="#14213d" stroke-width="2.5" stroke-linejoin="round"/>
-      <text x="${pad}" y="${y(h.points[0]) + 18}" font-size="12" fill="#3c4557">${money(h.points[0])} for ${h.days_at_price} of 90 days</text>
-      <text x="${pad}" y="${H - 8}" font-size="11" fill="#6b7486">90 days ago</text><text x="${W - pad}" y="${H - 8}" font-size="11" fill="#6b7486" text-anchor="end">Today</text>
+      <path d="${line}" fill="none" style="stroke: var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
+      <text x="${pad}" y="${y(h.points[0]) + 18}" font-size="12" style="fill: var(--ink-2)">${money(h.points[0])} for ${h.days_at_price} of 90 days</text>
+      <text x="${pad}" y="${H - 8}" font-size="12" style="fill: var(--ink-3)">90 days ago</text><text x="${W - pad}" y="${H - 8}" font-size="12" style="fill: var(--ink-3)" text-anchor="end">Today</text>
     </svg><div class="note">${esc(h.label)}</div></section>`;
 }
 

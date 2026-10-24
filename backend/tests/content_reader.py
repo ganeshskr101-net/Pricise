@@ -1,0 +1,46 @@
+"""Test helpers: serve the repo over HTTP and run the REAL extension content script (extension/content/content.js) on a page,
+so Deal Agent tests use exactly the PageFacts the extension would send. Local test pages only.
+"""
+from __future__ import annotations
+
+import functools
+import threading
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[2]
+CONTENT_JS = ROOT / "extension" / "content" / "content.js"
+
+# Just enough of the chrome.* API for content.js to answer a "pricise:read" message.
+FAKE_CHROME = """
+(() => {
+  let listener = null;
+  const fake = { storage: { local: { get: async () => ({}), set: async () => {} } },
+                 runtime: { onMessage: { addListener: (fn) => { listener = fn; } } } };
+  Object.defineProperty(window, 'chrome', { value: fake, configurable: true, writable: true });
+  window.__priciseRead = () => new Promise((resolve) => listener({ type: 'pricise:read' }, {}, resolve));
+})();
+"""
+
+
+class _Quiet(SimpleHTTPRequestHandler):
+    def log_message(self, *args):
+        pass
+
+
+def serve_repo() -> tuple[ThreadingHTTPServer, str]:
+    """Starts a background HTTP server on 127.0.0.1 serving the repo root. Returns (server, base_url)."""
+    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(_Quiet, directory=str(ROOT)))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, f"http://127.0.0.1:{server.server_address[1]}"
+
+
+async def read_page_facts(url: str) -> dict:
+    from backend.tools.browser import chromium
+
+    async with chromium() as browser:
+        page = await browser.new_page(viewport={"width": 1400, "height": 1000})
+        await page.add_init_script(FAKE_CHROME)
+        await page.goto(url, wait_until="load")
+        await page.add_script_tag(content=CONTENT_JS.read_text())
+        return await page.evaluate("window.__priciseRead()")

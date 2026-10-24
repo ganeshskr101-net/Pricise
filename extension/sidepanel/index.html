@@ -9,7 +9,7 @@
 </head>
 <body>
   <header class="head">
-    <div class="logo" id="logo"></div>
+    <img class="logo" src="../icons/logo.svg" alt="">
     <div class="head-text">
       <div class="brand">Pricise</div>
       <div class="sub" id="status">Getting ready…</div>
@@ -24,9 +24,21 @@
     <!-- Filled in by panel.js -->
   </main>
 
+  <!-- Outside <main> so live re-renders of the check never wipe the conversation. Filled in by panel.js. -->
+  <section class="card ask" id="ask" hidden>
+    <div class="ask-title">Ask about this page</div>
+    <div class="ask-chips" id="ask-chips"></div>
+    <div class="ask-thread" id="ask-thread" aria-live="polite"></div>
+    <form class="ask-form" id="ask-form">
+      <input id="ask-input" type="text" maxlength="300" autocomplete="off" placeholder="Ask about this page…" aria-label="Ask about this page">
+      <button class="btn primary" type="submit" id="ask-send">Ask</button>
+    </form>
+    <div class="ask-note" id="ask-note"></div>
+  </section>
+
   <footer class="foot">
     <span>&#128274; Analysed on this laptop · no personal data sent</span>
-    <a href="#" id="open-wishlist">Wishlist</a>
+    <span class="foot-links"><a href="#" id="card-setting">Quick card: on</a> · <a href="#" id="open-wishlist">Wishlist</a></span>
   </footer>
   <script type="module" src="panel.js"></script>
 </body>
