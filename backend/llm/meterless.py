@@ -1,6 +1,7 @@
 """Meterless Nightshift OpenAI-compatible client (only model-call path)."""
 
 from __future__ import annotations
+from functools import lru_cache
 
 import json
 import logging
@@ -305,3 +306,14 @@ def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
     except MeterlessError:
         return ""
     return _THINK_RE.sub("", text).strip()
+
+@lru_cache(maxsize=1)
+def _dotenv() -> dict[str, str]:
+    """Values from .env. Kept because the teammates' tests monkeypatch it."""
+    return {k: v for k, v in dotenv_values(_PROJECT_ROOT / ".env").items() if v}
+
+
+def _env_value(name: str) -> str:
+    """Env value, treating .env.example placeholders ("replace") as missing."""
+    value = (os.environ.get(name) or _dotenv().get(name, "")).strip()
+    return "" if "replace" in value.lower() else value
