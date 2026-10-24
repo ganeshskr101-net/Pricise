@@ -8,11 +8,12 @@ The local Pricise backend (FastAPI on http://localhost:8787) and the agents behi
 | `contracts.py` | Shared data shapes (Finding, FinalCard, PageFacts…). **Change only with Abel's OK** | Abel |
 | `agents/deal.py` | Deal Agent: fake discount, resetting timer, pre-ticked add-on, drip fees | Emmanuel |
 | `agents/chat.py` | "Ask about this page": answers only from the stored check | Shriganesh |
-| `agents/trust.py`, `price.py`, `skeptic.py` | Not written yet | Raj, Josh, Abel |
-| `tools/` | Deal tools: `runahead.py` (checkout walk + pay guard), `timer_test.py`, `discount.py`, `addons.py`, `browser.py` (shared headless Chromium) | Emmanuel |
+| `agents/trust.py`, `agents/trust_api.py` | Trust Agent: domain age, company record, copied photos, review patterns, returns policy; `POST /internal/trust/vet` for the Price Agent; `AGENT_TRUST=real` swaps it in. See `docs/trust_agent.md` | Raj |
+| `agents/price.py`, `skeptic.py` | Not written yet | Josh, Abel |
+| `tools/` | Trust tools: `domain.py`, `registry.py`, `photo_match.py`, `reviews.py`, `returns.py`, `trust_common.py` (Raj). Deal tools: `runahead.py` (checkout walk + pay guard), `timer_test.py`, `discount.py`, `addons.py`, `browser.py` (shared headless Chromium) | Emmanuel |
 | `llm/meterless.py` | The only way to call a model (Meterless Nightshift). Minimal client for now | Abel |
 | `data/` | `history.py` (`get_price_history`, JSON fixture today, Zetaris later) | Josh |
-| `engines/` | Meterless engines (World Model, H-MEM, Scout Intent, Markovian): not written yet | Abel |
+| `engines/` | Meterless engines (World Model, H-MEM, Scout Intent, Markovian): not written yet. `world_model_stub.py` is an in-memory stand-in Trust writes to until the World Model lands | Abel |
 | `env.py` | Loads `.env` at startup (shell variables win; no `.env` is fine) | |
 | `tests/` | pytest suite | everyone |
 

@@ -25,3 +25,15 @@ deal/ad-03.html,prechecked_addon,1,pre-ticked insurance
 deal/ad-04.html,prechecked_addon,1,pre-ticked donation
 deal/ad-05.html,prechecked_addon,0,honest: offered but not ticked
 deal/ad-06.html,prechecked_addon,0,pre-ticked opt-in with no cost
+trust/t-01/index.html,risky_store,1,new domain + no identity + copied photo
+trust/t-02/index.html,risky_store,1,new domain + review burst + duplicate reviews
+trust/t-03/index.html,risky_store,1,no address or company + no returns
+trust/t-04/index.html,risky_store,1,new domain + copied photo
+trust/t-05/index.html,risky_store,1,new domain + 3-day returns
+trust/t-06/index.html,risky_store,1,review burst + duplicates + no returns page (three weak signs)
+trust/t-07/index.html,risky_store,1,copied photo + no company number
+trust/t-08/index.html,risky_store,0,long-standing store (victim of t-01)
+trust/t-09/index.html,risky_store,0,fairly new domain (45 days) but nothing else wrong (victim of t-04)
+trust/t-10/index.html,risky_store,0,"14-day returns, only 6 reviews (victim of t-07)"
+trust/t-11/index.html,risky_store,0,one weak sign (5-day returns) is not enough
+trust/t-12/index.html,risky_store,0,reuses the manufacturer photo like everyone (must not count as copied)

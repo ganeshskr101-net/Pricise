@@ -6,6 +6,8 @@ Labelled test pages for the accuracy number on the proof screen. Made-up stores 
 | Path | What it is |
 |---|---|
 | `deal/` | 26 one-file pages for the Deal Agent: fake discount (7), resetting timer (6), drip fees (7), pre-ticked add-on (6), each with honest controls |
+| `trust/` | 12 made-up stores for the Trust Agent (7 risky, 5 legitimate), each a folder with `about.json`, `returns.html`, `listings.json`, `reviews.json`; regenerate with `trust/make_fixtures.py` |
+| `run_trust.py` | Vets every `trust/` store and the Store Lab demo stores, prints accuracy and vet time; details go to `bench/out/trust.csv`. No browser needed, a few seconds |
 | `labels.csv` | `page, trick, expected (1 = trick present), note` for every bench page |
 | `run_deal.py` | Runs the Deal Agent on every `deal/` page and prints accuracy per trick; details go to `bench/out/deal.csv` (not committed) |
 | `out/` | Generated results (git-ignored) |
