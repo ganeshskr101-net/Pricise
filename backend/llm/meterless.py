@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import time
 from datetime import datetime, timezone
 from pathlib import Path
@@ -253,3 +254,54 @@ def _append_trace(record: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("a", encoding="utf-8") as handle:
         handle.write(json.dumps(record, separators=(",", ":")) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Compatibility layer for the teammates' placeholder API.
+# Their agents call configured(), model_name() and complete(); keep these
+# signatures. complete() returns "" when keys are missing or the call fails,
+# so everything still runs without keys.
+# ---------------------------------------------------------------------------
+
+_LANE_ENV = {"fast": "NEMOTRON_FAST_MODEL", "deep": "NEMOTRON_DEEP_MODEL"}
+_THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
+
+
+def _env_value(name: str) -> str:
+    """Env value, treating .env.example placeholders ("replace") as missing."""
+    _load_env()
+    value = os.environ.get(name, "").strip()
+    return "" if "replace" in value.lower() else value
+
+
+def configured(lane: str = "fast") -> bool:
+    """True when the base URL, token and the lane's model name are all set."""
+    return all(
+        _env_value(name)
+        for name in ("METERLESS_BASE_URL", "METERLESS_RUNTIME_TOKEN", _LANE_ENV.get(lane, ""))
+    )
+
+
+def model_name(lane: str = "fast") -> str:
+    """Configured model name for the lane, or a readable fallback."""
+    return _env_value(_LANE_ENV.get(lane, "")) or f"nemotron {lane} lane (not configured)"
+
+
+def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
+    """One chat completion on the given lane. Blocking; use asyncio.to_thread from async code.
+
+    Returns "" if Nightshift is not configured or the call fails. Strips any
+    <think>...</think> reasoning block the model puts in front of its answer.
+    """
+    if not configured(lane):
+        return ""
+    call = deep if lane == "deep" else fast
+    try:
+        text, _ = call(
+            [{"role": "user", "content": prompt}],
+            temperature=0,
+            max_tokens=max_tokens,
+        )
+    except MeterlessError:
+        return ""
+    return _THINK_RE.sub("", text).strip()
