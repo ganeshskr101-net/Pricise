@@ -340,6 +340,10 @@ async def check_events(cid: str):
     if cid not in CHECKS:
         raise HTTPException(404, "unknown check")
     chk = CHECKS[cid]
+    if os.environ.get("AGENT_ORCH", "off").lower() == "on":  # opt-in: backend/orchestrator.py runs the check
+        from backend.orchestrator_stub import sse_stream
+        return StreamingResponse(sse_stream(chk), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     async def stream():
         page = PageFacts(**chk["page"])
