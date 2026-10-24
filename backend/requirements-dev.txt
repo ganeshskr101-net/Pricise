@@ -1,0 +1,4 @@
+# Tests and development. Install together with requirements.txt (the setup scripts do both).
+-r requirements.txt
+pytest==9.1.1
+httpx==0.28.1

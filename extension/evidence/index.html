@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Pricise · Evidence</title>
+  <link rel="stylesheet" href="../shared/tokens.css">
+  <link rel="stylesheet" href="../shared/page.css">
+  <style>
+    .grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 18px; align-items: start; }
+    td b { white-space: nowrap; }
+    .span2 { grid-column: 1 / -1; }
+    .chart { width: 100%; height: 220px; display: block; margin-top: 10px; }
+    .frames { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+    .frame { border: 1px solid var(--line); border-radius: 12px; padding: 12px; text-align: center; background: var(--bg); }
+    .frame .t { font-size: 12px; color: var(--ink-3); }
+    .frame .v { font-size: 26px; font-weight: 800; font-variant-numeric: tabular-nums; color: var(--bad); margin: 4px 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 13.5px; }
+    td, th { padding: 9px 4px; border-bottom: 1px solid var(--line-2); text-align: left; }
+    th { font-size: 11.5px; text-transform: uppercase; letter-spacing: .4px; color: var(--ink-3); }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.total td { font-weight: 800; font-size: 15px; border-bottom: 0; }
+    .late { color: var(--bad); font-weight: 700; }
+    .trace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; max-height: 360px; overflow: auto; }
+    .trace .r { display: grid; grid-template-columns: 96px 70px 120px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line-2); }
+    :target { box-shadow: 0 0 0 3px var(--info-bg), var(--shadow); }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <img class="logo" src="../icons/logo.svg" alt=""><b class="brandname">Pricise</b>
+    <nav class="nav"><a class="on" href="#">Evidence</a><a href="../wishlist/index.html">Wishlist</a></nav>
+    <span class="muted" id="page-url" style="margin-left:auto;font-size:12.5px;max-width:45%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"></span>
+  </div>
+  <div class="wrap">
+    <h1 id="title">Evidence</h1>
+    <p class="muted" id="subtitle">Every claim Pricise makes, with the proof behind it.</p>
+    <div class="grid" id="grid"></div>
+  </div>
+  <script type="module" src="evidence.js"></script>
+</body>
+</html>

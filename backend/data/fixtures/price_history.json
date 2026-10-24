@@ -1,0 +1,16 @@
+{
+  "_note": "SYNTHETIC price histories for made-up Store Lab and bench stores. Each series is a list of [price, days] runs, oldest first, ending today. Josh will replace this file with a Zetaris query behind backend/data/history.py:get_price_history.",
+  "series": [
+    {"host": "storelab/audiodealz", "product": "WH1000XM5/B", "aliases": ["WH-1000XM5"],
+     "runs": [[149, 30], [169, 7], [149, 3], [249, 2], [149, 48]]},
+    {"host": "storelab/store-c", "product": "WH-1000XM5", "runs": [[255, 90]]},
+
+    {"host": "bench/deal", "product": "BENCH-FD-01", "runs": [[59, 60], [99, 3], [59, 27]]},
+    {"host": "bench/deal", "product": "BENCH-FD-02", "runs": [[24.99, 85], [49.99, 5]]},
+    {"host": "bench/deal", "product": "BENCH-FD-03", "runs": [[399, 40], [599, 1], [399, 49]]},
+    {"host": "bench/deal", "product": "BENCH-FD-04", "runs": [[18, 30], [35, 7], [18, 53]]},
+    {"host": "bench/deal", "product": "BENCH-FD-05", "runs": [[120, 70], [120, 20]]},
+    {"host": "bench/deal", "product": "BENCH-FD-06", "runs": [[80, 75], [60, 15]]},
+    {"host": "bench/deal", "product": "BENCH-FD-07", "runs": [[45, 40], [65, 30], [45, 20]]}
+  ]
+}

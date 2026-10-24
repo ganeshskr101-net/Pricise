@@ -1,0 +1,40 @@
+/* Pricise quick card (docs/mockups/ui-v2, right column). Lives inside a closed Shadow DOM; tokens.css is prepended
+   (with :root -> :host) by the background. 320px, white, 1px border, soft shadow, 3px coloured left edge by state. */
+:host { all: initial; }
+.qc {
+  position: fixed; top: 12px; right: 16px; z-index: 2147483647; width: 320px; max-width: calc(100vw - 32px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 46, 43, .12), 0 1px 2px rgba(15, 46, 43, .06);
+  font-family: var(--font); font-size: 13px; line-height: 1.45; color: var(--ink); text-align: left;
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums;
+  animation: qc-in .22s ease-out both;
+}
+.qc::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--ink-3); }
+.qc.bad::before { background: var(--bad); } .qc.good::before { background: var(--good); } .qc.caution::before { background: var(--caution); }
+.qc.out { animation: qc-out .18s ease-in both; }
+@keyframes qc-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
+@keyframes qc-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateX(24px); } }
+@media (prefers-reduced-motion: reduce) { .qc, .qc.out { animation: none; } }
+
+.qh { display: flex; align-items: center; gap: 7px; padding: 10px 10px 0 15px; font-size: 12px; color: var(--ink-3); }
+.qh img { width: 16px; height: 16px; display: block; }
+.qx { margin-left: auto; width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; padding: 0;
+  border: 0; border-radius: 6px; background: none; color: var(--ink-3); cursor: pointer; }
+.qx:hover { background: var(--line-2); color: var(--ink); }
+.qx svg.i { width: 14px; height: 14px; }
+
+.qb { padding: 6px 15px 12px; }
+.qt { font-size: 15px; font-weight: 650; letter-spacing: -.2px; }
+.qc.bad .qt { color: var(--bad); } .qc.good .qt { color: var(--good); } .qc.caution .qt { color: var(--caution); }
+.qs { color: var(--ink-2); margin-top: 2px; }
+.qs + .qs { margin-top: 6px; }
+.qs b { color: var(--ink); font-weight: 600; }
+
+.qf { display: flex; align-items: center; gap: 10px; padding: 9px 15px; border-top: 1px solid var(--line-2); font-size: 12.5px; }
+.qf button { font: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+.qf .l { color: var(--brand-2); font-weight: 600; }
+.qf .r { margin-left: auto; color: var(--ink-3); font-size: 12px; }
+.qf button:hover { text-decoration: underline; }
+.qnote { padding: 0 15px 10px; font-size: 12px; color: var(--ink-2); }
+.qnote[hidden] { display: none; }
+:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }

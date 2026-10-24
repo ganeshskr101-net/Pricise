@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bluetooth Speaker 5 | Bench Store</title>
+<!-- Pricise bench page: a MADE-UP store. Label in bench/labels.csv. -->
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "Product", "name": "Bluetooth Speaker 5", "sku": "BENCH-TM-05", "offers": {"@type": "Offer", "price": "49.00", "priceCurrency": "USD"}}</script>
+<style>*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#111;background:#fff}.top{background:#2d3748;color:#fff;padding:12px 20px;font-weight:700}.wrap{max-width:900px;margin:20px auto;padding:0 20px}h1{font-size:22px;font-weight:500}.price{font-size:28px}.was{color:#666}.btn{display:inline-block;background:#f6c343;color:#111;border:0;border-radius:18px;padding:10px 22px;margin-top:12px;text-decoration:none;font-size:14px;cursor:pointer}.box{border:1px solid #ddd;border-radius:8px;padding:12px;margin:12px 0;font-size:14px}table{border-collapse:collapse;width:100%;max-width:420px}td{padding:6px 0;border-bottom:1px solid #eee}td.a{text-align:right}.lab{position:fixed;left:10px;bottom:10px;background:#111;color:#fff;font-size:11px;padding:4px 8px;border-radius:6px;opacity:.75}</style>
+</head>
+<body>
+<div class="top">Bench Store</div>
+<div class="wrap">
+<h1 id="title">Bluetooth Speaker 5</h1>
+<div class="price">$49.00</div>
+<div class="box" id="timer">Sale ends at midnight UTC: <b id="t">--:--</b></div>
+</div>
+<div class="lab">Pricise bench · made-up store</div>
+<script>const el=document.getElementById('t');const fmt=(s,h)=>{const p=n=>String(n).padStart(2,'0');return h?p(Math.floor(s/3600))+':'+p(Math.floor(s%3600/60))+':'+p(s%60):p(Math.floor(s/60))+':'+p(s%60)};const r=()=>{const n=new Date();const end=Date.UTC(n.getUTCFullYear(),n.getUTCMonth(),n.getUTCDate()+1);el.textContent=fmt(Math.round((end-n)/1000),1)};r();setInterval(r,1000);</script>
+</body>
+</html>

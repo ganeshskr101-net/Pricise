@@ -1,0 +1,66 @@
+/* Pricise design tokens (from docs/mockups/ui-v2/tokens.css): one stylesheet shared by every extension page.
+   Colour carries meaning only: bad (tricks, risk), caution (unverified), good (honest, safer option). Teal is the brand. */
+:root {
+  --ink: #0f2e2b;
+  --ink-2: #41544f;
+  --ink-3: #71827e;
+  --line: #e3eae8;
+  --line-2: #eef3f2;
+  --bg: #f5f8f7;
+  --surface: #fff;
+  --brand: #0b5f5a;        /* primary buttons, send button, user chat bubbles */
+  --brand-hover: #094c48;
+  --brand-2: #0e7a73;      /* links, proof links, agent dots */
+  --mint: #7ef0c4;
+  --mint-bg: #e7f7f0;
+  --bad: #b42318;     --bad-bg: #fdf1f0;
+  --caution: #a15c07; --caution-bg: #fdf6ea;
+  --good: #147a3d;    --good-bg: #edf7f0;
+  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, system-ui, sans-serif;
+
+  /* Older names still used by the code, mapped onto the new palette. */
+  --good-bg-2: var(--good-bg);
+  --info: var(--brand-2); --info-bg: var(--mint-bg);
+  --unknown: var(--ink-3); --unknown-bg: var(--line-2);
+  --radius: 12px;
+  --radius-sm: 10px;
+  --shadow: none;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body { font-family: var(--font); color: var(--ink); background: var(--surface); font-size: 13px; line-height: 1.45;
+  -webkit-font-smoothing: antialiased; font-variant-numeric: tabular-nums; /* every price lines up */ }
+button { font: inherit; cursor: pointer; }
+a { color: var(--brand-2); text-decoration: none; }
+a:hover { text-decoration: underline; }
+:focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }
+.num { font-variant-numeric: tabular-nums; }
+
+svg.i { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.logo { width: 26px; height: 26px; display: block; flex: none; } /* <img src="icons/logo.svg">: the logo brings its own tile */
+
+/* Status text (the mockup has no pills): coloured, semibold. */
+.pill { font-size: 12px; font-weight: 600; white-space: nowrap; color: var(--ink-3); }
+.pill.good { color: var(--good); } .pill.bad { color: var(--bad); } .pill.caution { color: var(--caution); }
+.pill.info { color: var(--brand-2); } .pill.unknown { color: var(--ink-3); }
+
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 12.5px; font-weight: 600; white-space: nowrap;
+  transition: background .15s, border-color .15s; }
+.btn:hover { background: var(--bg); }
+.btn svg.i { width: 14px; height: 14px; }
+.btn.primary { background: var(--brand); border-color: var(--brand); color: #fff; }
+.btn.primary:hover { background: var(--brand-hover); border-color: var(--brand-hover); }
+.btn:disabled { cursor: default; color: var(--ink-3); background: var(--surface); }
+.btn.primary:disabled { background: var(--line); border-color: var(--line); color: var(--ink-3); }
+input[type=text]:focus, input:not([type]):focus { outline: none; border-color: var(--brand-2); box-shadow: 0 0 0 3px var(--mint-bg); }
+
+/* Small square markers for rows. */
+.m { width: 6px; height: 6px; border-radius: 2px; flex: none; background: var(--ink-3); }
+.m.bad { background: var(--bad); } .m.caution { background: var(--caution); } .m.good { background: var(--good); }
+
+.muted { color: var(--ink-3); }
+.skeleton { background: linear-gradient(90deg, var(--line-2) 0%, var(--bg) 50%, var(--line-2) 100%); background-size: 200% 100%;
+  animation: shimmer 1.2s infinite; border-radius: 4px; }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+@media (prefers-reduced-motion: reduce) { .skeleton { animation: none; } }
