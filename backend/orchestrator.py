@@ -9,6 +9,9 @@ agent finishes and after each Skeptic result, so the verdict firms up as proof a
   without them the finding keeps its status. A second round runs only when the first result is "unverified".
 - The work runs ONCE per check_id: a second stream replays the stored events (and follows a run still in progress).
 - traces/{check_id}.json records, for every finding, who proposed and challenged it, its evidence, model, rounds and status.
+- AGENT_ORCH=on: findings also go to the shared World Model (backend/engines/world_model.py). A finding is identified by
+  finding_key(); the same finding again emits nothing, a changed one updates its entry. The trace reads the sidecar's
+  findings when it is reachable (one warning if they differ from the local entries); otherwise the local entries are used.
 """
 from __future__ import annotations
 
@@ -23,6 +26,7 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional, get_args
 from backend.agents import skeptic
 from backend.agents.skeptic import RuleResult
 from backend.contracts import FinalCard, Finding
+from backend.engines import world_model
 
 log = logging.getLogger("pricise.orchestrator")
 
@@ -55,6 +59,7 @@ class _Entry:
     finding: Finding
     proposed_by: str
     statuses: list[str]
+    key: str = ""  # world_model.finding_key of the first version (AGENT_ORCH=on only)
 
 
 _RUNS: dict[str, _Run] = {}
@@ -98,6 +103,8 @@ class _Work:
     def __init__(self, chk: dict, run: _Run, build_card: CardBuilder, traces_dir: Path) -> None:
         self.chk, self.run, self.build_card, self.traces_dir = chk, run, build_card, traces_dir
         self.entries: list[_Entry] = []
+        self.world = world_model.Session(chk["check_id"]) if world_model.enabled() else None
+        self.by_key: dict[str, int] = {}  # finding_key -> index in entries
 
     async def main(self, agents: list[Agent], rechecker: Optional[Rechecker], timeout: float) -> None:
         self.chk["findings"] = []
@@ -106,7 +113,7 @@ class _Work:
             await self._skeptic(rechecker)
             if not self.run.events or self.run.events[-1]["kind"] != "final_card":
                 await self._card()
-            self._write_trace()
+            await self._write_trace()
         except Exception as err:  # a bug here must not leave streams waiting forever
             log.error("orchestrator check=%s stopped: %s", self.chk["check_id"], type(err).__name__)
         finally:
@@ -140,10 +147,22 @@ class _Work:
                     await self._card()
 
     async def _add(self, f: Finding) -> None:
-        self.entries.append(_Entry(f, f.agent, [f.status]))
-        await self._emit_finding(f)
+        if self.world is None:
+            self.entries.append(_Entry(f, f.agent, [f.status]))
+            await self._emit_finding(f)
+            return
+        key = world_model.finding_key(f)
+        if key in self.by_key:  # the same finding again (a re-run step): emit only if it changed
+            await self._update(self.by_key[key], f)
+            return
+        await self.world.record(key, f)
+        self.by_key[key] = len(self.entries)
+        self.entries.append(_Entry(f, f.agent, [f.status], key))
+        await self._emit_finding(f)  # new to this stream: always shown once
 
     async def _update(self, i: int, f: Finding) -> None:
+        if self.world is not None and not await self.world.record(self.entries[i].key, f):
+            return
         self.entries[i].finding = f
         self.entries[i].statuses.append(f.status)
         await self._emit_finding(f)
@@ -166,10 +185,27 @@ class _Work:
         async with self.run.changed:
             self.run.changed.notify_all()
 
-    def _write_trace(self) -> None:
+    async def _trace_rows(self) -> list[dict]:
+        """The sidecar's findings when it is reachable (the shared state), else the local entries."""
+        local = [trace_row(e) for e in self.entries]
+        remote = await self.world.findings() if self.world is not None else None
+        if remote is None:
+            return local
+        try:
+            rows = [trace_row(_Entry(Finding.model_validate(r["finding"]), r["proposed_by"], list(r["statuses"])))
+                    for r in remote]
+        except Exception as err:
+            log.warning("orchestrator check=%s world model findings unreadable: %s", self.chk["check_id"], type(err).__name__)
+            return local
+        if rows != local:
+            log.warning("orchestrator check=%s world model has %d findings, local has %d, or they differ; the trace uses "
+                        "the world model", self.chk["check_id"], len(rows), len(local))
+        return rows
+
+    async def _write_trace(self) -> None:
         cid = self.chk["check_id"]
         path = self.traces_dir / f"{re.sub(r'[^A-Za-z0-9_-]', '', cid) or 'check'}.json"
-        trace = {"check_id": cid, "url": self.chk.get("url"), "findings": [trace_row(e) for e in self.entries]}
+        trace = {"check_id": cid, "url": self.chk.get("url"), "findings": await self._trace_rows()}
         try:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(trace, indent=2), encoding="utf-8")

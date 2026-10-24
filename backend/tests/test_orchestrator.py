@@ -1,6 +1,7 @@
 """Orchestrator: fake agents, fake rechecker, fake card builder, tmp traces. No real network, browser or model."""
 import asyncio
 import json
+import socket
 
 import pytest
 from fastapi.testclient import TestClient
@@ -13,10 +14,18 @@ RESETS = {"visits": [{"fresh_session": True, "reset": True}] * 3}
 TWO_VISITS = {"visits": [{"fresh_session": True, "reset": True}] * 2}
 
 
+def unused_port() -> int:
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        return s.getsockname()[1]
+
+
 @pytest.fixture(autouse=True)
 def _isolated(monkeypatch, tmp_path):
     monkeypatch.setattr(orchestrator, "_RUNS", {})
     monkeypatch.setattr(orchestrator, "TRACES_DIR", tmp_path)
+    monkeypatch.delenv("AGENT_ORCH", raising=False)  # a .env value must not change these tests; the hook test sets it
+    monkeypatch.setenv("WORLD_MODEL_URL", f"http://127.0.0.1:{unused_port()}")  # never write into a real sidecar
 
 
 def make(type_="product", status="confirmed", agent="page", evidence=None, **kw):
