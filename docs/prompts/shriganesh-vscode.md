@@ -3,7 +3,7 @@
 Open the `pricise` repo folder in VS Code first. CLAUDE.md loads automatically.
 
 ```text
-Read CLAUDE.md, AGENTS.md, README.md and docs/PLAN.md, then look at docs/mockups/ui_panel.png.
+Read CLAUDE.md, AGENTS.md, README.md and docs/PLAN.md, then look at docs/mockups/v1/ui_panel.png.
 This repo already has a working v0.1 of my part (the Chrome extension UI + a stub backend). Don't rewrite it; build on it.
 
 Step 1 - Get it running with me (stop after this step and wait for me):
@@ -20,7 +20,7 @@ Step 2 - Real store pages (my top priority; the product must work on real pages)
   so I can see what was extracted.
 
 Step 3 - Demo polish (one at a time, show me each before the next):
-a) Checkout approval screen for Store Lab, matching docs/mockups/ui_checkout.png: "Stopped before payment. Your approval is needed."
+a) Checkout approval screen for Store Lab, matching docs/mockups/v1/ui_checkout.png: "Stopped before payment. Your approval is needed."
 b) "Shuffle" button on the Store Lab page that randomises which tricks appear, so judges see it isn't scripted.
 c) Preference toggle in the panel: "Refurbished OK" (when on, Store B at $199 wins instead of Store C).
 d) A banner when Scout Intent blocks a hidden instruction on a page ("This page tried to instruct the agents. Ignored.").

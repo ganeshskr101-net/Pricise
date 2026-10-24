@@ -31,7 +31,7 @@ It also keeps a wishlist and sends a desktop notification (laptop, not phone) wh
   Store D $189 scam (blocked by Trust). Store E outage. Later Store C drops to $235 - $26 = **$209** (wishlist alert, Day 9).
 - Wishlist week: 340 price changes, 2 alerts, 11 tricks caught, 10 stores.
 
-## Side panel, top to bottom (see docs/mockups/ui_panel.png)
+## Side panel, top to bottom (v1: docs/mockups/v1/ui_panel.png; current design: docs/mockups/ui-v2/)
 1. Header: logo, "Pricise", "Checked this page in 6.2s", "4 agents" pill.
 2. Verdict card: "Don't buy here" + "Risky store · 3 tricks · real total $191, not $149" + green "Safer choice: Store C · $229 [Go]".
 3. Shop safe? (Risky): domain 6 days old · no address/company record · photos copied, each with a Proof link.

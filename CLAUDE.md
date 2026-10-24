@@ -4,7 +4,7 @@ Read these first, in order:
 1. `AGENTS.md`: the shared rules for every coding agent on the team (contracts, secrets, real-page safety). Follow it exactly.
 2. `docs/PLAN.md`: what Pricise is, every decision so far, the UI spec, demo numbers and demo script.
 3. `README.md`: how to run the stub backend and load the extension.
-4. `docs/mockups/*.png`: the target look (they still say "Guardian"; the product is Pricise).
+4. `docs/mockups/ui-v2/`: the target look (tokens, panel and quick card). Older v1 mockups are in `docs/mockups/v1/` (they still say "Guardian").
 
 ## Who I am
 Shriganesh: product lead. I own the Chrome extension UI and the demo. I build in VS Code with the Claude Code extension.

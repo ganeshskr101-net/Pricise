@@ -19,9 +19,8 @@ async function call(path, opts = {}) {
 
 export const api = {
   health: () => call('/health'),
-  startCheck: (url, page) => call('/check', { method: 'POST', body: JSON.stringify({ url, page }) }),
+  startCheck: (url, page, fresh = false) => call(`/check${fresh ? '?fresh=1' : ''}`, { method: 'POST', body: JSON.stringify({ url, page }) }),
   getCheck: (id) => call(`/check/${id}`),
-  events: (id) => new EventSource(`${BACKEND}/check/${id}/events`),
   chat: (check_id, question, history) => call('/chat', { method: 'POST', body: JSON.stringify({ check_id, question, history }) }),
   untick: (check_id, selector, amount) => call('/action/untick', { method: 'POST', body: JSON.stringify({ check_id, selector, amount }) }),
   wishlist: () => call('/wishlist'),

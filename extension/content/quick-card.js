@@ -1,4 +1,4 @@
-// Pricise quick verdict card: a small card at the top-right of the page when a check finds a trick or a cheaper safe option.
+// Pricise quick card: a small card at the top-right of every checked product page, red / amber / green by result.
 // It sits in a closed Shadow DOM, so the store's CSS can't change it and its CSS can't change the store.
 // It never clicks or changes anything on the page. Questions about the page are asked in the side panel.
 (() => {
@@ -7,13 +7,16 @@
 
   const SETTINGS_KEY = 'pricise:settings'; // same key as extension/shared/check.js
   const HIDE_AFTER_MS = 8000;
-  const ICON_DETAILS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M15 4v16"/></svg>';
-  const ICON_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  const SEVERITY = { good: 0, unknown: 1, caution: 2, bad: 3 };
   let host = null;
+  let view = { dismissed: false, tone: null, refresh: null }; // this page view: closed with ×? last tone shown? live updater
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
-    if (msg?.type === 'pricise:quick-card') { show(msg.data); sendResponse({ ok: true }); }
+    if (msg?.type === 'pricise:quick-card') { (msg.data.update ? update : show)(msg.data); sendResponse({ ok: true }); }
   });
+  // content.js calls this when a single-page site moves to another URL, so an old result never sits on a new product.
+  // It lives in the extension's isolated world, so the page's own scripts can't call it.
+  window.__priciseRemoveCard = () => { remove(); view = { dismissed: false, tone: null, refresh: null }; };
 
   function el(tag, cls, text) {
     const n = document.createElement(tag);
@@ -22,29 +25,59 @@
     return n;
   }
 
+  // A firmer verdict for this page view (proof from the run-ahead or timer test landed). Update the visible card in place;
+  // if it was closed with ×, leave it closed; if it hid itself, bring it back only when the verdict got worse.
+  function update(data) {
+    if (view.dismissed) return;
+    if (host && view.refresh) return view.refresh(data);
+    if (view.tone == null || (SEVERITY[data.tone] ?? 1) > (SEVERITY[view.tone] ?? 1)) show(data);
+  }
+
   function show(data) {
     remove();
     host = document.createElement('pricise-quick-card');
     const root = host.attachShadow({ mode: 'closed' });
     const style = el('style');
     style.textContent = data.css || '';
-    const card = el('div', 'qc card');
+    const tone = ['good', 'bad', 'caution'].includes(data.tone) ? data.tone : 'unknown';
+    const card = el('div', `qc ${tone}`);
     card.setAttribute('role', 'dialog');
-    card.setAttribute('aria-label', 'Pricise quick verdict');
-    card.innerHTML = `
-      <div class="qc-head"><img class="logo" alt=""><div class="qc-verdict"></div>
-        <button class="qc-icon" type="button" data-act="details" title="Details" aria-label="Open details in the side panel">${ICON_DETAILS}</button>
-        <button class="qc-icon" type="button" data-act="close" title="Close" aria-label="Close">${ICON_CLOSE}</button></div>
-      <div class="qc-reason"></div>
-      <div class="qc-foot"><a href="#" class="qc-never" data-act="never">Never on this site</a></div>`;
-    card.querySelector('.logo').src = data.logo || chrome.runtime.getURL('icons/logo.svg');
-    const tone = ['good', 'bad', 'caution', 'unknown'].includes(data.tone) ? data.tone : 'unknown';
-    const verdict = card.querySelector('.qc-verdict');
-    verdict.classList.add(tone);
-    verdict.textContent = data.title || 'Checked';
-    const reasonEl = card.querySelector('.qc-reason');
-    reasonEl.textContent = data.reason || '';
-    reasonEl.title = data.reason || '';
+    card.setAttribute('aria-label', 'Pricise check result');
+
+    const head = el('div', 'qh');
+    const logo = el('img');
+    logo.src = data.logo || chrome.runtime.getURL('icons/logo.svg');
+    logo.alt = '';
+    const close = el('button', 'qx');
+    close.type = 'button';
+    close.setAttribute('aria-label', 'Close');
+    close.innerHTML = data.close || '×'; // our own static SVG from extension/shared/icons.js
+    head.append(logo, document.createTextNode('Pricise'), close);
+
+    const body = el('div', 'qb');
+    const fill = (d) => {
+      const tone = ['good', 'bad', 'caution'].includes(d.tone) ? d.tone : 'unknown';
+      card.className = `qc ${tone}`;
+      view.tone = tone;
+      body.replaceChildren(el('div', 'qt', d.title || 'Checked'));
+      for (const line of (d.lines || []).slice(0, 2)) {
+        const row = el('div', 'qs');
+        for (const [text, bold] of line) row.appendChild(bold ? el('b', 'num', text) : document.createTextNode(text));
+        body.appendChild(row);
+      }
+    };
+    fill(data);
+
+    const note = el('div', 'qnote', 'Click the Pricise icon in the toolbar for details.');
+    note.hidden = true;
+    const foot = el('div', 'qf');
+    const details = el('button', 'l', 'See details');
+    details.type = 'button';
+    const never = el('button', 'r', "Don't show on this site");
+    never.type = 'button';
+    foot.append(details, never);
+
+    card.append(head, body, note, foot);
     root.append(style, card);
     document.documentElement.appendChild(host);
 
@@ -57,19 +90,20 @@
     card.addEventListener('focusin', hold);
     card.addEventListener('focusout', arm);
     arm();
+    view.refresh = (d) => { fill(d); if (!card.matches(':hover') && !card.contains(root.activeElement)) arm(); };
 
-    card.querySelector('[data-act=close]').addEventListener('click', () => hide(card)); // this page view only
-    card.querySelector('[data-act=details]').addEventListener('click', async () => {
+    close.addEventListener('click', () => { view.dismissed = true; hide(card); }); // this page view only
+    details.addEventListener('click', async () => {
       const res = await chrome.runtime.sendMessage({ type: 'pricise:open-panel' }).catch(() => null);
       if (res?.ok) return hide(card);
-      reasonEl.textContent = 'Click the Pricise icon for details'; // Chrome wants a click on the toolbar icon
+      note.hidden = false; // Chrome wants a click on the toolbar icon
     });
-    card.querySelector('[data-act=never]').addEventListener('click', async (e) => {
-      e.preventDefault();
+    never.addEventListener('click', async () => {
       const s = (await chrome.storage.local.get(SETTINGS_KEY))[SETTINGS_KEY] || {};
       const sites = new Set(Array.isArray(s.neverSites) ? s.neverSites : []);
       sites.add(data.host || location.host);
       await chrome.storage.local.set({ [SETTINGS_KEY]: { ...s, neverSites: [...sites] } });
+      view.dismissed = true;
       hide(card);
     });
   }
@@ -88,5 +122,6 @@
     // Every card on the page, including one left by an older copy of this script (e.g. after the extension was reloaded).
     document.querySelectorAll('pricise-quick-card').forEach((n) => n.remove());
     host = null;
+    view.refresh = null;
   }
 })();

@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import asyncio
 import re
-import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping, Optional
@@ -215,23 +214,31 @@ async def walk_checkout(url: str, check_id: str, max_pages: int = MAX_PAGES) -> 
             before = page.url
             await page.locator(CONTROLS).nth(nxt["i"]).click()
             await page.wait_for_load_state("load")
-            await page.wait_for_timeout(150)
+            await page.wait_for_timeout(50)  # let the step's own script fill in the order summary
             if page.url == before:
                 walk.stopped = f"\"{nxt['text']}\" didn't lead anywhere"
                 break
             on_checkout = True
         else:
             walk.stopped = f"stopped after {max_pages} pages"
+        if walk.steps and not walk.steps[-1]["screenshot"]:  # the evidence always shows the last step reached
+            walk.steps[-1]["screenshot"] = await _shot(page, out_dir, walk.steps[-1]["step"])
         await ctx.close()
     return walk
 
 
-async def _record(page, walk: Walk, step: int, out_dir: Path) -> None:
+async def _shot(page, out_dir: Path, step: int) -> str:
     out_dir.mkdir(parents=True, exist_ok=True)
     shot = out_dir / f"runahead-step{step}.png"
-    await page.screenshot(path=str(shot), full_page=True)
-    walk.steps.append({"step": step, "url": page.url, "title": await page.title(), "screenshot": f"/traces/{out_dir.name}/{shot.name}"})
+    await page.screenshot(path=str(shot))
+    return f"/traces/{out_dir.name}/{shot.name}"
+
+
+async def _record(page, walk: Walk, step: int, out_dir: Path) -> None:
+    """Reads the order summary. Screenshots only the steps where a new charge appears (plus the last step, in walk_checkout)."""
+    walk.steps.append({"step": step, "url": page.url, "title": await page.title(), "screenshot": None})
     first_page = len(walk.steps) == 1
+    new_line = False
     for row in await page.evaluate(LINES_JS):
         amount = line_amount(row["text"])
         if amount is None:
@@ -244,6 +251,9 @@ async def _record(page, walk: Walk, step: int, out_dir: Path) -> None:
         key = re.sub(r"[^a-z0-9]", "", label.lower())
         if key not in walk.lines:
             walk.lines[key] = Line(label=label, amount=amount, step=max(1, step), kind=kind)
+            new_line = True
+    if new_line:
+        walk.steps[-1]["screenshot"] = await _shot(page, out_dir, step)
 
 
 # ----------------------------------------------------------------------------- the tool

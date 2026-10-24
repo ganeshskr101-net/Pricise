@@ -142,7 +142,7 @@ def _browser_ok() -> bool:
         return False
 
 
-needs_browser = pytest.mark.skipif(not _browser_ok(), reason="Playwright + Chromium not installed (pip install -r backend/requirements.txt)")
+needs_browser = pytest.mark.skipif(not _browser_ok(), reason="needs the hidden browser: run scripts/setup.sh (installs Playwright Chromium)")
 
 
 @pytest.fixture(scope="module")
@@ -241,3 +241,54 @@ def test_bench_labels_match_pages():
     rows = [r for r in csv.DictReader(open(ROOT / "bench" / "labels.csv")) if r["page"].startswith("deal/")]
     assert all((ROOT / "bench" / r["page"]).exists() for r in rows)
     assert Counter(r["trick"] for r in rows) == {"fake_discount": 7, "resetting_timer": 6, "drip_fees": 7, "prechecked_addon": 6}
+
+
+# ----------------------------------------------------------------------------- streaming + timer cache
+
+def test_store_lab_streams_placeholders_first_and_collect_drops_them(monkeypatch):
+    from backend.tools.common import ToolResult, finding as mk
+
+    async def slow_runahead(cid, url, page):
+        await asyncio.sleep(0.2)
+        return ToolResult([mk(cid, "drip_fees", "confirmed", "$37.01 in fees appear only at checkout step 4.")])
+
+    async def no_timer(cid, url, page):
+        return ToolResult()
+    monkeypatch.setattr(deal, "check_runahead", slow_runahead)
+    monkeypatch.setattr(deal, "check_timer", no_timer)
+    page = _page(DEMO_URL, 149.0, [{"type": "countdown", "selector": "#timer", "text": "Deal ends in 09:58"}])
+    done = []
+    streamed = asyncio.run(_collect(deal.iter_deal("t-stream", DEMO_URL, page, fresh=True,
+                                                   on_tool_done=lambda name, secs: done.append(name))))
+    assert [f.model for f in streamed[:2]] == [deal.PENDING, deal.PENDING]  # "still checking" rows come first
+    assert {f.summary for f in streamed[:2]} == {"Checking checkout for late fees…", "Checking if the timer resets…"}
+    assert set(done) == {"addons", "discount", "scarcity", "runahead", "timer"} and done.index("runahead") > done.index("addons")
+    assert all(f.model != deal.PENDING for f in asyncio.run(deal.assess_deal("t-stream2", DEMO_URL, page, fresh=True)))
+
+
+async def _collect(agen):
+    return [f async for f in agen]
+
+
+def test_timer_result_is_reused_for_ten_minutes_unless_fresh(monkeypatch):
+    from backend.tools.common import ToolResult, finding as mk
+    calls = []
+
+    async def counting_timer(cid, url, page):
+        calls.append(cid)
+        return ToolResult([mk(cid, "resetting_timer", "confirmed", "The timer restarts at 09:59 on every visit.")])
+    monkeypatch.setattr(deal, "check_timer", counting_timer)
+    monkeypatch.setattr(deal, "TIMER_CACHE", {})
+    url = "http://localhost:8787/storelab/audiodealz/?cache-test"
+    page = _page(url, 149.0, [])
+    first = asyncio.run(deal._timer("c1", url, page, fresh=False))
+    again = asyncio.run(deal._timer("c2", url, page, fresh=False))
+    assert len(calls) == 1 and again.findings[0].check_id == "c2" and "Timer test from" in again.findings[0].summary
+    asyncio.run(deal._timer("c3", url, page, fresh=True))  # the refresh button
+    assert len(calls) == 2
+    monkeypatch.setitem(deal.TIMER_CACHE, url, (time.time() - deal.TIMER_CACHE_S - 1, first))
+    asyncio.run(deal._timer("c4", url, page, fresh=False))  # older than 10 minutes: run it again
+    assert len(calls) == 3
+    real = "https://shop.example/item"
+    asyncio.run(deal._timer("c5", real, page, fresh=False))
+    assert real not in deal.TIMER_CACHE  # only Store Lab results are cached

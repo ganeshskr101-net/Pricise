@@ -1,6 +1,8 @@
 // Wishlist page: items Pricise is watching, weekly stats, and the demo clock that fast-forwards time.
 import { api, money, esc } from '../shared/api.js';
+import { ICONS } from '../shared/icons.js';
 
+document.querySelectorAll('#privacy [data-icon]').forEach((li) => li.insertAdjacentHTML('afterbegin', ICONS[li.dataset.icon]));
 document.getElementById('nav-evidence').addEventListener('click', (e) => { e.preventDefault(); history.back(); });
 const DAYS = [1, 3, 5, 7, 9];
 let flashId = null;
@@ -31,7 +33,7 @@ function renderRows(items) {
       <td><b>${esc(i.name)}</b>${i.url ? `<div class="muted" style="font-size:12px">${esc(new URL(i.url).host)}</div>` : ''}</td>
       <td>${esc(i.rule)}</td>
       <td>${i.best_price != null ? `<b>${money(i.best_price)}</b>` : '—'}${i.best_store ? ` · ${esc(i.best_store)}` : ''}</td>
-      <td><span class="pill ${i.tone}">${i.tone === 'good' ? '✓ ' : ''}${esc(i.status)}</span></td>
+      <td><span class="pill ${i.tone}">${esc(i.status)}</span></td>
     </tr>`).join('');
 }
 

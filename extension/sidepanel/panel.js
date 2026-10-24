@@ -1,30 +1,32 @@
 // Pricise side panel: reads the current page, asks the local backend to check it, and fills in live as findings stream in.
+// Layout follows docs/mockups/ui-v2/panel.html: verdict block, three question sections, "Checked by", chat, footer.
 import { api, money, esc } from '../shared/api.js';
-import { chatErrorText, followCheck, getSettings, saveSettings } from '../shared/check.js';
+import { chatErrorText, followCheck, getSettings, money2, PENDING, saveSettings, summarize, TRICK_TYPES } from '../shared/check.js';
+import { ICONS } from '../shared/icons.js';
 
 const $ = (sel) => document.querySelector(sel);
 const main = $('#main');
-
-const AGENTS = [
-  { key: 'trust', name: 'Trust', color: '#5b6cf0' },
-  { key: 'deal', name: 'Deal', color: '#e08a1e' },
-  { key: 'price', name: 'Price', color: '#0e7a73' },
-  { key: 'skeptic', name: 'Skeptic', color: '#d64545' },
-];
-const ICON = { bad: '✕', caution: '!', good: '✓', unknown: '?', pending: '…' };
-const TRICK_TYPES = new Set(['fake_discount', 'resetting_timer', 'prechecked_addon', 'drip_fees']);
+const AGENTS = [['trust', 'Trust'], ['deal', 'Deal'], ['price', 'Price'], ['skeptic', 'Skeptic']];
+const SECTION_ICON = { safe: ICONS.store, honest: ICONS.tag, best: ICONS.target };
 
 const PINNED_TAB = new URLSearchParams(location.search).get('tab'); // dev/testing: sidepanel/index.html?tab=<id>
 
-let state = null; // { tab, url, page, checkId, findings, card, startedAt, stop, unticked, watching, chat, asking }
+let state = null; // { tab, url, page, checkId, findings, card, startedAt, stop, unticked, watching, chat, asking, status }
 
 // ------------------------------------------------------------------ boot
+$('#recheck').innerHTML = ICONS.refresh;
+$('#ft-lock').innerHTML = ICONS.lock;
+$('#ask-send').innerHTML = ICONS.send;
 $('#recheck').addEventListener('click', () => runCheck(true));
 $('#open-wishlist').addEventListener('click', (e) => { e.preventDefault(); chrome.tabs.create({ url: chrome.runtime.getURL('wishlist/index.html') }); });
 
 chrome.tabs.onActivated.addListener(() => runCheck());
+let urlTimer = null;
 chrome.tabs.onUpdated.addListener((tabId, info, tab) => {
-  if (info.status === 'complete' && tab.active && state?.tab?.windowId === tab.windowId) runCheck();
+  if (!tab.active || state?.tab?.windowId !== tab.windowId) return;
+  if (info.status === 'complete') runCheck();
+  // Single-page shops change the URL without loading: give the new product a moment to render, then check it.
+  else if (info.url) { clearTimeout(urlTimer); urlTimer = setTimeout(() => runCheck(), 1500); }
 });
 chrome.storage.onChanged.addListener((changes) => { if (changes['pricise:settings']) renderCardSetting(); });
 runCheck();
@@ -52,7 +54,8 @@ async function runCheck(force = false) {
   if (!tab) return;
   if (!force && state && state.tab.id === tab.id && state.url === tab.url) return;
   state?.stop?.();
-  state = { tab, url: tab.url, findings: [], card: null, startedAt: performance.now(), unticked: false, watching: false, chat: [], asking: false };
+  state = { tab, url: tab.url, findings: [], card: null, startedAt: performance.now(), unticked: false, watching: false,
+            chat: [], asking: false, status: 'checking' };
   renderCardSetting();
   renderThread();
 
@@ -64,34 +67,53 @@ async function runCheck(force = false) {
     return renderOffline();
   }
 
-  setChecking(true);
   render();
   try {
     const mine = state;
-    const page = await readPage(tab);
-    if (mine !== state) return;
-    state.page = page;
-    // The background runs the check (shared with the quick verdict card); reuse it if this page was already checked.
-    state.stop = followCheck({ tabId: tab.id, url: tab.url, page, force }, (snap) => {
+    // The background runs the check (shared with the quick card). If it already has one for this page, join it straight
+    // away instead of reading the page again (that read alone takes ~1.5 s: it watches the countdown tick).
+    const onUpdate = async (snap) => {
       if (mine !== state) return;
-      if (snap.error && !state.card) { setChecking(false); return renderOffline(); }
-      if (snap.findings.length < state.findings.length && !snap.card) return; // an older update arrived late
+      if (snap.missing) {
+        mine.stop?.();
+        let page;
+        try { page = await readPage(tab); } catch (err) { if (mine === state) renderError(err); return; }
+        if (mine !== state) return;
+        state.page = page;
+        state.stop = followCheck({ tabId: tab.id, url: tab.url, page, force }, onUpdate);
+        return;
+      }
+      state.page ??= snap.page;
+      if (snap.error && !state.card) return renderOffline();
+      if ((snap.seq ?? 0) < (state.seq ?? -1)) return; // an older update arrived late
+      state.seq = snap.seq ?? 0;
       state.checkId = snap.checkId;
       state.findings = state.unticked ? snap.findings.filter((x) => x.type !== 'prechecked_addon') : [...snap.findings];
-      if (snap.card && !state.card) { state.card = snap.card; setChecking(false); setBadge(); }
+      // The verdict shows as soon as the fast checks finish and firms up as proof lands; "Checked in" waits for the last one.
+      if (snap.card) { state.card = snap.card; setBadge(); }
+      if (snap.final && state.card) state.status = 'done';
       render();
       highlightOnPage();
-    });
+    };
+    state.stop = force
+      ? followCheck({ tabId: tab.id, url: tab.url, page: (state.page = await readPage(tab)), force }, onUpdate)
+      : followCheck({ tabId: tab.id, url: tab.url, page: null, force }, onUpdate);
   } catch (err) {
-    setChecking(false);
     renderError(err);
   }
 }
 
-function setChecking(on) {
-  document.body.classList.toggle('checking', on);
-  const secs = ((performance.now() - (state?.startedAt || 0)) / 1000).toFixed(1);
-  $('#status').textContent = on ? 'Checking this page…' : state?.card ? `Checked this page in ${state.card.elapsed_s || secs}s` : '';
+function renderMeta() {
+  let host = '';
+  try { host = new URL(state?.url || '').host; } catch (_) { /* not a web page */ }
+  const secs = state?.card?.elapsed_s ?? ((performance.now() - (state?.startedAt || 0)) / 1000).toFixed(1);
+  const status = {
+    checking: 'Checking…', done: `Checked in ${secs}s`, idle: 'Waiting for a product page',
+    offline: 'Backend not running', error: "Couldn't check this page",
+  }[state?.status] || '';
+  const parts = [host && `<span class="host">${esc(host)}</span>`, status && `<span>${esc(status)}</span>`,
+    ['checking', 'done'].includes(state?.status) ? '<span>4 agents</span>' : ''].filter(Boolean);
+  $('#meta').innerHTML = parts.join('<span class="d"></span>');
 }
 
 // ------------------------------------------------------------------ page outlines + badge
@@ -119,97 +141,97 @@ function render() {
   const f = state.findings;
   const card = state.card;
   const by = (agent) => f.filter((x) => x.agent === agent);
-  const parts = [];
-
-  if (card) parts.push(verdictHtml(card));
-
-  // Shop safe?
-  parts.push(questionHtml({
-    id: 'safe', title: 'Shop safe?',
-    verdict: card?.safe,
-    live: by('trust').map(liveRow),
-  }));
-
-  // Honest deal?
   const addon = f.find((x) => x.type === 'prechecked_addon');
   const addonAmt = addon ? (addon.summary.match(/\$\d+(?:\.\d{2})?/) || [''])[0] : '';
-  const honestActions = card ? [
-    addon && !state.unticked ? `<button class="btn primary" data-act="untick">Untick ${esc(addonAmt)} add-on</button>` : '',
-    addon && state.unticked ? `<button class="btn" disabled>✓ Add-on unticked</button>` : '',
-    `<button class="btn" data-act="evidence" data-view="">See all evidence</button>`,
-  ].join('') : '';
-  parts.push(questionHtml({
-    id: 'honest', title: 'Honest deal?',
-    verdict: card?.honest,
-    live: by('deal').map(liveRow),
-    actions: honestActions,
-  }));
-
-  // Best safe price
   const bp = card?.best_price;
-  const bestActions = card ? [
-    bp?.url ? `<button class="btn go" data-act="go" data-url="${esc(bp.url)}">Go to ${esc(bp.store)}</button>` : '',
-    `<button class="btn" data-act="watch" ${state.watching ? 'disabled' : ''}>${state.watching ? '★ Watching' : '☆ Watch price'}</button>`,
-    bp?.url ? '' : `<button class="btn" data-act="evidence" data-view="stores">See why</button>`,
-  ].join('') : '';
-  parts.push(questionHtml({
-    id: 'best', title: 'Best safe price',
-    verdict: bp,
-    live: [...by('page'), ...by('price'), ...by('skeptic')].map(liveRow),
-    actions: bestActions,
-  }));
+  const parts = [verdictHtml(card)];
 
+  parts.push(sectionHtml({
+    id: 'safe', title: 'Shop safe?', verdict: card?.safe, live: by('trust').map(liveRow),
+  }));
+  parts.push(sectionHtml({
+    id: 'honest', title: 'Honest deal?', verdict: card?.honest, live: by('deal').map(liveRow),
+    actions: card ? [
+      addon && !state.unticked ? `<button class="btn primary" data-act="untick">Untick ${esc(addonAmt)} add-on</button>` : '',
+      state.unticked ? `<button class="btn" disabled>${ICONS.check}Add-on unticked</button>` : '',
+      `<button class="btn" data-act="evidence" data-view="">All evidence</button>`,
+    ].join('') : '',
+  }));
+  parts.push(sectionHtml({
+    id: 'best', title: 'Best safe price', verdict: bp, live: [...by('page'), ...by('price'), ...by('skeptic')].map(liveRow),
+    actions: card ? [
+      bp?.url ? `<button class="btn" data-act="go" data-url="${esc(bp.url)}">Go to ${esc(bp.store)}</button>` : '',
+      `<button class="btn" data-act="watch" ${state.watching ? 'disabled' : ''}>${state.watching ? `${ICONS.check}Watching` : `${ICONS.star}Watch price`}</button>`,
+      bp?.url ? '' : `<button class="btn" data-act="evidence" data-view="stores">See why</button>`,
+    ].join('') : '',
+  }));
   parts.push(agentsHtml());
   main.innerHTML = parts.join('');
+  renderMeta();
   wire();
   updateAsk();
 }
 
-function verdictHtml(c) {
-  const subtitle = state.unticked && c.subtitle.includes('$191') ? c.subtitle.replace('$191', '$186.01') : c.subtitle;
-  const alt = c.alt ? `
-    <div class="alt">
-      <div class="alt-text"><b>Safer choice: ${esc(c.alt.store)} · ${money(c.alt.total)}</b>Same model, new, full warranty</div>
-      <button class="btn go" data-act="go" data-url="${esc(c.alt.url)}">Go ›</button>
-    </div>` : '';
-  return `
-    <section class="card verdict ${c.tone}">
-      <div class="verdict-top">
-        <div class="v-icon ${c.tone}">${ICON[c.tone] || '!'}</div>
-        <div><div class="v-title">${esc(c.title)}</div><div class="v-sub">${esc(subtitle)}</div></div>
-      </div>${alt}
-    </section>`;
+function verdictHtml(card) {
+  if (!card) {
+    return `<section class="verdict pending" aria-busy="true"><div class="lbl">Verdict</div>
+      <span class="skeleton sk big"></span><span class="skeleton sk" style="width:80%"></span><div class="skeleton sk-stats"></div></section>`;
+  }
+  const s = summarize(card, state.findings, state.page);
+  let total = s.realTotal;
+  if (state.unticked && total != null) { // the user removed the add-on: take it off the real total
+    const amt = Number(((state.untickedSummary || '').match(/\$(\d+(?:\.\d{2})?)/) || [])[1]);
+    if (amt) total = Math.round((total - amt) * 100) / 100;
+  }
+  const struck = s.listed != null && total != null && total > s.listed + 0.005 ? `<small>${money(s.listed)}</small>` : '';
+  const alt = s.safer ? `
+    <div class="alt"><div class="ic">${ICONS.shield}</div>
+      <div class="tx"><div class="a1">${esc(s.safer.store)} · ${money2(s.safer.total)}</div><div class="a2">${esc(s.safer.note)}</div></div>
+      ${s.safer.url ? `<button class="go" data-act="go" data-url="${esc(s.safer.url)}">View${ICONS.chevron}</button>` : ''}</div>` : '';
+  const tone = s.tone === 'bad' ? 'bad' : card.tone; // confirmed tricks are red here too, matching the quick card
+  return `<section class="verdict ${esc(tone)}"><div class="lbl">Verdict</div>
+    <div class="vt">${esc(card.title)}</div><div class="vs">${esc(verdictReason(card, s))}</div>
+    <div class="stats">
+      <div class="stat"><div class="k">Real total</div><div class="v">${total != null ? money2(total) : '—'}${struck}</div></div>
+      <div class="stat"><div class="k">Tricks</div><div class="v ${s.tricks ? 'bad' : 'good'}">${s.tricks}</div></div>
+      <div class="stat"><div class="k">Store risk</div><div class="v ${s.storeTone}">${esc(s.storeRisk)}</div></div>
+    </div>${alt}</section>`;
 }
 
-function questionHtml({ id, title, verdict, live, actions = '' }) {
-  const status = verdict ? verdict.status : 'pending';
-  const pill = verdict
-    ? `<span class="pill ${verdict.status}">${esc(verdict.headline)}</span>`
-    : `<span class="pill unknown">Checking…</span>`;
+function verdictReason(card, s) {
+  const tricks = s.tricks ? `${s.tricks} trick${s.tricks === 1 ? '' : 's'} on this page` : '';
+  if (s.risky && tricks) return `Risky store and ${tricks}.`;
+  if (s.risky) return 'Risky store, though no tricks were found on this page.';
+  if (tricks) return `${tricks.charAt(0).toUpperCase()}${tricks.slice(1)}.`;
+  if (s.soft.length) return "Some claims on this page can't be verified yet.";
+  return card.safe?.status === 'unknown' ? "No tricks found; store checks aren't connected yet." : 'No tricks found on this page.';
+}
+
+function sectionHtml({ id, title, verdict, live, actions = '' }) {
+  const status = verdict
+    ? `<span class="st ${esc(verdict.status)}">${esc(verdict.headline)}</span>`
+    : '<span class="st pending">Checking…</span>';
   let rows;
   if (verdict) {
-    rows = verdict.reasons.map((r) => `
-      <li class="row"><span class="dot ${r.tone}"></span><span class="txt">${esc(r.text)}</span>
-      ${r.proof ? `<a href="#" class="proof" data-act="evidence" data-view="${esc(r.proof)}">${proofLabel(r.proof)}</a>` : ''}</li>`).join('');
+    rows = verdict.reasons.map((r) => `<li><span class="m ${esc(r.tone)}"></span><span class="tx">${esc(r.text)}</span>
+      ${r.proof ? `<a href="#" class="pf" data-act="evidence" data-view="${esc(r.proof)}">${proofLabel(r.proof)}</a>` : ''}</li>`).join('');
   } else if (live.length) {
     rows = live.join('');
   } else {
-    rows = '<li><div class="skeleton sk" style="width:86%"></div><div class="skeleton sk" style="width:64%"></div></li>';
+    rows = '<li aria-hidden="true"><span class="skeleton sk" style="width:86%"></span></li><li aria-hidden="true"><span class="skeleton sk" style="width:62%"></span></li>';
   }
-  return `
-    <section class="card q" id="q-${id}">
-      <div class="q-head"><div class="q-icon ${status}">${ICON[status]}</div><div class="q-title">${title}</div>${pill}</div>
-      <ul class="rows">${rows}</ul>
-      ${actions ? `<div class="actions">${actions}</div>` : ''}
-    </section>`;
+  return `<section class="sec" id="q-${id}"${verdict ? '' : ' aria-busy="true"'}>
+    <div class="sh"><span class="ico">${SECTION_ICON[id]}</span><span class="ttl">${title}</span>${status}</div>
+    <ul class="rows">${rows}</ul>${actions ? `<div class="acts">${actions}</div>` : ''}</section>`;
 }
 
 function liveRow(f) {
+  if (f.model === PENDING) return `<li class="live"><span class="m"></span><span class="tx">${esc(f.summary)}</span></li>`;
   const tone = f.status === 'rejected' ? 'caution' : f.status === 'unverified' ? 'unknown'
-    : f.agent === 'page' ? 'unknown' : f.status === 'confirmed' && (f.agent === 'skeptic') ? 'good'
+    : f.agent === 'page' ? 'unknown' : f.status === 'confirmed' && f.agent === 'skeptic' ? 'good'
     : TRICK_TYPES.has(f.type) || f.agent === 'trust' ? 'bad' : 'caution';
   const tag = f.status === 'rejected' ? 'Skipped' : f.status === 'proposed' ? 'Checking' : '';
-  return `<li class="row live"><span class="dot ${tone}"></span><span class="txt">${tag ? `<span class="tag">${tag}</span>` : ''}${esc(f.summary)}</span></li>`;
+  return `<li class="live"><span class="m ${tone}"></span><span class="tx">${tag ? `<span class="tag">${tag}</span>` : ''}${esc(f.summary)}</span></li>`;
 }
 
 function proofLabel(view) {
@@ -218,43 +240,42 @@ function proofLabel(view) {
 
 function agentsHtml() {
   const f = state.findings;
-  const counts = {
-    trust: f.filter((x) => x.agent === 'trust' || x.challenged_by === 'trust').length,
-    deal: f.filter((x) => x.agent === 'deal').length,
-    price: f.filter((x) => x.agent === 'price').length,
-    skeptic: f.filter((x) => x.agent === 'skeptic' || x.challenged_by === 'skeptic').length,
-  };
+  const challenges = f.filter((x) => x.challenged_by).length;
   const last = f[f.length - 1];
-  const activeAgent = !state.card && last ? (last.challenged_by || last.agent) : null;
-  const chips = AGENTS.map((a) => `
-    <span class="chip ${activeAgent === a.key ? 'active' : ''}"><i style="background:${a.color}">${a.name[0]}</i>${a.name}${a.key === 'skeptic' && counts.skeptic ? ` <span class="n">· ${counts.skeptic}</span>` : ''}</span>`).join('');
-  return `<section class="agents"><div class="agents-title">Agents on this check</div><div class="chips">${chips}</div></section>`;
+  const active = !state.card && last ? (last.challenged_by || last.agent) : null;
+  const items = AGENTS.map(([key, name]) => {
+    const extra = key === 'skeptic' && challenges ? ` · ${challenges} challenge${challenges === 1 ? '' : 's'}` : '';
+    const cls = ['ag', active === key ? 'active' : '', key === 'skeptic' && challenges ? 'challenged' : ''].filter(Boolean).join(' ');
+    return `<span class="${cls}"><i></i>${name}${extra}</span>`;
+  }).join('');
+  return `<section class="agents">Checked by ${items}</section>`;
 }
 
 function renderIdle() {
   $('#ask').hidden = true;
-  setChecking(false);
-  $('#status').textContent = 'Waiting for a product page';
-  main.innerHTML = `<div class="card empty"><img class="logo" src="../icons/logo.svg" alt="" style="margin:0 auto">
-    <h2>Open a product page</h2><p>Pricise checks the page you are on: is the shop safe, is the deal honest, and is there a better safe price.</p></div>`;
+  state.status = 'idle';
+  renderMeta();
+  main.innerHTML = `<div class="empty"><img class="logo" src="../icons/logo.svg" alt="">
+    <h2>Open a product page</h2><p>Pricise checks the page you're on: is the shop safe, is the deal honest, and is there a better safe price.</p></div>`;
 }
 
 function renderOffline() {
   $('#ask').hidden = true;
-  setChecking(false);
-  $('#status').textContent = 'Backend not running';
-  main.innerHTML = `<div class="card empty"><h2>Start the local backend</h2>
+  state.status = 'offline';
+  renderMeta();
+  main.innerHTML = `<div class="empty"><h2>Start the local backend</h2>
     <p>Pricise checks pages on this laptop. In the repo folder, run:</p>
     <p><code>python -m uvicorn backend.stub_server:app --port 8787</code></p>
-    <button class="btn primary" id="retry">Try again</button></div>`;
+    <button class="btn primary" id="retry">Check again</button></div>`;
   $('#retry').addEventListener('click', () => runCheck(true));
 }
 
 function renderError(err) {
   $('#ask').hidden = true;
-  $('#status').textContent = 'Could not check this page';
-  main.innerHTML = `<div class="card empty"><h2>Could not read this page</h2><p class="muted">${esc(err?.message || err)}</p>
-    <button class="btn primary" id="retry">Try again</button></div>`;
+  state.status = 'error';
+  renderMeta();
+  main.innerHTML = `<div class="empty"><h2>Couldn't read this page</h2><p class="muted">${esc(err?.message || err)}</p>
+    <button class="btn primary" id="retry">Check again</button></div>`;
   $('#retry').addEventListener('click', () => runCheck(true));
 }
 
@@ -277,14 +298,13 @@ function updateAsk() {
 
 function renderThread() {
   const chips = $('#ask-chips');
-  chips.innerHTML = state?.chat.length ? '' : SUGGESTIONS.map((q) => `<button class="ask-chip" type="button">${esc(q)}</button>`).join('');
+  chips.innerHTML = state?.chat.length ? '' : SUGGESTIONS.map((q) => `<button class="chip" type="button">${esc(q)}</button>`).join('');
   chips.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => ask(b.textContent)));
   const seen = state?.chatShown || 0; // only messages added since the last draw get the fade-in
   $('#ask-thread').innerHTML = (state?.chat || []).map((m, i) => {
     const cls = (m.role === 'user' ? 'user' : `bot${m.pending ? ' pending' : ''}${m.error ? ' error' : ''}`) + (i >= seen ? ' new' : '');
-    const tags = m.sources?.length
-      ? `<div class="srcs">${m.sources.map((t) => `<span class="src-tag">${esc(t.replace(/_/g, ' '))}</span>`).join('')}</div>` : '';
-    return `<div class="msg ${cls}">${esc(m.text)}${tags}</div>`;
+    const src = m.sources?.length ? `<span class="src">From: ${esc(m.sources.map((t) => t.replace(/_/g, ' ')).join(', '))}</span>` : '';
+    return `<div class="msg ${cls}">${esc(m.text)}${src}</div>`;
   }).join('');
   if (state) state.chatShown = state.chat.length;
   updateAsk();
@@ -314,7 +334,7 @@ async function ask(text) {
   $('#ask-input').focus();
 }
 
-// ------------------------------------------------------------------ quick verdict card setting (footer)
+// ------------------------------------------------------------------ quick card setting (footer)
 async function renderCardSetting() {
   const el = $('#card-setting');
   const { card, neverSites } = await getSettings();
@@ -351,6 +371,7 @@ async function onAction(e) {
     await chrome.tabs.sendMessage(state.tab.id, { type: 'pricise:untick', selector: sel }).catch(() => {});
     await api.untick(state.checkId, sel).catch(() => {});
     state.unticked = true;
+    state.untickedSummary = addon?.summary;
     state.findings = state.findings.filter((x) => x !== addon);
     render();
     highlightOnPage();

@@ -8,37 +8,32 @@
   <link rel="stylesheet" href="panel.css">
 </head>
 <body>
-  <header class="head">
+  <header class="hd">
     <img class="logo" src="../icons/logo.svg" alt="">
-    <div class="head-text">
-      <div class="brand">Pricise</div>
-      <div class="sub" id="status">Getting ready…</div>
-    </div>
-    <span class="pill info agents-pill" id="agents-pill"><span class="live-dot"></span>4 agents</span>
-    <button class="icon-btn" id="recheck" title="Check this page again" aria-label="Check this page again">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M20 11a8 8 0 1 0-2.3 5.7"/><path d="M20 4v7h-7"/></svg>
-    </button>
+    <span class="t">Pricise</span>
+    <button class="ib" id="recheck" type="button" title="Check this page again" aria-label="Check this page again"></button>
   </header>
+  <div class="meta" id="meta" aria-live="polite"></div>
 
   <main id="main">
     <!-- Filled in by panel.js -->
   </main>
 
   <!-- Outside <main> so live re-renders of the check never wipe the conversation. Filled in by panel.js. -->
-  <section class="card ask" id="ask" hidden>
-    <div class="ask-title">Ask about this page</div>
-    <div class="ask-chips" id="ask-chips"></div>
-    <div class="ask-thread" id="ask-thread" aria-live="polite"></div>
-    <form class="ask-form" id="ask-form">
-      <input id="ask-input" type="text" maxlength="300" autocomplete="off" placeholder="Ask about this page…" aria-label="Ask about this page">
-      <button class="btn primary" type="submit" id="ask-send">Ask</button>
+  <section class="chat" id="ask" hidden aria-labelledby="ask-title">
+    <div class="lbl" id="ask-title">Ask about this page</div>
+    <div class="chips" id="ask-chips"></div>
+    <div class="thread" id="ask-thread" aria-live="polite"></div>
+    <form class="inp" id="ask-form">
+      <input id="ask-input" type="text" maxlength="300" autocomplete="off" placeholder="Ask a question…" aria-label="Ask about this page">
+      <button class="sb" type="submit" id="ask-send" aria-label="Send"></button>
     </form>
-    <div class="ask-note" id="ask-note"></div>
+    <div class="note" id="ask-note"></div>
   </section>
 
-  <footer class="foot">
-    <span>&#128274; Analysed on this laptop · no personal data sent</span>
-    <span class="foot-links"><a href="#" id="card-setting">Quick card: on</a> · <a href="#" id="open-wishlist">Wishlist</a></span>
+  <footer class="ft">
+    <span class="lock" id="ft-lock"></span><span>Analysed on this laptop</span>
+    <span class="ft-links"><a href="#" id="card-setting">Quick card: on</a><a href="#" id="open-wishlist">Wishlist</a></span>
   </footer>
   <script type="module" src="panel.js"></script>
 </body>

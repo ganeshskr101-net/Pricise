@@ -85,3 +85,39 @@ def test_unverified_tricks_are_not_counted():
     page = PageFacts(url="https://x.example", host="x.example")
     f = stub_server._f("c", "deal", "drip_fees", "unverified", "Couldn't check late checkout fees.")
     assert stub_server.real_card("c", page, [f], 1.0).tricks == 0
+
+
+def test_agent_deal_real_sends_a_verdict_early_and_firms_it_up(monkeypatch):
+    """The first verdict goes out when the fast Deal tools finish; later ones arrive as the slow proof lands."""
+    import asyncio as aio
+    from backend.agents import deal
+    from backend.tools.common import ToolResult, finding
+
+    async def slow_runahead(cid, url, page):
+        await aio.sleep(0.3)
+        return ToolResult([finding(cid, "drip_fees", "confirmed", "$37.01 in fees appear only at checkout step 4 (x). Real total: $191.00.")],
+                          {"fees": [{"label": "Item", "amount": 149.0, "step": 1}], "total": 191.0})
+
+    async def slow_timer(cid, url, page):
+        await aio.sleep(0.6)
+        return ToolResult([finding(cid, "resetting_timer", "confirmed", "The timer restarts at 09:59 on every visit.")])
+    monkeypatch.setenv("AGENT_DEAL", "real")
+    monkeypatch.setattr(deal, "check_runahead", slow_runahead)
+    monkeypatch.setattr(deal, "check_timer", slow_timer)
+    page = {"url": "http://localhost:8787/storelab/audiodealz/", "host": "localhost:8787",
+            "product": {"price": 149.0, "sku": "WH1000XM5/B"},
+            "signals": [{"type": "claimed_discount", "selector": "#deal-badge", "text": "List Price: $249.00", "amount": 249.0},
+                        {"type": "countdown", "selector": "#timer", "text": "Deal ends in 09:58"}]}
+    cid = client.post("/check?fresh=1", json={"url": page["url"], "page": page}).json()["check_id"]
+    events = _events(cid)
+    kinds = [e["kind"] if e["kind"] == "final_card" else e["finding"]["type"] for e in events]
+    first_card = kinds.index("final_card")
+    assert first_card < kinds.index("resetting_timer")  # verdict before the timer proof
+    first = events[first_card]["card"]
+    assert "Checking if the timer resets…" in [r["text"] for r in first["honest"]["reasons"]]
+    last = events[-1]["card"]
+    assert last["tricks"] == 3 and "$191" in last["subtitle"]
+    assert all(r["text"] != "Checking if the timer resets…" for r in last["honest"]["reasons"])
+    stored = client.get(f"/check/{cid}").json()
+    assert all(f.get("model") != deal.PENDING for f in stored["findings"])  # no stale "still checking" rows
+    assert set(stored["evidence_data"]["timings"]) >= {"runahead", "timer"}

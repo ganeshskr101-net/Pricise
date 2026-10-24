@@ -14,9 +14,12 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
+import re
 import time
 import uuid
+from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
@@ -38,16 +41,42 @@ from backend.contracts import (
     WishlistItem,
 )
 
-from backend.agents import chat as chat_agent
-from backend.agents.chat import ChatRequest, ChatResponse  # proposed for backend/contracts.py
+from backend.env import load_dotenv
+
+load_dotenv()  # before anything reads settings; shell variables still win, no .env is fine
+
+from backend.agents import chat as chat_agent  # noqa: E402
+from backend.agents.chat import ChatRequest, ChatResponse  # noqa: E402  (proposed for backend/contracts.py)
 
 ROOT = Path(__file__).resolve().parent.parent
-app = FastAPI(title="Pricise stub backend", version="0.1")
+@asynccontextmanager
+async def lifespan(_app):
+    """With the real Deal Agent, launch the hidden browser once at startup so no check pays a cold start."""
+    from backend.tools import browser
+    if _deal_mode() == "real":
+        try:
+            await browser.warm()
+        except Exception as err:  # no Playwright/Chromium: the Deal Agent reports "couldn't check" per tool instead
+            logging.getLogger("pricise").warning("hidden browser not started: %s", err)
+    yield
+    await browser.shutdown()
+
+
+app = FastAPI(title="Pricise stub backend", version="0.1", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 app.mount("/storelab", StaticFiles(directory=ROOT / "storelab", html=True), name="storelab")
 (ROOT / "traces").mkdir(exist_ok=True)
 app.mount("/traces", StaticFiles(directory=ROOT / "traces"), name="traces")  # Deal Agent screenshots (timer test, run-ahead)
 app.mount("/bench", StaticFiles(directory=ROOT / "bench", html=True), name="bench")  # labelled bench pages (made-up stores)
+
+# Timing logs from the agents ("pricise.*" loggers) show up in the uvicorn console.
+_log = logging.getLogger("pricise")
+if not _log.handlers:
+    _h = logging.StreamHandler()
+    _h.setFormatter(logging.Formatter("%(asctime)s %(name)s: %(message)s", "%H:%M:%S"))
+    _log.addHandler(_h)
+    _log.setLevel(logging.INFO)
+
 
 CHECKS: dict[str, dict[str, Any]] = {}
 DEMO_DELAY = 0.55  # seconds between streamed findings on the demo page
@@ -215,7 +244,6 @@ def real_findings(cid: str, page: PageFacts) -> list[Finding]:
 
 
 def _fee_name(text: str) -> str:
-    import re
     m = re.search(r"([A-Za-z ]*?fee)", text, re.I)
     return (m.group(1).strip().lower() if m else "fee")
 
@@ -289,12 +317,13 @@ def root():
 
 
 @app.post("/check")
-def start_check(req: CheckRequest) -> dict:
+def start_check(req: CheckRequest, fresh: bool = False) -> dict:
+    """fresh=1 (query string, optional): re-run every check instead of reusing recent results (the panel's refresh button)."""
     cid = uuid.uuid4().hex[:12]
     page = req.page or PageFacts(url=req.url)
     demo = _is_demo(req.url)
     CHECKS[cid] = {"check_id": cid, "url": req.url, "demo": demo, "page": page.model_dump(), "started": time.time(),
-                   "findings": [], "final_card": None,
+                   "findings": [], "final_card": None, "fresh": fresh,
                    "evidence_data": demo_evidence() if demo else real_evidence(page)}
     return {"check_id": cid}
 
@@ -317,9 +346,18 @@ async def check_events(cid: str):
         findings = demo_findings(cid) if chk["demo"] else real_findings(cid, page)
         delay = DEMO_DELAY if chk["demo"] else 0.18
         chk["findings"] = []
-        source = _with_real_deal(cid, chk, page, findings, delay) if _deal_mode() == "real" else _paced(findings, delay)
+        if _deal_mode() == "real":
+            async for kind, item in _with_real_deal(cid, chk, page, findings, delay):
+                if kind == "finding":
+                    item.ts = time.time()
+                    chk["findings"].append(item.model_dump())
+                    yield f"data: {json.dumps({'kind': 'finding', 'finding': item.model_dump()})}\n\n"
+                else:
+                    chk["final_card"] = item.model_dump()
+                    yield f"data: {json.dumps({'kind': 'final_card', 'card': item.model_dump()})}\n\n"
+            return
         streamed = []
-        async for f in source:
+        async for f in _paced(findings, delay):
             f.ts = time.time()
             streamed.append(f)
             chk["findings"].append(f.model_dump())
@@ -342,31 +380,97 @@ async def _paced(findings: list[Finding], delay: float):
 
 
 async def _with_real_deal(cid: str, chk: dict, page: PageFacts, findings: list[Finding], delay: float):
-    """Scripted non-deal findings (Trust, Price, Skeptic, page) paced as before, merged with the real Deal Agent's live findings."""
+    """Scripted non-deal findings (Trust, Price, Skeptic, page) paced as before, merged with the real Deal Agent's live findings.
+    Yields ("finding", Finding) and ("card", FinalCard). A verdict goes out as soon as the fast Deal tools finish (~0.1 s) and
+    again each time a slow one (run-ahead, timer test) lands, so it firms up as proof arrives. The last card is the final one."""
     from backend.agents import deal
 
     queue: asyncio.Queue = asyncio.Queue()
+    done: set[str] = set()
 
     async def scripted():
         async for f in _paced([f for f in findings if f.agent != "deal"], delay):
-            await queue.put(f)
+            await queue.put(("finding", f))
 
     async def agent():
-        async for f in deal.iter_deal(cid, chk["url"], page):
-            await queue.put(f)
+        async for f in deal.iter_deal(cid, chk["url"], page, fresh=chk.get("fresh", False),
+                                      on_tool_done=lambda name, _secs: queue.put_nowait(("tool", name))):
+            await queue.put(("finding", f))
 
     async def both():
         await asyncio.gather(scripted(), agent(), return_exceptions=True)
         await queue.put(None)  # end of stream
 
     runner = asyncio.create_task(both())
+    seen: list[Finding] = []
+    sent_card = False
     try:
-        while (f := await queue.get()) is not None:
-            yield f
-        chk["evidence_data"].update(deal.EVIDENCE.get(cid, {}))  # real price history, timer frames, fee table for the evidence page
+        while (item := await queue.get()) is not None:
+            kind, value = item
+            if kind == "finding":
+                seen.append(value)
+                yield "finding", value
+                continue
+            done.add(value)
+            fast_done = set(deal.FAST_TOOLS) <= done
+            if fast_done and (not sent_card or value in deal.SLOW_TOOLS):
+                sent_card = True
+                yield "card", _live_card(cid, chk, page, seen, done, deal)
+        yield "card", _live_card(cid, chk, page, seen, done, deal)  # the final verdict, with the total elapsed time
     finally:
         runner.cancel()
         deal.EVIDENCE.pop(cid, None)
+
+
+def _live_card(cid: str, chk: dict, page: PageFacts, seen: list[Finding], done: set[str], deal) -> FinalCard:
+    """The verdict so far. Placeholders for slow checks that are still running show as "Checking…" reasons."""
+    chk["evidence_data"].update(deal.EVIDENCE.get(cid, {}))  # real price history, timer frames, fee table, timings
+    pending = [f for f in seen if f.model == deal.PENDING and deal.TYPE_TOOL.get(f.type) not in done]
+    shown = [f for f in seen if f.model != deal.PENDING]
+    # Finished placeholders leave the stored check, so GET /check and the chat never see a stale "still checking" row.
+    chk["findings"] = [d for d in chk["findings"]
+                       if not (d.get("model") == deal.PENDING and deal.TYPE_TOOL.get(d.get("type")) in done)]
+    elapsed = time.time() - chk["started"]
+    if chk["demo"]:
+        return _demo_card_live(cid, elapsed, shown, pending, chk["evidence_data"])
+    card = real_card(cid, page, shown, elapsed)
+    if pending:
+        kept = [r for r in card.honest.reasons if not r.text.startswith("No timers")]
+        card.honest.reasons = (kept + [Reason(text=f.summary, tone="unknown") for f in pending])[:5]
+    return card
+
+
+def _money_short(v: float) -> str:
+    return f"${v:,.0f}" if float(v).is_integer() else f"${v:,.2f}"
+
+
+def _demo_card_live(cid: str, elapsed: float, deal_findings: list[Finding], pending: list[Finding], ev: dict) -> FinalCard:
+    """The AudioDealz demo card, with "Honest deal?" built from the real Deal Agent's findings instead of the script."""
+    card = demo_card(cid, elapsed)
+    by = {f.type: f for f in deal_findings}  # the latest finding of each type
+    fake, timer, fees = by.get("fake_discount"), by.get("resetting_timer"), by.get("drip_fees")
+    reasons = []
+    for f, text, proof in ((fake, "Fake 40% off: it was $149 for 81 of 90 days", "chart"),
+                           (timer, "Timer resets on every visit", "replay"),
+                           (fees, None, "fees")):
+        if not f:
+            continue
+        if f.status != "confirmed":
+            reasons.append(Reason(text=f.summary, tone="unknown"))
+            continue
+        if text is None:  # "$37.01 in fees appear only at checkout step 4 (...)" -> "$37 in fees appear at checkout step 4"
+            m = re.match(r"\$([\d,.]+) in fees appear only at checkout step (\d+)", f.summary)
+            text = f"${float(m.group(1).replace(',', '')):,.0f} in fees appear at checkout step {m.group(2)}" if m else f.summary
+        reasons.append(Reason(text=text, tone="bad", proof=proof))
+    reasons += [Reason(text=p.summary, tone="unknown") for p in pending]
+    n = sum(1 for f in (fake, timer, fees) if f and f.status == "confirmed")
+    tricks = f"{n} trick{'s' if n != 1 else ''}"
+    total = ev.get("total") if fees and fees.status == "confirmed" else None
+    card.tricks = n
+    card.honest = Verdict(status="bad" if n else "unknown", headline=tricks + (" so far" if pending else ""), reasons=reasons)
+    card.subtitle = (f"Risky store · {tricks} · real total {_money_short(total)}, not $149" if total
+                     else f"Risky store · {tricks} so far")
+    return card
 
 
 @app.post("/chat")

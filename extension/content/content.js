@@ -230,35 +230,120 @@
     return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
   }
 
-  // ---------------------------------------------------------------- automatic check on product pages
-  // A product page: JSON-LD Product, a price next to the main heading, or a trick signal that comes with money
-  // (pre-ticked paid add-on, ticking countdown, fee, or a was-price). Anything else: do nothing.
-  function priceNearH1() {
-    const h1 = [...document.querySelectorAll('h1')].find(visible);
-    let node = h1;
-    for (let i = 0; node && i < 4; i++, node = node.parentElement) {
-      const text = node.innerText || '';
-      if (text.length > 3000) break;
-      if (PRICE_RE.test(text.replace(h1.innerText || '', ''))) return true;
+  // ---------------------------------------------------------------- automatic check on single product pages (any site)
+  // A product page has structured product data (JSON-LD Product/ProductGroup, og:type=product, product:price meta,
+  // microdata Product/Offer) OR one h1 + one prominent price + an add-to-cart/buy button.
+  // Not product pages: search results and category/listing pages (many products), cart/checkout pages without a product,
+  // and non-shopping sites. Read only: this decides whether to ask for a check, nothing else.
+  const BUY_RE = /add to (cart|bag|basket|trolley)|buy (it )?now|add to order|pre-?order now|in den warenkorb|ajouter au panier/i;
+  const SEARCH_URL_RE = /\/s\?|\/search\b|\/sch\/|[?&](k|q|d|query|search_query|searchterm|keyword|keywords|_nkw|text|term|st)=/i;
+  const LISTING_PATH_RE = /\/(pl|c|category|categories|collections?|browse|department|shop)(\/[^/]*)?\/?$/i;
+  const CART_URL_RE = /\/(cart|basket|bag|checkout)(\b|\.|\/|$)/i;
+
+  function ldTopLevel() {
+    const out = [];
+    document.querySelectorAll('script[type="application/ld+json"]').forEach((s) => {
+      try {
+        const data = JSON.parse(s.textContent);
+        for (const d of [].concat(data)) {
+          if (!d || typeof d !== 'object') continue;
+          out.push(d, ...(Array.isArray(d['@graph']) ? d['@graph'] : []));
+        }
+      } catch (_) { /* ignore broken JSON-LD */ }
+    });
+    return out.filter((d) => d && typeof d === 'object');
+  }
+  const ldType = (d) => [].concat(d['@type'] || []).map(String);
+
+  function meta(prop) {
+    return document.querySelector(`meta[property="${prop}"],meta[name="${prop}"]`)?.getAttribute('content') || '';
+  }
+
+  function buyButtons() {
+    return [...document.querySelectorAll('button, input[type=submit], input[type=button], a, [role=button]')]
+      .filter((el) => BUY_RE.test(el.innerText || el.value || el.getAttribute('aria-label') || '') && visible(el));
+  }
+
+  function prominentPrice() {
+    const limit = window.innerHeight * 1.6;
+    const cands = new Set(findText(PRICE_RE, 40));
+    document.querySelectorAll('[class*=price],[id*=price],[itemprop=price],[data-testid*=price]').forEach((el) => cands.add(el));
+    for (const el of cands) {
+      if (!visible(el) || el.closest('s,del,strike') || !PRICE_RE.test(el.innerText || '')) continue;
+      const r = el.getBoundingClientRect();
+      if (r.top + window.scrollY > limit) continue;
+      const sizes = [el, ...el.querySelectorAll('*')].slice(0, 8).map((n) => parseFloat(getComputedStyle(n).fontSize) || 0);
+      if (Math.max(...sizes) >= 18) return true;
     }
     return false;
   }
 
-  function isTrickSignal(s) {
-    if (['prechecked_addon', 'countdown', 'resetting_timer'].includes(s.type)) return true;
-    return ['drip_fees', 'claimed_discount'].includes(s.type) && s.amount != null; // "-5%" alone could be a news headline
+  function isProductPage() {
+    const ld = ldTopLevel();
+    const ldProducts = ld.filter((d) => ldType(d).some((t) => t === 'Product' || t === 'ProductGroup')).length;
+    const itemList = ld.some((d) => ldType(d).includes('ItemList') && [].concat(d.itemListElement || []).length >= 3);
+    const microProducts = document.querySelectorAll('[itemscope][itemtype*="schema.org/Product"]').length;
+    const microOffer = document.querySelector('[itemscope][itemtype*="schema.org/Offer"], [itemprop=offers]');
+    const buttons = buyButtons();
+    const top = (el) => el.getBoundingClientRect().top + window.scrollY;
+    const firstScreen = buttons.filter((el) => top(el) < window.innerHeight);
+    const nearTop = buttons.filter((el) => top(el) < window.innerHeight * 1.6);
+    const path = location.pathname + location.search;
+
+    // Several buy buttons on the first screen means a grid of products. "Related items" carousels sit lower on a
+    // product page, so they don't count.
+    const listing = ldProducts > 1 || (itemList && ldProducts === 0) || microProducts > 2 || firstScreen.length >= 4;
+    if (listing) return false;
+    const structured = ldProducts === 1 || /^product/i.test(meta('og:type')) || !!meta('product:price:amount')
+      || !!meta('og:price:amount') || microProducts === 1 || (!!microOffer && microProducts <= 1);
+    if (structured) return true;
+    // Without structured data, the URL tells search, category and cart pages apart from a product.
+    const listingPath = LISTING_PATH_RE.test(location.pathname) && !/\/products?\//i.test(location.pathname);
+    if (SEARCH_URL_RE.test(path) || listingPath || CART_URL_RE.test(location.pathname)) return false;
+    const h1s = [...document.querySelectorAll('h1')].filter(visible);
+    return h1s.length === 1 && nearTop.length >= 1 && prominentPrice();
   }
 
-  async function autoCheck() {
+  let checkedUrl = null;
+  async function autoCheck(retries = 1) {
     if (window.top !== window) return;
+    const url = location.href;
     const s = (await chrome.storage.local.get('pricise:settings'))['pricise:settings'] || {};
     if ((s.neverSites || []).includes(location.host)) return;
-    const looksLikeProduct = !!readJsonLd() || priceNearH1();
+    if (!isProductPage()) {
+      // Some shops render the product after load: look once more before giving up.
+      if (retries > 0) setTimeout(() => { if (location.href === url) autoCheck(retries - 1); }, 2500);
+      return;
+    }
+    if (checkedUrl === url) return;
+    checkedUrl = url;
     const page = await readPage();
-    if (!looksLikeProduct && !page.signals.some(isTrickSignal)) return;
+    if (location.href !== url) return; // moved on while reading
     chrome.runtime.sendMessage({ type: 'pricise:auto-check', page }).catch(() => {});
   }
   autoCheck().catch(() => {});
+
+  // Single-page shops (Amazon, Walmart, Shopify themes) change the URL without reloading. The content script can't see the
+  // page's own history.pushState calls, so watch the signals it can: popstate, the Navigation API, and the <title> changing.
+  let lastUrl = location.href;
+  let settle = null;
+  function onMaybeNewUrl() {
+    if (location.href === lastUrl) return;
+    lastUrl = location.href;
+    window.__priciseRemoveCard?.();
+    clearMarks();
+    clearTimeout(settle);
+    settle = setTimeout(() => autoCheck(1).catch(() => {}), 1200); // give the new product a moment to render
+  }
+  window.addEventListener('popstate', onMaybeNewUrl);
+  window.navigation?.addEventListener?.('navigatesuccess', onMaybeNewUrl);
+  const titleWatch = new MutationObserver(onMaybeNewUrl);
+  const watchTitle = () => {
+    const t = document.querySelector('head > title');
+    if (t) titleWatch.observe(t, { childList: true, characterData: true, subtree: true });
+  };
+  watchTitle();
+  if (document.head) new MutationObserver(() => { watchTitle(); onMaybeNewUrl(); }).observe(document.head, { childList: true });
 
   // ---------------------------------------------------------------- outlines on the page
   let marks = [];

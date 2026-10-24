@@ -1,6 +1,6 @@
 """Resetting countdown test.
 
-Store Lab: load the page in 3 fresh browser contexts TIMER_GAP_S apart (default 20 s in SAMPLE_MODE, 120 s otherwise), read the
+Store Lab: load the page in 3 fresh browser contexts TIMER_GAP_S apart (default 3 s in SAMPLE_MODE, 120 s otherwise), read the
 countdown and screenshot it each time. A real deadline keeps counting down between visits; a fake one restarts.
 Real pages: never load the site from here; pass through what the extension saw (countdown / resetting_timer signals).
 """
@@ -34,7 +34,8 @@ FIND_TIMER_JS = """(src) => {
 def timer_gap_s() -> float:
     if os.environ.get("TIMER_GAP_S"):
         return float(os.environ["TIMER_GAP_S"])
-    return 20.0 if os.environ.get("SAMPLE_MODE", "true").lower() in {"1", "true", "yes"} else 120.0
+    # 3 s is enough to prove a reset: a real countdown drops ~3 s between visits, a fake one shows the same start again.
+    return 3.0 if os.environ.get("SAMPLE_MODE", "true").lower() in {"1", "true", "yes"} else 120.0
 
 
 def timeout_s(gap: Optional[float] = None) -> float:

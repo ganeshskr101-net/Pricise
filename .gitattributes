@@ -1,0 +1,4 @@
+# Shell scripts must keep LF line endings, even when cloned on Windows.
+*.sh text eol=lf
+# PowerShell scripts work best with CRLF on Windows.
+*.ps1 text eol=crlf
