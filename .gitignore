@@ -1,0 +1,27 @@
+# Secrets (never commit; keep .env.example with placeholders only)
+.env
+.env.example
+# Agent traces and logs
+traces/
+ 
+# Python
+__pycache__/
+*.pyc
+.pytest_cache/
+.venv/
+venv/
+ 
+# Node / extension tooling
+node_modules/
+ 
+# Bench output
+bench/out/*.png
+ 
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+ 
+# Abel's local-only placeholder until backend/contracts.py lands
+backend/_finding_stub.py
+backend/tests/test_finding_stub.py
