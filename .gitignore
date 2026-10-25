@@ -12,6 +12,9 @@ traces/
 bench/out/
 bench/results.json
 
+# Local shopper memory (H-MEM notes, outbox, audit log): personal data, never committed
+.pricise-data/
+
 # Local tool settings
 .claude/settings.local.json
 settings.local.json
