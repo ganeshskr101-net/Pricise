@@ -108,6 +108,22 @@ def test_rule_text_is_parsed_and_never_stored():
     assert (item["target"], item["new_only"], item["trusted_only"]) == (300.0, True, False)
 
 
+def test_sidecar_down_costs_one_connection_attempt_for_a_whole_catch_up(monkeypatch):
+    """Back-off: after one refused connection the client stops trying for RETRY_AFTER_S, so a 30-day catch-up does not
+    wait for a refused connection on every chunk (about 2 s each on Windows)."""
+    from backend.engines import markovian
+    from backend.tests.test_world_model_dedupe import unused_port
+
+    monkeypatch.setenv("WORLD_MODEL_URL", f"http://127.0.0.1:{unused_port()}")  # loopback, nothing listening
+    attempts = []
+    real_open = markovian._OPENER.open
+    monkeypatch.setattr(markovian._OPENER, "open", lambda *a, **k: attempts.append(1) or real_open(*a, **k))
+    watch.sync_items(DEMO)
+    chain = markovian.SidecarChain()
+    assert alerts(watch.advance_to(30, chain=chain)) == DEMO_ALERTS
+    assert len(attempts) == 1 and chain.local_chunks == 30
+
+
 # bounded catch-up, resume, going back
 
 def test_catch_up_runs_in_bounded_chains_with_flat_carryover():

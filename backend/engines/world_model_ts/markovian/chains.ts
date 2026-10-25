@@ -18,7 +18,9 @@ import { Markovian, estimateTokens } from "./index.ts";
 import type { ChunkConfig, MarkovianRun } from "./index.ts";
 
 export const MAX_OPEN_CHAINS = 4;
-export const CHAIN_CONFIG: Partial<ChunkConfig> = { chunkSize: 2000, maxChunks: 8, carryoverTokens: 256, overlapTokens: 0 };
+// carryoverTokens 512: the watch's carryover for 20 items, worst case, is 502 estimated tokens (measured), so the engine
+// keeps it as sent (marker level) instead of its heuristic fallback. chunkSize must be >= 400 + carryoverTokens + 1200.
+export const CHAIN_CONFIG: Partial<ChunkConfig> = { chunkSize: 3000, maxChunks: 8, carryoverTokens: 512, overlapTokens: 0 };
 export const CHAIN_ID_RE = /^c-[0-9a-f]{16}$/;
 export const MAX_GOAL = 300;
 export const MAX_TEXT = 4000;
