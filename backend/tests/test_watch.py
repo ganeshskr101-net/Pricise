@@ -78,6 +78,23 @@ def test_no_watch_rule_means_no_alert():
     assert st["lamp"]["has_rule"] is False and st["lamp"]["last_price"] == 1.0 and not st["lamp"]["alert_sent"]
 
 
+def test_trusted_only_needs_a_safe_store_even_when_the_offer_is_not_held():
+    watch.sync_items([{"id": "shoes", "target": 90, "rule": "Under $90 · trusted only"},
+                      {"id": "socks", "target": 90, "rule": "Under $90"}])
+    caution = [obs(1, 10, 84, store="store-f", store_trust="caution", held=False)]
+    feed = watch.Feed.from_runs({"shoes": caution, "socks": caution})
+    # same offer, not held: only the rule without "trusted only" alerts
+    assert alerts(watch.advance_to(10, feed)) == [("socks", 2, 84.0)]
+
+
+def test_editing_a_rule_can_alert_again_when_the_price_still_qualifies():
+    watch.sync_items(DEMO)
+    assert alerts(watch.advance_to(10)) == [("sony", 9, 209.0)]
+    watch.sync_items([{**i, "target": 210} if i["id"] == "sony" else i for i in DEMO])  # $209 is still under $210
+    assert alerts(watch.advance_to(12)) == [("sony", 12, 209.0)]  # count restarts at day 11, confirmed day 12
+    assert [a["item"] for a in watch.advance_to(30).alerts] == ["fryer", "kindle"]  # once per rule: no third Sony alert
+
+
 def test_rule_text_is_parsed_and_never_stored():
     watch.sync_items([{"id": "tv", "rule": "Under $300 · new only · my note: sister's birthday, PIN 4471"}])
     raw = watch.checkpoint_file().read_text(encoding="utf-8")

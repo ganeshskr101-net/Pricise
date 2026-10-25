@@ -60,3 +60,22 @@ Files added by the Pricise team (not from Meterless):
   hmem/pricise.ts           shopper notes: privacy policy, own atomic persistence, content-free audit log, rebuild after delete
   server.ts                 changed: adds the /hmem/* routes, and refuses browser requests (Origin) and non-JSON POST/PUT on
                             every route
+
+Markovian (markovian/): code from the Meterless Markovian reference implementation:
+  https://github.com/Meterless/Meterless  (engines/markovian/reference/src/, commit 1742dec, 2026-10-19)
+  Copyright 2026 Meterless, licensed under the Apache License, Version 2.0 (the LICENSE in this folder has the same text
+  as engines/markovian/LICENSE).
+
+Files copied from Meterless, NOT modified (only the 9 source files; nothing from its node_modules, tests or scripts):
+  markovian/src/carryover.ts
+  markovian/src/configManager.ts
+  markovian/src/history.ts
+  markovian/src/index.ts
+  markovian/src/markers.ts
+  markovian/src/orchestrator.ts
+  markovian/src/progress.ts
+  markovian/src/promptBuilder.ts
+  markovian/src/types.ts
+
+Files added by the Pricise team (not from Meterless):
+  markovian/index.ts        re-exports the engine (the conformance-suite target)

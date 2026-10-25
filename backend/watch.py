@@ -8,6 +8,8 @@ Decisions are rules, no model:
 - A drop is real after CONFIRM_DAYS checks in a row that count (a one-day glitch never alerts).
 - One alert per item: the checkpoint records it as sent BEFORE advance_to() returns it (at-most-once: a crash in between
   loses that notification, never duplicates it; the item still shows the alert as sent).
+- Editing an item's rule (target, "new only", "trusted only") through sync_items() resets that item's drop count and
+  alert state: if the price still qualifies under the new rule, the item CAN alert again (once per rule).
 
 Bounded steps: advance_to(day) processes the missed days one day per chunk, at most MAX_DAYS_PER_CHAIN chunks per chain;
 a long gap (the computer was asleep, the demo clock jumped) becomes several chains. The checkpoint is saved after every
