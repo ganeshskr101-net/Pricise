@@ -1,0 +1,135 @@
+{
+  "version": 1,
+  "note": "Pricise intent registry for Scout (spec docs/intent-registry.md). One shopper, so roles are \"*\". Action intents (untick, checkout, notification) carry approval.require; scout/packs/pricise.json adds their policies (checkout.pay is always denied).",
+  "intents": [
+    {
+      "id": "GENERAL",
+      "category": "general",
+      "description": "Safe fallback when no registered intent clears the Reject band. Answers conversationally, never routes to tools or actions.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": [],
+      "riskClass": "low",
+      "surfaces": ["panel", "chat", "api", "wishlist", "storelab"],
+      "roles": ["*"],
+      "examples": ["hello", "what can you do?", "thanks"],
+      "version": 1
+    },
+    {
+      "id": "page.check",
+      "category": "page",
+      "description": "Check the product page the shopper is looking at: is the store safe, is the deal honest, and what is the best safe price.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["page.read", "trust.check", "deal.check", "price.search"],
+      "riskClass": "low",
+      "surfaces": ["panel", "chat", "api"],
+      "roles": ["*"],
+      "examples": ["Check this page", "Is this a good deal?", "Should I buy this?", "Check this product before I buy it"],
+      "version": 1
+    },
+    {
+      "id": "deal.explain",
+      "category": "deal",
+      "description": "Explain a deal finding from the stored check: discount claims, was-prices, countdown timers, fees and the real total.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["check.read", "price.history"],
+      "riskClass": "low",
+      "surfaces": ["panel", "chat", "api"],
+      "roles": ["*"],
+      "examples": [
+        "Is this discount real?",
+        "Was it really $249 before?",
+        "Does the timer reset?",
+        "Why is the total higher than the listed price?",
+        "What fees will I pay at checkout?"
+      ],
+      "version": 1
+    },
+    {
+      "id": "store.trust",
+      "category": "store",
+      "description": "Explain whether the store or seller looks safe, from the trust findings of the stored check.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["check.read", "trust.check"],
+      "riskClass": "low",
+      "surfaces": ["panel", "chat", "api"],
+      "roles": ["*"],
+      "examples": ["Is this store safe?", "Can I trust this seller?", "Is this site legit?"],
+      "version": 1
+    },
+    {
+      "id": "price.compare",
+      "category": "price",
+      "description": "Find the best safe price for the exact same item at trusted stores.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["check.read", "price.search"],
+      "riskClass": "low",
+      "surfaces": ["panel", "chat", "api"],
+      "roles": ["*"],
+      "examples": ["Where is it cheaper?", "Find the best safe price for this", "Is there a cheaper trusted store?"],
+      "version": 1
+    },
+    {
+      "id": "wishlist.add",
+      "category": "wishlist",
+      "description": "Watch an item with a price rule. The rule is the shopper's approval for later price alerts on this item.",
+      "parameters": {
+        "type": "object",
+        "properties": { "target": { "type": "number", "minimum": 0 } }
+      },
+      "capabilities": ["wishlist.write"],
+      "riskClass": "medium",
+      "surfaces": ["panel", "chat", "wishlist", "api"],
+      "roles": ["*"],
+      "examples": ["Watch this item and tell me when it drops under $200", "Add this to my wishlist", "Alert me if the price falls"],
+      "version": 1
+    },
+    {
+      "id": "notify.desktop",
+      "category": "notify",
+      "description": "Show a desktop notification for a watched item. Needs the shopper's watch rule for that item.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["notify.send", "approval.require"],
+      "riskClass": "medium",
+      "surfaces": ["wishlist", "api"],
+      "roles": ["*"],
+      "examples": ["Send me a desktop notification when the price drops", "Notify me on my desktop"],
+      "version": 1
+    },
+    {
+      "id": "addon.untick",
+      "category": "addon",
+      "description": "Untick a pre-ticked add-on on the page. The only page change Pricise makes; needs the shopper's confirmation.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["page.untick", "approval.require"],
+      "riskClass": "high",
+      "surfaces": ["panel", "chat"],
+      "roles": ["*"],
+      "examples": ["Untick the protection plan", "Remove the pre-ticked add-on", "Take the warranty off my cart"],
+      "version": 1
+    },
+    {
+      "id": "checkout.step",
+      "category": "checkout",
+      "description": "Move the hidden browser to the next checkout step on a Store Lab page to find late fees. Stops before payment.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["runahead.step", "approval.require"],
+      "riskClass": "high",
+      "surfaces": ["storelab"],
+      "roles": ["*"],
+      "examples": ["Go to the next checkout step", "Continue through checkout to see the fees", "Walk the checkout to find the real total"],
+      "version": 1
+    },
+    {
+      "id": "checkout.pay",
+      "category": "checkout",
+      "description": "Pay, place an order or submit a checkout. Always denied: Pricise never buys.",
+      "parameters": { "type": "object", "properties": {} },
+      "capabilities": ["checkout.pay"],
+      "riskClass": "high",
+      "surfaces": ["panel", "chat", "api", "storelab"],
+      "roles": ["*"],
+      "examples": ["Buy it for me", "Place the order", "Pay for this now", "Complete the purchase"],
+      "version": 1
+    }
+  ]
+}
