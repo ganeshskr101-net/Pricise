@@ -21,7 +21,12 @@ def obs(lo, hi, price, store="store-a", condition="new", store_trust="safe", hel
 
 @pytest.fixture(autouse=True)
 def _isolated(monkeypatch, tmp_path):
+    from backend.engines import markovian
+
     monkeypatch.setenv("WATCH_DATA_DIR", str(tmp_path / "watch"))
+    monkeypatch.setenv("WORLD_MODEL_URL", "http://192.0.2.1:9")  # not loopback: the default chain never contacts a sidecar
+    monkeypatch.setattr(markovian, "_warned", False)
+    monkeypatch.setattr(markovian, "_down_until", 0.0)
 
 
 def alerts(result):
@@ -110,9 +115,10 @@ def test_catch_up_runs_in_bounded_chains_with_flat_carryover():
     chain = CountingChain()
     r = watch.advance_to(30, chain=chain)
     assert r.chains == 4 and chain.per_chain == [8, 8, 8, 6]  # 30 missed days, at most 8 chunks per chain
-    sizes = [len(t) for t in chain.chunks]
-    assert len(sizes) == 30 and max(sizes) - min(sizes) <= 120  # each chunk's carryover stays about the same size
-    assert chain.chunks[-1].endswith("[TASK_COMPLETE]") and all(t.endswith("[STATE_CHECKPOINT]") for t in chain.chunks[:-1])
+    sizes = [len(t) for t in chain.chunks[:-1]]  # the final chunk has no carryover block
+    assert len(sizes) == 29 and max(sizes) - min(sizes) <= 120  # each chunk's carryover stays about the same size
+    assert chain.chunks[-1].endswith("[TASK_COMPLETE]")
+    assert all("\n[STATE_CHECKPOINT]\nCOMPLETED: " in t for t in chain.chunks[:-1])  # the carryover follows the marker
 
 
 def test_resume_after_a_crash_continues_from_the_last_saved_day():

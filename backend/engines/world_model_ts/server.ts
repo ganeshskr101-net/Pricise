@@ -6,6 +6,9 @@
 // - H-MEM: the Meterless reference engine (hmem/src/, unchanged) behind hmem/pricise.ts: the shopper's notes, typed by the
 //   user only, checked for secrets and by Scout, kept in HMEM_DATA_DIR (default <repo>/.pricise-data/memory/, git-ignored).
 //   backend/engines/hmem.py is the client.
+// - Markovian: the Meterless reference engine (markovian/src/, unchanged) behind markovian/chains.ts: bounded chains for
+//   the wishlist watch. Python (backend/watch.py, backend/engines/markovian.py) sends each chunk, built from checkpoint
+//   facts, and keeps the checkpoints. Chains live in memory only; at most 4 open; 60 s per chunk.
 //
 // Every route: a request with an Origin header is refused (403: browsers send one, our Python clients do not), and a
 // POST or PUT must be Content-Type: application/json (415). Without this, any web page could send a blind "simple"
@@ -20,6 +23,10 @@
 //   DELETE /hmem/notes/{id}                                 -> {deleted}
 //   POST /hmem/forget             {}                        -> {deleted: n}
 //   POST /hmem/query              {query, top?}             -> {results: [{note, relevance}]}
+//   POST /markovian/chains        {goal, carryover}         -> {chain_id, done: false, step: 1, prompt, prompt_tokens}  (429 = too many open)
+//   POST /markovian/chains/{id}/chunks {text}               -> the next prompt, or {done: true, status, chunk_tokens, ...}
+//   GET  /markovian/chains/{id}                             -> {chain_id, step}
+//   DELETE /markovian/chains/{id}                           -> {closed}
 //   GET  /health                                            -> {ok: true}
 //
 // One finding = one observation (externalId = key, type "finding"). Its text is the canonical JSON of the finding without
@@ -36,6 +43,7 @@ import type { Entity, WorldEvent } from "./src/index.ts";
 import { Scout } from "./scout/index.ts";
 import { PriciseMemory, badNote } from "./hmem/index.ts";
 import type { NoteInput } from "./hmem/index.ts";
+import { CHAIN_ID_RE, ChainRegistry, MAX_GOAL, MAX_TEXT, badText } from "./markovian/chains.ts";
 
 const HOST = "127.0.0.1";
 const MAX_BODY = 64 * 1024;
@@ -49,6 +57,13 @@ const SCOUT_PACKS = ["default", "adversarial-tight", "pricise"];
 const QUERY_FIELDS = new Set(["query", "top"]);
 const MAX_QUERY = 500;
 const NOTE_PATH = /^\/hmem\/notes\/([^/]{1,64})$/;
+const CHAIN_PATH = /^\/markovian\/chains\/([^/]{1,64})$/;
+const CHUNK_PATH = /^\/markovian\/chains\/([^/]{1,64})\/chunks$/;
+const OPEN_FIELDS = new Set(["goal", "carryover"]);
+
+function onlyFields(body: unknown, fields: Set<string>): body is Record<string, unknown> {
+  return !!body && typeof body === "object" && !Array.isArray(body) && Object.keys(body).every((k) => fields.has(k));
+}
 
 function memoryDir(): string {
   const configured = process.env.HMEM_DATA_DIR?.trim();
@@ -203,8 +218,8 @@ async function jsonBody(req: http.IncomingMessage): Promise<unknown> {
   }
 }
 
-function createServer(world: WorldModel, memory: PriciseMemory, now: () => Date = () => new Date(),
-                      scout: Scout = createScout()): http.Server {
+function createServer(world: WorldModel, memory: PriciseMemory, chains: ChainRegistry = new ChainRegistry(),
+                      now: () => Date = () => new Date(), scout: Scout = createScout()): http.Server {
   const startedAt = new Map<string, string>(); // check_id -> provenance time of its first write (same for every version)
   const guard = (text: string) => scout.checkTexts([text])[0].level;
   return http.createServer(async (req, res) => {
@@ -278,6 +293,36 @@ function createServer(world: WorldModel, memory: PriciseMemory, now: () => Date 
         if (problem) return send(res, 400, { error: problem });
         const { query, top } = body as { query: string; top?: number };
         return send(res, 200, { results: memory.query(query, top ?? 5) });
+      }
+      if (req.method === "POST" && url.pathname === "/markovian/chains") {
+        const body = await jsonBody(req);
+        if (body === undefined) return send(res, 400, { error: "invalid or too large JSON body" });
+        if (!onlyFields(body, OPEN_FIELDS)) return send(res, 400, { error: "only goal and carryover are accepted" });
+        const problem = badText(body.goal, MAX_GOAL, guard) ?? badText(body.carryover, MAX_TEXT, guard);
+        if (problem) return send(res, 400, { error: `goal and carryover ${problem}` });
+        const reply = await chains.open(body.goal as string, body.carryover as string);
+        if (reply === "full") return send(res, 429, { error: "too many open chains" });
+        return send(res, 200, reply);
+      }
+      const chunkPath = url.pathname.match(CHUNK_PATH);
+      if (req.method === "POST" && chunkPath) {
+        if (!CHAIN_ID_RE.test(chunkPath[1])) return send(res, 404, { error: "unknown chain" });
+        const body = await jsonBody(req);
+        if (body === undefined) return send(res, 400, { error: "invalid or too large JSON body" });
+        if (!onlyFields(body, new Set(["text"]))) return send(res, 400, { error: "only text is accepted" });
+        const problem = badText(body.text, MAX_TEXT, guard);
+        if (problem) return send(res, 400, { error: `text ${problem}` });
+        const reply = await chains.chunk(chunkPath[1], body.text as string);
+        if (reply === "unknown") return send(res, 404, { error: "unknown chain (finished, timed out or closed)" });
+        if (reply === "not-waiting") return send(res, 409, { error: "the chain is not waiting for a chunk" });
+        return send(res, 200, reply);
+      }
+      const chainPath = url.pathname.match(CHAIN_PATH);
+      if (chainPath && (req.method === "GET" || req.method === "DELETE")) {
+        const id = chainPath[1];
+        if (req.method === "DELETE") return send(res, 200, { closed: CHAIN_ID_RE.test(id) && chains.close(id) });
+        const info = CHAIN_ID_RE.test(id) ? chains.info(id) : undefined;
+        return info ? send(res, 200, info) : send(res, 404, { error: "unknown chain" });
       }
       return send(res, 404, { error: "not found" });
     } catch (err) {

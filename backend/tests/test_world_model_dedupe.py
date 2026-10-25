@@ -278,12 +278,14 @@ def test_agent_orch_unset_keeps_todays_behaviour(sidecar, monkeypatch):
 # the real server.ts (skipped without Node or node_modules)
 
 
-def _start_real_sidecar(port: int, data_dir: Path | None = None) -> subprocess.Popen:
-    """data_dir: where H-MEM keeps notes (HMEM_DATA_DIR); a fresh temp folder by default, never the repo's .pricise-data."""
+def _start_real_sidecar(port: int, data_dir: Path | None = None, env_extra: dict | None = None) -> subprocess.Popen:
+    """data_dir: where H-MEM keeps notes (HMEM_DATA_DIR); a fresh temp folder by default, never the repo's .pricise-data.
+    env_extra: test-only settings such as MARKOVIAN_CHUNK_TIMEOUT_MS."""
     tsx = ENGINE_DIR / "node_modules" / "tsx" / "dist" / "cli.mjs"
     env = {k: os.environ[k] for k in ("PATH", "SYSTEMROOT") if k in os.environ}  # nothing else: no secrets in its env
     env["WORLD_MODEL_URL"] = f"http://127.0.0.1:{port}"
     env["HMEM_DATA_DIR"] = str(data_dir or tempfile.mkdtemp(prefix="hmem-test-"))
+    env.update(env_extra or {})
     proc = subprocess.Popen([shutil.which("node"), str(tsx), "server.ts"], cwd=ENGINE_DIR, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.time() + 15
