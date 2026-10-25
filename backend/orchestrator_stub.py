@@ -72,6 +72,7 @@ def card_builder(chk: dict, done: set[str] | None = None) -> orchestrator.CardBu
 async def sse_stream(chk: dict) -> AsyncIterator[str]:
     """check_events' text/event-stream body, from the orchestrator."""
     done: set[str] = set()
+    await orchestrator.clean_page(chk)  # the stub agents quote page text: clean it before they are created
     async for ev in orchestrator.run_check(chk, stub_agents(chk, done), None, build_card=card_builder(chk, done),
                                            agent_timeout_s=_deal_timeout_s()):
         body = ({"kind": "finding", "finding": ev["finding"].model_dump()} if ev["kind"] == "finding"

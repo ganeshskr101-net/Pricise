@@ -12,7 +12,7 @@ The local Pricise backend (FastAPI on http://localhost:8787) and the agents behi
 | `tools/` | Deal tools: `runahead.py` (checkout walk + pay guard), `timer_test.py`, `discount.py`, `addons.py`, `browser.py` (shared headless Chromium) | Emmanuel |
 | `llm/meterless.py` | The only way to call a model (Meterless Nightshift). Minimal client for now | Abel |
 | `data/` | `history.py` (`get_price_history`, JSON fixture today, Zetaris later) | Josh |
-| `engines/` | Meterless engines (World Model, H-MEM, Scout Intent, Markovian): not written yet | Abel |
+| `engines/` | Meterless engines. `world_model_ts/` is the **engine sidecar**: one Node process on 127.0.0.1 that hosts the World Model (`src/`) and Scout Intent (`scout/`). The folder keeps its first name. Python clients: `world_model.py` (shared finding state) and `scout.py` (guard for untrusted page and model text, with a local-rules fallback). H-MEM and Markovian: not written yet | Abel |
 | `env.py` | Loads `.env` at startup (shell variables win; no `.env` is fine) | |
 | `tests/` | pytest suite | everyone |
 
