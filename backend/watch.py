@@ -38,7 +38,7 @@ CONFIRM_DAYS = 2
 MAX_DAY = 3650
 MAX_ITEMS = 200
 MAX_PRICE = 100_000.0
-GOAL = "Watch the wishlist: check each item's price for each day, alert once when a drop is real."
+GOAL = "Watch the wishlist: check the price of every item for each day, alert once when a drop is real."
 
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,31}$")
 KEYLIKE_RE = re.compile(r"^((sk|pk|rk)-|gh[pousr]-?[a-z0-9]{8}|xox[abprs]-|akia[0-9a-z]{12})")  # key formats ID_RE allows
@@ -298,12 +298,20 @@ def carryover(cp: dict, last_day: int) -> str:
             f"DECISIONS: {'; '.join(sent) or 'no alert sent'}\nCONTEXT: {ctx or 'no items'}")
 
 
+def chunk_text(cp: dict, day: int, new_alerts: int, last_day: int, done: bool) -> str:
+    """One chunk for the engine, from checkpoint facts only: a summary line, then the marker. A non-final chunk carries
+    the canonical block AFTER [STATE_CHECKPOINT] (the engine takes its next carryover from there)."""
+    head = f"Day {day}: {len(cp['items'])} items checked, {new_alerts} new alerts."
+    return f"{head}\n[TASK_COMPLETE]" if done else f"{head}\n[STATE_CHECKPOINT]\n{carryover(cp, last_day)}"
+
+
 # ----------------------------------------------------------------------------- the chain (bounded chunks)
 
 
 class Chain(Protocol):
-    """Runs one bounded chain of chunks. step (iii) puts the sidecar's Markovian engine behind this; LocalChain is the
-    no-sidecar version."""
+    """Runs one bounded chain of chunks: backend/engines/markovian.SidecarChain (the sidecar's Markovian engine, the
+    default) or LocalChain (no engine). A Chain must never raise for a sidecar problem: the checkpoint is already saved
+    when chunk() is called, and an exception there would lose that day's alerts (at-most-once)."""
 
     def start(self, goal: str, carryover: str) -> None: ...
     def chunk(self, text: str, done: bool) -> None: ...
@@ -337,7 +345,10 @@ def advance_to(day: int, feed: Optional[Feed] = None, chain: Optional[Chain] = N
     if not (isinstance(day, int) and 0 <= day <= MAX_DAY):
         raise ValueError(f"day must be 0-{MAX_DAY}")
     feed = feed or load_feed()
-    chain = chain or LocalChain()
+    if chain is None:
+        from backend.engines import markovian  # the sidecar's engine; falls back to local chunks when it is down
+
+        chain = markovian.SidecarChain()
     cp = load()
     alerts, days, chains = [], [], 0
     while cp["day"] < day:
@@ -350,7 +361,7 @@ def advance_to(day: int, feed: Optional[Feed] = None, chain: Optional[Chain] = N
             alerts += today
             days.append(d)
             done = d == day
-            chain.chunk(carryover(cp, day) + ("\n[TASK_COMPLETE]" if done else "\n[STATE_CHECKPOINT]"), done)
+            chain.chunk(chunk_text(cp, d, len(today), day, done), done)
     return Result(alerts=alerts, days=days, chains=chains, day=cp["day"])
 
 
