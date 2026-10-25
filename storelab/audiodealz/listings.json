@@ -1,0 +1,14 @@
+[
+  {
+    "listing_id": "audiodealz-1",
+    "product_id": "sony-wh1000xm5",
+    "image_url": "img/official.png",
+    "price": 149
+  },
+  {
+    "listing_id": "audiodealz-2",
+    "product_id": "sony-wh1000xm5",
+    "image_url": "img/product.png",
+    "price": 149
+  }
+]

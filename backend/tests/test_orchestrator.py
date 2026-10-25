@@ -246,3 +246,72 @@ def test_stub_hook_streams_through_orchestrator_and_replays(monkeypatch, tmp_pat
     assert any(e["kind"] == "finding" and e["finding"]["type"] == "prechecked_addon" for e in events)
     assert _sse(client, cid) == events
     assert (tmp_path / f"{cid}.json").exists()
+
+
+# Trust Agent through the orchestrator (AGENT_ORCH=on, AGENT_TRUST=real); assess_store is faked, so no network
+
+def _fake_trust(monkeypatch, error=None):
+    from backend.agents import trust
+
+    calls = []
+
+    async def fake(store_url, check_id, page=None, **_kw):
+        calls.append(store_url)
+        if error is not None:
+            raise error
+        f = Finding(check_id=check_id, agent="trust", type="domain_age", status="proposed",
+                    summary="Domain registered 6 days ago.", evidence=[Evidence(kind="url", ref="storelab:store-d/about.json")])
+        return {"verdict": "unsafe", "reasons": [f.summary], "findings": [f], "store": "Store D", "store_url": store_url,
+                "checked": True, "elapsed_ms": 1}
+
+    monkeypatch.setattr(trust, "assess_store", fake)
+    return calls
+
+
+def _hook_check(monkeypatch, trust_mode):
+    from backend import stub_server
+
+    monkeypatch.setenv("AGENT_ORCH", "on")
+    monkeypatch.setenv("AGENT_TRUST", trust_mode)
+    client = TestClient(stub_server.app)
+    page = PageFacts(url="https://shop.example/item", host="shop.example")
+    cid = client.post("/check", json={"url": page.url, "page": page.model_dump()}).json()["check_id"]
+    return cid, _sse(client, cid)
+
+
+def _rows(events, agent_):
+    return [(e["finding"]["type"], e["finding"]["status"]) for e in events
+            if e["kind"] == "finding" and e["finding"]["agent"] == agent_]
+
+
+def test_trust_real_replaces_not_connected_row_and_sets_card_safe(monkeypatch, tmp_path):
+    calls = _fake_trust(monkeypatch)
+    cid, events = _hook_check(monkeypatch, "real")
+    assert calls == ["https://shop.example/item"]
+    assert _rows(events, "trust") == [("domain_age", "proposed")]  # no ("not_connected", "unverified") row
+    assert ("not_connected", "unverified") in _rows(events, "price")  # other scripted rows stay
+    safe = events[-1]["card"]["safe"]
+    assert events[-1]["kind"] == "final_card" and (safe["status"], safe["headline"]) == ("bad", "Risky")
+    assert safe["reasons"][0]["text"] == "Domain registered 6 days ago"
+    rows = {r["type"]: r for r in json.loads((tmp_path / f"{cid}.json").read_text(encoding="utf-8"))["findings"]}
+    assert (rows["domain_age"]["proposed_by"], rows["domain_age"]["final_status"]) == ("trust", "proposed")
+    assert "not_connected" not in {r["type"] for r in rows.values() if r["proposed_by"] == "trust"}
+
+
+def test_trust_stub_mode_is_unchanged(monkeypatch):
+    calls = _fake_trust(monkeypatch)
+    _, events = _hook_check(monkeypatch, "stub")
+    assert calls == []
+    assert _rows(events, "trust") == [("not_connected", "unverified")]
+    safe = events[-1]["card"]["safe"]
+    assert (safe["status"], safe["headline"]) == ("unknown", "Not fully checked")  # stub_server.real_card's own section
+
+
+def test_trust_failure_becomes_agent_failed_and_check_completes(monkeypatch, tmp_path):
+    _fake_trust(monkeypatch, error=RuntimeError("store down"))
+    cid, events = _hook_check(monkeypatch, "real")
+    assert _rows(events, "trust") == [("agent_failed", "unverified")]
+    failed = next(e["finding"] for e in events if e["kind"] == "finding" and e["finding"]["type"] == "agent_failed")
+    assert "store down" not in failed["summary"] and "RuntimeError" in failed["summary"]
+    assert events[-1]["kind"] == "final_card" and events[-1]["card"]["safe"]["headline"] == "Not fully checked"
+    assert (tmp_path / f"{cid}.json").exists()

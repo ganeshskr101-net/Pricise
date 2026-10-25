@@ -10,6 +10,7 @@ __pycache__/
 # Generated at run time
 traces/
 bench/out/
+bench/results.json
 
 # Local tool settings
 .claude/settings.local.json
