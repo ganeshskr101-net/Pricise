@@ -9,6 +9,7 @@ Labelled test pages for the accuracy number on the proof screen. Made-up stores 
 | `trust/` | 12 made-up stores for the Trust Agent (7 risky, 5 legitimate), each a folder with `about.json`, `returns.html`, `listings.json`, `reviews.json`; regenerate with `trust/make_fixtures.py` |
 | `run_trust.py` | Vets every `trust/` store and the Store Lab demo stores, prints accuracy and vet time; details go to `bench/out/trust.csv`. No browser needed, a few seconds |
 | `labels.csv` | `page, trick, expected (1 = trick present), note` for every bench page |
+| `run_watch.py` | Measured run for the wishlist watch (`backend/watch.py`): 30 days, 4 items, made-up Store Lab prices from `watch/prices.json`; prints the per-day prompt size, naive full-history baseline vs the Markovian engine, estimated (chars/4), no model call. Starts its own sidecar on a free port; details go to `bench/out/watch.json`. See `docs/markovian-report.md` |
 | `run_deal.py` | Runs the Deal Agent on every `deal/` page and prints accuracy per trick; details go to `bench/out/deal.csv` (not committed) |
 | `out/` | Generated results (git-ignored) |
 

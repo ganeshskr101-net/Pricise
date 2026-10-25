@@ -282,7 +282,7 @@ def step_day(cp: dict, day: int, feed: Feed) -> list[dict]:
 
 
 def _money(v: Optional[float]) -> str:
-    return "-" if v is None else f"{v:.2f}"
+    return "none" if v is None else f"{v:.2f}"  # not "-": the engine strips runs like "-@-" from a carryover
 
 
 def carryover(cp: dict, last_day: int) -> str:
@@ -291,7 +291,7 @@ def carryover(cp: dict, last_day: int) -> str:
             for iid, f in sorted(cp["items"].items()) if f["alert"]["state"] == "sent"]
     ctx = "; ".join(
         f"{iid} t={_money(f['target'])}{' new' if f['new_only'] else ''}{' trusted' if f['trusted_only'] else ''}"
-        f" last={_money(f['last_price'])}@{f['store'] or '-'} run={f['below_target_days']}"
+        f" last={_money(f['last_price'])}@{f['store'] or 'none'} run={f['below_target_days']}"
         for iid, f in sorted(cp["items"].items()))
     remaining = f"days {cp['day'] + 1}-{last_day}" if cp["day"] < last_day else "none"
     return (f"COMPLETED: days 1-{cp['day']} checked\nREMAINING: {remaining}\n"

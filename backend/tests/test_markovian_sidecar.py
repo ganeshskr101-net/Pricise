@@ -20,7 +20,7 @@ JSON = {"Content-Type": "application/json"}
 DEMO = [{"id": "sony", "target": 215, "rule": "Under $215 · new only"}, {"id": "kindle", "target": 120, "rule": "Under $120"},
         {"id": "shoes", "target": 90, "rule": "Under $90 · trusted only"}, {"id": "fryer", "target": 80, "rule": "Under $80"}]
 DEMO_ALERTS = [("sony", 9, 209.0), ("fryer", 19, 79.0), ("kindle", 23, 119.0)]
-CARRY = "COMPLETED: days 1-0 checked\nREMAINING: days 1-3\nDECISIONS: no alert sent\nCONTEXT: sony t=215.00 new last=-@- run=0"
+CARRY = "COMPLETED: days 1-0 checked\nREMAINING: days 1-3\nDECISIONS: no alert sent\nCONTEXT: sony t=215.00 new last=none@none run=0"
 
 pytestmark = pytest.mark.skipif(not shutil.which("node") or not (ENGINE_DIR / "node_modules" / "tsx").exists(),
                                 reason="needs Node and: cd backend/engines/world_model_ts && npm install --ignore-scripts")
@@ -100,6 +100,33 @@ def test_a_final_chunk_completes_the_chain(sidecar):
     chunk(sidecar, cid, 1)
     status, end = chunk(sidecar, cid, 2, done=True)
     assert status == 200 and end["done"] and end["status"] == "completed" and end["chunks"] == 2
+
+
+def worst_case_carryover(n: int) -> str:
+    """The watch's carryover for n items at their longest: 4-digit target and price, both flags, alert sent."""
+    item = {"target": 1215.0, "new_only": True, "trusted_only": True, "last_checked_day": 30, "last_price": 1209.0,
+            "store": "store-c", "below_target_days": 23, "alert": {"state": "sent", "day": 29, "price": 1209.0}}
+    cp = {"version": 1, "day": 29, "items": {f"item-{i:02d}": dict(item) for i in range(n)}}
+    watch.validate_checkpoint(cp)
+    return watch.carryover(cp, 30)
+
+
+def carried(sidecar, block: str) -> str:
+    """Send one chunk carrying block; return the prompt the engine builds for the next chunk."""
+    cid = sidecar.open()[1]["chain_id"]
+    status, reply = sidecar.call("POST", f"/markovian/chains/{cid}/chunks",
+                                 {"text": f"Day 30: 1 items checked, 0 new alerts.\n[STATE_CHECKPOINT]\n{block}"})
+    sidecar.call("DELETE", f"/markovian/chains/{cid}", headers={})
+    assert status == 200
+    return reply["prompt"]
+
+
+def test_twenty_items_fit_the_engine_carryover_with_no_heuristic_fallback(sidecar):
+    block = worst_case_carryover(20)
+    assert -(-len(block) // 4) <= 512  # estimated tokens (chars/4, rounded up) within carryoverTokens
+    assert f"[CARRYOVER STATE]\n{block}\n\n" in carried(sidecar, block)  # kept exactly: the marker level was used
+    over = worst_case_carryover(21)  # 527 estimated tokens: over the budget, so the engine's fallback replaces it
+    assert -(-len(over) // 4) > 512 and f"[CARRYOVER STATE]\n{over}\n\n" not in carried(sidecar, over)
 
 
 def test_open_chains_are_limited_and_can_be_closed(sidecar):
