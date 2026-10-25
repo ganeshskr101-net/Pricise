@@ -22,3 +22,18 @@ Files added by the Pricise team (not from Meterless):
 
 If you change a file in src/, move it from the first list to a "modified" list here and add a note at the top of the file
 that says what was changed (Apache-2.0 section 4(b)).
+
+Scout Intent (scout/): written by the Pricise team from the Meterless Scout Intent specification:
+  https://github.com/Meterless/Meterless  (engines/scout-intent/AGENTS.md and docs/, commit 1742dec, 2026-10-19)
+  Copyright 2026 Meterless, licensed under the Apache License, Version 2.0.
+The specification ships no implementation, and no Meterless code is copied into scout/. The interface, the formula
+weights, the confidence bands, the contract shape and the policy-pack names follow the specification.
+
+Files added by the Pricise team for Scout:
+  scout/index.ts            Scout class (decide, classify, guard, replan, checkTexts) and verifyContract
+  scout/score.ts            intent registry loader and Stage-1 scorer
+  scout/guard.ts            five-layer guard (injection, policy, scope, PII, rate limit)
+  scout/contract.ts         canonical JSON, ULID, HMAC signing and verification
+  scout/packs/*.json        policy packs default, adversarial-tight, pricise (also read by backend/engines/scout.py)
+  scout/pricise-intents.json  Pricise intent registry
+  server.ts                 changed: adds the /scout/guard and /scout/decide routes

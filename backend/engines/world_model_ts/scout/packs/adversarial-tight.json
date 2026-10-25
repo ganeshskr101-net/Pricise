@@ -1,0 +1,12 @@
+{
+  "name": "adversarial-tight",
+  "version": 1,
+  "note": "Hardened posture for hostile surfaces (Scout spec: the eval runner composes it with default). Adds patterns and turns some default warns into blocks.",
+  "escalate": ["markdown-imperative", "new-instructions"],
+  "patterns": [
+    { "id": "addressed-model-command", "kind": "role-drift", "severity": "block",
+      "pattern": "\\b(?:ai|assistant|agent|bot|chatbot|llm|model|copilot)s?\\b\\s*[,:]\\s*(?:please\\s+)?(?:ignore|disregard|forget|reveal|delete|grant|execute|run)\\b" },
+    { "id": "from-now-on", "kind": "role-drift", "severity": "block",
+      "pattern": "\\bfrom now on,? you (?:are|will|must|should)\\b" }
+  ]
+}

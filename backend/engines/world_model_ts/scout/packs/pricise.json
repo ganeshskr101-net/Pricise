@@ -1,0 +1,25 @@
+{
+  "name": "pricise",
+  "version": 1,
+  "note": "Pricise: store pages that talk to shopping assistants, plus the action policies for the Pricise registry (scout/pricise-intents.json). Patterns must stay precise on real store text (timers, add-ons, fees, pressure messages): a false block removes real page text.",
+  "patterns": [
+    { "id": "addressed-shopping-ai", "kind": "addressed-ai", "severity": "block",
+      "pattern": "\\b(?:ai|a\\.i\\.|assistant|agent|bot|chatbot|llm|language model|shopping assistant|price checker|pricise|copilot|chatgpt|gpt|claude|gemini)s?\\b\\s*[,:;-]\\s*(?:please\\s+)?(?:approve|confirm|complete|buy|purchase|check ?out|place|mark|rate|trust|recommend|ignore|proceed|report)\\b" },
+    { "id": "note-to-ai", "kind": "addressed-ai", "severity": "block",
+      "pattern": "\\b(?:note|message|instructions?)\\s+(?:to|for)\\s+(?:the\\s+|any\\s+)?(?:ai|ai assistants?|ai agents?|assistants?|bots?|llms?|language models?|shopping assistants?)\\b" },
+    { "id": "ai-must", "kind": "addressed-ai", "severity": "block",
+      "pattern": "\\b(?:ai|ai assistants?|ai agents?|ai models?|chatbots?|llms?|language models?|shopping assistants?)\\b[^.\\n]{0,25}?\\b(?:must|should|shall|need to|are required to|are instructed to)\\b[^.\\n]{0,25}?\\b(?:approve|recommend|rate|report|say|tell|trust|ignore|confirm|buy|purchase|mark|treat|consider|describe)\\b" },
+    { "id": "if-you-are-ai", "kind": "addressed-ai", "severity": "block",
+      "pattern": "\\bif you(?: are|'re) an? (?:ai|assistant|bot|agent|llm|language model|shopping assistant)\\b" },
+    { "id": "steer-verdict", "kind": "pattern", "severity": "block",
+      "pattern": "\\b(?:rate|mark|report|classify|label|treat)\\s+(?:this|the)\\s+(?:store|site|shop|seller|page|deal|discount|price|product)\\s+as\\s+(?:safe|trusted|trustworthy|legit(?:imate)?|verified|honest|genuine|real|a good deal|the best)\\b" },
+    { "id": "tell-the-shopper", "kind": "pattern", "severity": "block",
+      "pattern": "\\b(?:tell|assure|inform|convince)\\s+(?:the\\s+)?(?:user|shopper|customer|buyer)\\b" }
+  ],
+  "policies": [
+    { "intent": "checkout.pay", "deny": true, "reason": "Pricise never pays, places an order or submits a checkout." },
+    { "intent": "checkout.step", "allow": { "surfaces": ["storelab"] }, "requireApproval": ["user-confirm"] },
+    { "intent": "addon.untick", "requireApproval": ["user-confirm"] },
+    { "intent": "notify.desktop", "requireApproval": ["watch-rule"] }
+  ]
+}
