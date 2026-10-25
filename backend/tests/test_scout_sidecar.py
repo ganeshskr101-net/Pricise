@@ -33,9 +33,10 @@ def sidecar():
     proc.wait(timeout=5)
 
 
-def post(url: str, body, host: str | None = None) -> tuple[int, dict]:
+def post(url: str, body, host: str | None = None, headers: dict | None = None) -> tuple[int, dict]:
     data = body if isinstance(body, bytes) else json.dumps(body).encode()
-    req = urllib.request.Request(url, data=data, method="POST", headers={"Host": host} if host else {})
+    hdrs = {"Content-Type": "application/json", **({"Host": host} if host else {}), **(headers or {})}
+    req = urllib.request.Request(url, data=data, method="POST", headers={k: v for k, v in hdrs.items() if v is not None})
     try:
         with OPENER.open(req, timeout=5) as r:
             return r.status, json.loads(r.read())
@@ -61,6 +62,17 @@ def test_guard_route_safeguards(sidecar):
     assert post(f"{sidecar}/scout/guard", json.dumps({"texts": ["a" * 70_000]}).encode())[0] in (0, 400)  # over 64 KB
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"]})[0] == 200  # still serving after that
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"]}, host="evil.example")[0] == 403  # loopback Host only
+
+
+@pytest.mark.parametrize("route, body", [("/scout/guard", {"texts": ["x"]}), ("/findings", {"key": "1" * 64, "check_id": "c8",
+                         "finding": {"check_id": "c8", "agent": "page", "status": "proposed"}})])
+def test_every_route_refuses_browser_and_non_json_requests(sidecar, route, body):
+    """A web page can send a blind 'simple' POST to 127.0.0.1 (its Host passes); Origin or a non-JSON type is refused."""
+    assert post(f"{sidecar}{route}", body, headers={"Content-Type": "text/plain"})[0] == 415
+    assert post(f"{sidecar}{route}", body, headers={"Content-Type": None})[0] == 415  # no Content-Type at all
+    assert post(f"{sidecar}{route}", body, headers={"Origin": "https://evil.example"})[0] == 403
+    assert post(f"{sidecar}{route}", body, headers={"Origin": "null"})[0] == 403  # sandboxed iframes send "null"
+    assert post(f"{sidecar}{route}", body, headers={"Content-Type": "application/json; charset=utf-8"})[0] == 200
 
 
 def test_decide_route_routes_and_guards_pricise_intents(sidecar):
