@@ -11,6 +11,7 @@ import os
 import shutil
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 import urllib.error
@@ -277,10 +278,12 @@ def test_agent_orch_unset_keeps_todays_behaviour(sidecar, monkeypatch):
 # the real server.ts (skipped without Node or node_modules)
 
 
-def _start_real_sidecar(port: int) -> subprocess.Popen:
+def _start_real_sidecar(port: int, data_dir: Path | None = None) -> subprocess.Popen:
+    """data_dir: where H-MEM keeps notes (HMEM_DATA_DIR); a fresh temp folder by default, never the repo's .pricise-data."""
     tsx = ENGINE_DIR / "node_modules" / "tsx" / "dist" / "cli.mjs"
     env = {k: os.environ[k] for k in ("PATH", "SYSTEMROOT") if k in os.environ}  # nothing else: no secrets in its env
     env["WORLD_MODEL_URL"] = f"http://127.0.0.1:{port}"
+    env["HMEM_DATA_DIR"] = str(data_dir or tempfile.mkdtemp(prefix="hmem-test-"))
     proc = subprocess.Popen([shutil.which("node"), str(tsx), "server.ts"], cwd=ENGINE_DIR, env=env,
                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.time() + 15
@@ -310,6 +313,7 @@ def test_real_sidecar_dedupes_and_versions(monkeypatch, tmp_path, caplog):
         assert row["statuses"] == ["proposed", "confirmed"] and row["final_status"] == "confirmed"
         assert warnings(caplog, WARN_DOWN) == [] and warnings(caplog, WARN_DIFF) == []
         req = urllib.request.Request(f"http://127.0.0.1:{port}/findings", method="POST",
+                                     headers={"Content-Type": "application/json"},
                                      data=json.dumps({"key": "0" * 64, "check_id": "c1", "finding": f.model_dump(),
                                                       "token": "x"}).encode())
         with pytest.raises(urllib.error.HTTPError) as err:  # anything but finding JSON is refused

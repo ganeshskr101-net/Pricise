@@ -37,3 +37,26 @@ Files added by the Pricise team for Scout:
   scout/packs/*.json        policy packs default, adversarial-tight, pricise (also read by backend/engines/scout.py)
   scout/pricise-intents.json  Pricise intent registry
   server.ts                 changed: adds the /scout/guard and /scout/decide routes
+
+H-MEM (hmem/): code from the Meterless H-MEM reference implementation:
+  https://github.com/Meterless/Meterless  (engines/hmem/reference/src/, commit 1742dec, 2026-10-19)
+  Copyright 2026 Meterless, licensed under the Apache License, Version 2.0 (the LICENSE in this folder has the same text
+  as engines/hmem/LICENSE).
+
+Files copied from Meterless, NOT modified (only the 10 source files; nothing from its node_modules or tests):
+  hmem/src/conflictDetection.ts
+  hmem/src/dreaming.ts
+  hmem/src/embeddings.ts
+  hmem/src/index.ts
+  hmem/src/memoryMining.ts
+  hmem/src/memoryRetrieval.ts
+  hmem/src/memoryStore.ts
+  hmem/src/sleepCycle.ts
+  hmem/src/trustLedger.ts
+  hmem/src/types.ts
+
+Files added by the Pricise team (not from Meterless):
+  hmem/index.ts             re-exports HMEM (the conformance-suite target) and the Pricise layer
+  hmem/pricise.ts           shopper notes: privacy policy, own atomic persistence, content-free audit log, rebuild after delete
+  server.ts                 changed: adds the /hmem/* routes, and refuses browser requests (Origin) and non-JSON POST/PUT on
+                            every route
