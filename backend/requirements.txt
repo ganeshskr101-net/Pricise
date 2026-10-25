@@ -2,4 +2,5 @@
 fastapi==0.162.0
 uvicorn==0.54.0
 pydantic==2.14.1
+python-dotenv==1.2.3  # .env reading in backend/llm/meterless.py
 playwright==1.64.1   # hidden browser for Store Lab only; after installing run: python -m playwright install chromium

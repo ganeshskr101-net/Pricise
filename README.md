@@ -91,6 +91,32 @@ Everything runs without keys today. When you plug in a real service, put its val
   switch in `backend/stub_server.py` (or the orchestrator) the way `AGENT_DEAL` works, keep the Finding / FinalCard shapes from
   `backend/contracts.py`, and keep `stub` the default so the demo never breaks.
 
+## World Model (shared finding state)
+
+With `AGENT_ORCH=on`, the orchestrator writes every finding to one shared state: the
+[Meterless World Model](https://github.com/Meterless/Meterless/tree/main/engines/world-model) reference engine, vendored
+unchanged in `backend/engines/world_model_ts/src/` (Apache-2.0, see `LICENSE` and `NOTICE` there) and run as a small Node
+sidecar on `127.0.0.1:8788`. A finding is identified by check, agent, type and evidence (not its wording): the same
+finding again shows nothing new, a changed one (e.g. its status) becomes a new version of the same entry. The trace
+(`traces/{check_id}.json`) is read back from the sidecar.
+
+The sidecar is optional. If it isn't running, the backend logs one warning and deduplicates in memory instead; checks never
+fail. With `AGENT_ORCH` unset nothing changes.
+
+```bash
+cd backend/engines/world_model_ts
+npm install --ignore-scripts     # once; installs tsx only (Node 20+)
+npx tsx server.ts                # leave running; port from WORLD_MODEL_URL (default http://127.0.0.1:8788)
+```
+
+It listens on `127.0.0.1` only, accepts only finding JSON, keeps everything in memory (a restart starts empty) and never logs
+request bodies. Conformance check (needs a clone of Meterless and `npm install --ignore-scripts` in its
+`engines/world-model/reference/`), run from that `reference/` folder:
+
+```bash
+WORLD_MODEL_IMPL="/abs/path/to/Pricise/backend/engines/world_model_ts/src/index.ts" npx tsx ../conformance/runner.ts
+```
+
 ## Safety rules
 
 - **Real store pages are read only.** The extension reads the page you are looking at; it never clicks, submits or buys. The
