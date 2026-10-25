@@ -6,6 +6,8 @@ Labelled test pages for the accuracy number on the proof screen. Made-up stores 
 | Path | What it is |
 |---|---|
 | `deal/` | 26 one-file pages for the Deal Agent: fake discount (7), resetting timer (6), drip fees (7), pre-ticked add-on (6), each with honest controls |
+| `trust/` | 12 made-up stores for the Trust Agent (7 risky, 5 legitimate), each a folder with `about.json`, `returns.html`, `listings.json`, `reviews.json`; regenerate with `trust/make_fixtures.py` |
+| `run_trust.py` | Vets every `trust/` store and the Store Lab demo stores, prints accuracy and vet time; details go to `bench/out/trust.csv`. No browser needed, a few seconds |
 | `labels.csv` | `page, trick, expected (1 = trick present), note` for every bench page |
 | `run_deal.py` | Runs the Deal Agent on every `deal/` page and prints accuracy per trick; details go to `bench/out/deal.csv` (not committed) |
 | `out/` | Generated results (git-ignored) |
@@ -17,7 +19,7 @@ Fake-discount pages read their price history from `backend/data/fixtures/price_h
 ## Full bench (run_bench.py)
 
 `run_bench.py` runs every page in `labels.csv` through the real orchestrator path (`AGENT_ORCH=on`, `AGENT_DEAL=real`,
-World Model sidecar optional), one page at a time, and scores it against the labels.
+`AGENT_TRUST=real`, World Model sidecar optional), one page at a time, and scores it against the labels.
 
 ```
 python bench/run_bench.py            # full mode: hidden-browser run-ahead and timer test on, model calls allowed
@@ -30,7 +32,11 @@ python bench/run_bench.py --sample   # sample mode: Chromium only reads the page
   output, `accounting` in `results.json`).
 - **False alarm** = a confirmed `fake_discount`, `resetting_timer`, `drip_fees` or `prechecked_addon` finding on a clean page
   (`expected=0` rows plus any `clean_control` rows). Trust and `not_connected` findings do not count.
-- **n/a**: a type whose agent isn't connected (scam store, look-alike listing), or that sample mode turns off (resetting timer,
+- **Trust** (`risky_store`; `scam_store` is accepted as an alias): Trust findings are never `confirmed`, so the card decides.
+  Scam detection = risky stores (`expected=1`) whose `card.safe` is caution or bad (unsafe); **Trust false alarms** = legitimate
+  stores (`expected=0`) flagged the same way. Trust needs no browser, so both modes score it. A store whose verdict disagrees
+  with its label is listed under "Trust mismatches" (and `trust_mismatches` in `results.json`) for Raj to decide.
+- **n/a**: a type whose agent isn't connected (look-alike listing), or that sample mode turns off (resetting timer,
   drip fees), shows as `n/a (reason)` with its page count. It is never scored as 0.
 - **Time** = page load (`page.goto`) to the last final card; read and check time are shown separately. Timer pages take
   longer in full mode (3 visits `TIMER_GAP_S` apart; default 3 s here).

@@ -21,8 +21,8 @@ def row(page, trick, expected):
     return {"page": page, "trick": trick, "expected": expected, "note": ""}
 
 
-def card(safe="unknown"):
-    return {"tone": "caution", "tricks": 1, "safe": safe}
+def card(safe="unknown", verdict=None, reasons=()):
+    return {"tone": "caution", "tricks": 1, "safe": safe, "safe_reasons": list(reasons), "trust_verdict": verdict}
 
 
 @pytest.fixture
@@ -37,16 +37,21 @@ def outcomes():
                         [f("no_https", agent="trust", evidence=0), f("not_connected", "unverified", agent="trust"),
                          f("scarcity", "proposed")], card(), 1.0, 1.0),
         rb.page_outcome(row("clean/c-01.html", "clean_control", 0), [f("drip_fees")], card(), 1.0, 1.0),
-        rb.page_outcome(row("trust/s-01.html", "scam_store", 1), [], card("bad"), 1.0, 1.0),
-        rb.page_outcome(row("trust/s-02.html", "scam_store", 1), [], card("good"), 1.0, 1.0),
+        rb.page_outcome(row("trust/s-01/index.html", "risky_store", 1), [], card("bad", "unsafe"), 1.0, 1.0),
+        rb.page_outcome(row("trust/s-02/index.html", "risky_store", 1), [], card("good", "safe", ["No warning signs found"]),
+                        1.0, 1.0),
+        rb.page_outcome(row("trust/s-03/index.html", "risky_store", 0), [], card("caution", "caution", ["Only 5 days"]),
+                        1.0, 1.0),
+        rb.page_outcome(row("trust/s-04/index.html", "risky_store", 0), [], card("good", "safe"), 1.0, 1.0),
     ]
 
 
-def test_load_labels_reads_expected_as_int(tmp_path):
+def test_load_labels_reads_expected_as_int_and_maps_the_scam_store_alias(tmp_path):
     p = tmp_path / "labels.csv"
-    p.write_text('page,trick,expected,note\ndeal/a.html,drip_fees,1,"fee, late"\ndeal/b.html,drip_fees,0,honest\n')
-    assert rb.load_labels(p) == [row("deal/a.html", "drip_fees", 1) | {"note": "fee, late"},
-                                 row("deal/b.html", "drip_fees", 0) | {"note": "honest"}]
+    p.write_text('page,trick,expected,note\r\ndeal/a.html,drip_fees,1,"fee, late"\r\ntrust/s/index.html,scam_store,0,ok\r\n',
+                 newline="")
+    assert rb.load_labels(p) == [row("deal/a.html", "drip_fees", 1) | {"note": "fee, late", "label_trick": "drip_fees"},
+                                 row("trust/s/index.html", "risky_store", 0) | {"note": "ok", "label_trick": "scam_store"}]
 
 
 def test_trick_detection_rate_counts_planted_pages_only(outcomes):
@@ -71,18 +76,40 @@ def test_false_alarms_count_confirmed_deal_types_on_clean_pages_only(outcomes):
     assert (fa["k"], fa["n"], fa["clean_pages"], fa["planned"], fa["left_out"]) == (2, 4, 4, 10, [])
 
 
-def test_scam_detection_uses_card_safe_verdict_when_trust_is_connected(outcomes, monkeypatch):
-    monkeypatch.setattr(rb, "NOT_CONNECTED", {rb.LOOKALIKE: "agent not connected"})
-    scam = rb.score(outcomes, "full")["scam_detection"]
-    assert (scam["k"], scam["n"], scam["status"]) == (1, 2, "scored")
+@pytest.mark.parametrize("mode", ["full", "sample"])  # Trust needs no browser: scored in both modes
+def test_scam_detection_and_trust_false_alarms_use_card_safe(outcomes, mode):
+    res = rb.score(outcomes, mode)
+    scam, tfa = res["scam_detection"], res["trust_false_alarms"]
+    assert (scam["k"], scam["n"], scam["status"]) == (1, 2, "scored")  # s-01 bad = caught, s-02 good = missed
+    assert (tfa["k"], tfa["n"], tfa["status"]) == (1, 2, "scored")  # s-03 caution = false alarm, s-04 good = fine
+    assert (res["per_type"]["risky_store"]["planted"], res["per_type"]["risky_store"]["honest"]) == (2, 2)
 
 
-def test_not_connected_types_are_na_with_page_count_never_zero(outcomes):
+def test_trust_label_and_verdict_disagreements_are_reported_not_tuned(outcomes):
+    res = rb.build_results("full", outcomes)
+    assert res["trust_mismatches"] == [
+        {"page": "trust/s-02/index.html", "expected": 1, "trust_verdict": "safe", "safe": "good",
+         "reasons": ["No warning signs found"]},
+        {"page": "trust/s-03/index.html", "expected": 0, "trust_verdict": "caution", "safe": "caution",
+         "reasons": ["Only 5 days"]}]
+    s02 = next(p for p in res["pages"] if p["page"] == "trust/s-02/index.html")
+    assert s02["reason"].startswith("MISMATCH: label expected=1, Trust verdict safe (card.safe good)")
+    text = rb.render(res)
+    assert "Trust mismatches (label vs verdict, for Raj to decide): " in text
+    assert "  trust/s-03/index.html: label expected=0, verdict caution (card.safe caution); reasons: Only 5 days" in text
+    err = rb.page_outcome(row("trust/s-05/index.html", "risky_store", 1), [], error="TimeoutError")
+    assert not err["caught"] and err["reason"] == "page not checked: TimeoutError"  # an error is a miss, not a mismatch
+
+
+def test_not_connected_types_are_na_with_page_count_never_zero(outcomes, monkeypatch):
     res = rb.score(outcomes, "full")
-    assert res["per_type"]["scam_store"] == {"status": "n/a", "reason": "agent not connected", "pages": 2, "planned": 7}
-    assert res["scam_detection"]["status"] == "n/a" and "detection" not in res["per_type"]["scam_store"]
     assert res["exact_match"] == {"status": "n/a", "reason": "agent not connected", "pages": 0, "planned": 7}
-    assert {n["type"] for n in res["na_types"]} == {"scam_store", "lookalike_listing"}
+    assert {n["type"] for n in res["na_types"]} == {"lookalike_listing"}
+    monkeypatch.setattr(rb, "NOT_CONNECTED", {rb.LOOKALIKE: "agent not connected", rb.SCAM: "agent not connected"})
+    res = rb.score(outcomes, "full")
+    assert res["per_type"]["risky_store"] == {"status": "n/a", "reason": "agent not connected", "pages": 4, "planned": 7}
+    assert res["scam_detection"]["status"] == res["trust_false_alarms"]["status"] == "n/a"
+    assert res["trust_mismatches"] == []
 
 
 def test_sample_mode_makes_timer_and_fees_na_and_leaves_their_clean_pages_out(outcomes):
@@ -115,12 +142,14 @@ def test_every_labelled_page_is_scored_or_excluded(outcomes, mode):
     assert acc["trick_detection"] == sum(v["detection"]["n"] for t, v in res["per_type"].items()
                                          if t in rb.DEAL_TYPES and v["status"] == "scored")
     assert acc["false_alarms"] == res["false_alarms"]["n"]
+    assert (acc["scam_detection"], acc["trust_false_alarms"]) == (res["scam_detection"]["n"], res["trust_false_alarms"]["n"])
     excluded = {x["page"]: x["reason"] for x in acc["excluded"]}
-    want = {"trust/s-01.html": "n/a (agent not connected)", "trust/s-02.html": "n/a (agent not connected)"}
+    want = {}
     if mode == "sample":
-        want |= {"deal/tm-01.html": "n/a (hidden browser off)", "deal/tm-05.html": "n/a (hidden browser off)"}
+        want = {"deal/tm-01.html": "n/a (hidden browser off)", "deal/tm-05.html": "n/a (hidden browser off)"}
     assert excluded == want
-    assert f"Page accounting: 9 labelled = {acc['trick_detection']} in trick_detection" in rb.render(res)
+    assert (f"Page accounting: 11 labelled = {acc['trick_detection']} in trick_detection + {acc['false_alarms']} in "
+            f"false_alarms + 2 in scam_detection + 2 in trust_false_alarms + {len(want)} excluded") in rb.render(res)
 
 
 def test_trick_rows_show_planted_and_honest_split(outcomes):
@@ -138,7 +167,7 @@ def test_median_odd_even_empty(values, want):
 
 def test_timing_is_page_load_to_final_card(outcomes):
     tm = rb.score(outcomes, "full")["timing"]
-    assert (tm["median_load_to_card_s"], tm["median_read_s"], tm["median_check_s"], tm["pages_timed"]) == (2.0, 1.0, 1.0, 9)
+    assert (tm["median_load_to_card_s"], tm["median_read_s"], tm["median_check_s"], tm["pages_timed"]) == (2.0, 1.0, 1.0, 11)
     assert rb.page_outcome(row("deal/x.html", "drip_fees", 1), [], error="TimeoutError")["load_to_card_s"] is None
 
 
@@ -163,10 +192,12 @@ def test_results_json_written_to_tmp_path_without_machine_paths(outcomes, tmp_pa
     path = rb.write_results(res, tmp_path / "sub" / "results.json")
     data = json.loads(path.read_text(encoding="utf-8"))
     assert {"mode", "date", "per_type", "false_alarms", "exact_match", "scam_detection", "timing", "na_types", "pages",
-            "notes", "accounting"} <= data.keys()
+            "notes", "accounting", "trust_false_alarms", "trust_mismatches"} <= data.keys()
+    assert (data["scam_detection"]["k"], data["scam_detection"]["n"]) == (1, 2)
+    assert data["accounting"]["trust_false_alarms"] == 2 and rb.TRUST_NOTE in data["notes"]
     assert data["pages"][0]["scored_in"] == "trick_detection" and data["pages"][0]["excluded_reason"] is None
     assert data["mode"] == "full" and data["notes"][0] == rb.CONFIRMED_NOTE
     page = data["pages"][0]
     assert page["findings"] == [{"agent": "deal", "type": "fake_discount", "status": "confirmed", "evidence": 1}]
-    assert page["card"] == {"tone": "caution", "tricks": 1, "safe": "unknown"}
+    assert page["card"] == {"tone": "caution", "tricks": 1, "safe": "unknown", "safe_reasons": [], "trust_verdict": None}
     assert str(ROOT) not in path.read_text(encoding="utf-8")
