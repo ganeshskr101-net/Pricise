@@ -9,6 +9,9 @@ agent finishes and after each Skeptic result, so the verdict firms up as proof a
   without them the finding keeps its status. A second round runs only when the first result is "unverified".
 - The work runs ONCE per check_id: a second stream replays the stored events (and follows a run still in progress).
 - traces/{check_id}.json records, for every finding, who proposed and challenged it, its evidence, model, rounds and status.
+- Page text is untrusted: before any agent starts, every text field of chk["page"] goes through the Scout guard
+  (backend/engines/scout.py). A blocked field is replaced in chk["page"], a warned one is kept; either way ONE
+  "hidden_instructions" finding says so, and the check carries on. The guard never stops a check.
 - AGENT_ORCH=on: findings also go to the shared World Model (backend/engines/world_model.py). A finding is identified by
   finding_key(); the same finding again emits nothing, a changed one updates its entry. The trace reads the sidecar's
   findings when it is reachable (one warning if they differ from the local entries); otherwise the local entries are used.
@@ -25,8 +28,8 @@ from typing import Any, AsyncIterator, Awaitable, Callable, Optional, get_args
 
 from backend.agents import skeptic
 from backend.agents.skeptic import RuleResult
-from backend.contracts import FinalCard, Finding
-from backend.engines import world_model
+from backend.contracts import Evidence, FinalCard, Finding
+from backend.engines import scout, world_model
 
 log = logging.getLogger("pricise.orchestrator")
 
@@ -63,6 +66,20 @@ class _Entry:
 
 
 _RUNS: dict[str, _Run] = {}
+_PAGE_REPORTS: dict[str, scout.PageGuard] = {}  # check_id -> guard report from clean_page(), emitted by its run
+
+
+async def clean_page(chk: dict) -> None:
+    """Clean chk["page"] NOW, for callers that build agents from the page before run_check (orchestrator_stub).
+    The run still emits the hidden_instructions finding. Never raises."""
+    try:
+        report = await asyncio.to_thread(scout.guard_page, chk.get("page"))
+    except Exception as err:
+        log.error("orchestrator check=%s page guard failed: %s", chk.get("check_id"), type(err).__name__)
+        return
+    if report.hits:
+        chk["page"] = report.page
+        _PAGE_REPORTS[chk["check_id"]] = report
 
 
 async def run_check(chk: dict, agents: list[Agent], rechecker: Optional[Rechecker] = None, *,
@@ -109,6 +126,7 @@ class _Work:
     async def main(self, agents: list[Agent], rechecker: Optional[Rechecker], timeout: float) -> None:
         self.chk["findings"] = []
         try:
+            await self._guard_page()
             await self._agents(agents, timeout)
             await self._skeptic(rechecker)
             if not self.run.events or self.run.events[-1]["kind"] != "final_card":
@@ -120,6 +138,21 @@ class _Work:
             self.run.done = True
             async with self.run.changed:
                 self.run.changed.notify_all()
+
+    async def _guard_page(self) -> None:
+        """Untrusted page text is checked before any agent (or model) reads it. Never raises."""
+        early = _PAGE_REPORTS.pop(self.chk["check_id"], None)  # clean_page() already did the work
+        if early is not None:
+            await self._add(page_text_finding(self.chk["check_id"], early))
+            return
+        try:
+            report = await asyncio.to_thread(scout.guard_page, self.chk.get("page"))
+        except Exception as err:  # a guard bug must not stop the check; the model-call gate still applies
+            log.error("orchestrator check=%s page guard failed: %s", self.chk["check_id"], type(err).__name__)
+            return
+        if report.hits:
+            self.chk["page"] = report.page
+            await self._add(page_text_finding(self.chk["check_id"], report))
 
     async def _agents(self, agents: list[Agent], timeout: float) -> None:
         queue: asyncio.Queue = asyncio.Queue()
@@ -237,6 +270,19 @@ async def _drive(agent: Agent, chk: dict, queue: asyncio.Queue, timeout: float) 
         await queue.put(failed_finding(chk["check_id"], agent_name(agent), err, timeout))
     finally:
         await queue.put(_AGENT_DONE)
+
+
+def page_text_finding(check_id: str, report: scout.PageGuard) -> Finding:
+    """One finding for every page text the guard removed or flagged. Says what we saw, never the text itself."""
+    n = len(report.removed)
+    places = f"{n} place{'s' if n != 1 else ''}"
+    summary = (f"This page has text aimed at AI assistants ({places}). Pricise removed it before any check read it "
+               "and did not follow it." if n else
+               "This page has text that may be aimed at AI assistants. Pricise kept it but did not follow it.")
+    evidence = [Evidence(kind="selector", ref=h.selector, label="Text aimed at AI") if h.selector
+                else Evidence(kind="text", ref=f"page.{h.field}") for h in report.hits]
+    return Finding(check_id=check_id, agent="page", type="hidden_instructions", status="confirmed" if n else "unverified",
+                   summary=summary, evidence=evidence, confidence=0.9 if n else 0.5, model=scout.MODEL)
 
 
 def failed_finding(check_id: str, name: str, err: BaseException, timeout: float) -> Finding:

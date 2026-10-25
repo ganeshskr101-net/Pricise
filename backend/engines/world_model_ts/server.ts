@@ -1,8 +1,13 @@
-// Pricise World Model sidecar: the Meterless reference engine (src/, unchanged) behind a tiny HTTP API on 127.0.0.1.
-// The orchestrator (backend/engines/world_model.py) writes every finding version here; the trace reads them back.
+// Pricise engine sidecar (the folder keeps its first name, world_model_ts): two Meterless engines in ONE Node process on
+// 127.0.0.1 with the same safeguards (loopback Host check, 64 KB body limit, field allowlists, no CORS, no body logs).
+// - World Model: the Meterless reference engine (src/, unchanged). backend/engines/world_model.py writes every finding
+//   version here; the trace reads them back.
+// - Scout Intent: Pricise's implementation of the Scout spec (scout/). backend/engines/scout.py sends untrusted text here.
 //
 //   POST /findings                {key, check_id, finding} -> {changed, version, entity_id}
 //   GET  /checks/{check_id}/findings                        -> {findings: [{key, version, proposed_by, statuses, finding}]}
+//   POST /scout/guard             {texts, surface?}         -> {results: [{level, flags}], packs}   (flags: ids + offsets only)
+//   POST /scout/decide            {prompt, user?, surface}  -> Scout decision; its contract is UNSIGNED (the backend signs)
 //   GET  /health                                            -> {ok: true}
 //
 // One finding = one observation (externalId = key, type "finding"). Its text is the canonical JSON of the finding without
@@ -11,13 +16,25 @@
 // Never logs request bodies. Binds to 127.0.0.1 only. Start: npx tsx server.ts (port from WORLD_MODEL_URL, default 8788).
 
 import http from "node:http";
+import { fileURLToPath } from "node:url";
 import { WorldModel, canonicalJson, externalId } from "./src/index.ts";
 import type { Entity, WorldEvent } from "./src/index.ts";
+import { Scout } from "./scout/index.ts";
 
 const HOST = "127.0.0.1";
 const MAX_BODY = 64 * 1024;
 const KEY_RE = /^[0-9a-f]{64}$/;
 const BODY_FIELDS = new Set(["key", "check_id", "finding"]);
+const GUARD_FIELDS = new Set(["texts", "surface"]);
+const DECIDE_FIELDS = new Set(["prompt", "user", "surface"]);
+const MAX_TEXTS = 64;
+const MAX_PROMPT = 4000;
+const SCOUT_PACKS = ["default", "adversarial-tight", "pricise"];
+
+function createScout(): Scout {
+  const registry = fileURLToPath(new URL("./scout/pricise-intents.json", import.meta.url));
+  return new Scout({ intentRegistry: registry, policyPack: SCOUT_PACKS, signer: null });
+}
 
 function portFrom(url: string | undefined): number {
   const u = new URL(url || "http://127.0.0.1:8788");
@@ -110,7 +127,40 @@ function badBody(body: unknown): string | null {
   return null;
 }
 
-function createServer(world: WorldModel, now: () => Date = () => new Date()): http.Server {
+function badGuardBody(body: unknown): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return "body must be a JSON object";
+  const b = body as Record<string, unknown>;
+  if (Object.keys(b).some((k) => !GUARD_FIELDS.has(k))) return "only texts and surface are accepted";
+  if (!Array.isArray(b.texts) || b.texts.length > MAX_TEXTS || b.texts.some((t) => typeof t !== "string")) {
+    return `texts must be a list of at most ${MAX_TEXTS} strings`;
+  }
+  if (b.surface !== undefined && (typeof b.surface !== "string" || b.surface.length > 32)) return "surface must be a short string";
+  return null;
+}
+
+function badDecideBody(body: unknown): string | null {
+  if (!body || typeof body !== "object" || Array.isArray(body)) return "body must be a JSON object";
+  const b = body as Record<string, unknown>;
+  if (Object.keys(b).some((k) => !DECIDE_FIELDS.has(k))) return "only prompt, user and surface are accepted";
+  if (typeof b.prompt !== "string" || !b.prompt || b.prompt.length > MAX_PROMPT) return `prompt must be 1-${MAX_PROMPT} characters`;
+  if (typeof b.surface !== "string" || !b.surface || b.surface.length > 32) return "surface must be a short string";
+  const u = b.user as Record<string, unknown> | undefined;
+  if (u !== undefined && (!u || typeof u !== "object" || typeof u.id !== "string" || typeof u.role !== "string" ||
+      u.id.length > 64 || u.role.length > 32 || Object.keys(u).some((k) => k !== "id" && k !== "role"))) {
+    return "user must be {id, role} with short strings";
+  }
+  return null;
+}
+
+async function jsonBody(req: http.IncomingMessage): Promise<unknown> {
+  try {
+    return JSON.parse(await readBody(req));
+  } catch {
+    return undefined;
+  }
+}
+
+function createServer(world: WorldModel, now: () => Date = () => new Date(), scout: Scout = createScout()): http.Server {
   const startedAt = new Map<string, string>(); // check_id -> provenance time of its first write (same for every version)
   return http.createServer(async (req, res) => {
     const host = (req.headers.host ?? "").split(":")[0];
@@ -132,6 +182,21 @@ function createServer(world: WorldModel, now: () => Date = () => new Date()): ht
         const { key, check_id, finding } = body as { key: string; check_id: string; finding: Finding };
         if (!startedAt.has(check_id)) startedAt.set(check_id, now().toISOString());
         return send(res, 200, await writeFinding(world, key, finding, startedAt.get(check_id)!));
+      }
+      if (req.method === "POST" && url.pathname === "/scout/guard") {
+        const body = await jsonBody(req);
+        if (body === undefined) return send(res, 400, { error: "invalid or too large JSON body" });
+        const problem = badGuardBody(body);
+        if (problem) return send(res, 400, { error: problem });
+        const results = scout.checkTexts((body as { texts: string[] }).texts).map(({ level, flags }) => ({ level, flags }));
+        return send(res, 200, { results, packs: SCOUT_PACKS });
+      }
+      if (req.method === "POST" && url.pathname === "/scout/decide") {
+        const body = await jsonBody(req);
+        if (body === undefined) return send(res, 400, { error: "invalid or too large JSON body" });
+        const problem = badDecideBody(body);
+        if (problem) return send(res, 400, { error: problem });
+        return send(res, 200, await scout.decide(body as { prompt: string; surface: string }));
       }
       return send(res, 404, { error: "not found" });
     } catch (err) {
