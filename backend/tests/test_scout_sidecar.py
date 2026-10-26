@@ -33,7 +33,8 @@ def sidecar():
     proc.wait(timeout=5)
 
 
-def post(url: str, body, host: str | None = None, headers: dict | None = None) -> tuple[int, dict]:
+def post(url: str, body, host: str | None = None, headers: dict | None = None) -> tuple[int | str, dict]:
+    """(status, reply). A dropped connection gives the exception text in place of the status, so a failure says why."""
     data = body if isinstance(body, bytes) else json.dumps(body).encode()
     hdrs = {"Content-Type": "application/json", **({"Host": host} if host else {}), **(headers or {})}
     req = urllib.request.Request(url, data=data, method="POST", headers={k: v for k, v in hdrs.items() if v is not None})
@@ -42,8 +43,8 @@ def post(url: str, body, host: str | None = None, headers: dict | None = None) -
             return r.status, json.loads(r.read())
     except urllib.error.HTTPError as err:
         return err.code, json.loads(err.read() or b"{}")
-    except (ConnectionError, http.client.RemoteDisconnected, urllib.error.URLError):
-        return 0, {}  # the server dropped the connection (readBody does this for bodies over 64 KB)
+    except (ConnectionError, http.client.RemoteDisconnected, urllib.error.URLError) as err:
+        return f"{type(err).__name__}: {getattr(err, 'reason', err)}", {}  # the server dropped the connection
 
 
 def test_guard_route_matches_the_python_rules(sidecar):
@@ -59,7 +60,7 @@ def test_guard_route_safeguards(sidecar):
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"], "token": "t"})[0] == 400  # field allowlist
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"] * 65})[0] == 400
     assert post(f"{sidecar}/scout/guard", {"texts": [1]})[0] == 400
-    assert post(f"{sidecar}/scout/guard", json.dumps({"texts": ["a" * 70_000]}).encode())[0] in (0, 400)  # over 64 KB
+    assert post(f"{sidecar}/scout/guard", json.dumps({"texts": ["a" * 70_000]}).encode())[0] == 400  # over 64 KB: drained, then refused
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"]})[0] == 200  # still serving after that
     assert post(f"{sidecar}/scout/guard", {"texts": ["x"]}, host="evil.example")[0] == 403  # loopback Host only
 
