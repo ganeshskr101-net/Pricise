@@ -25,9 +25,15 @@ _shared: dict = {}  # {"pw", "browser", "loop"} once warm() has run
 
 
 def cached_chromium() -> Optional[str]:
-    for root in (CACHE, LINUX_CACHE):
+    """PLAYWRIGHT_CHROMIUM_PATH if that file exists, else the newest Chromium in Playwright's cache (macOS, Linux, Windows)."""
+    path = os.environ.get("PLAYWRIGHT_CHROMIUM_PATH", "").strip()
+    if path and Path(path).is_file():
+        return path
+    windows = Path(os.environ.get("LOCALAPPDATA", "")) / "ms-playwright" if os.environ.get("LOCALAPPDATA") else None
+    for root in (CACHE, LINUX_CACHE, *([windows] if windows else [])):
         hits = sorted(root.glob("chromium-*/chrome-*/**/MacOS/Google Chrome for Testing"), reverse=True) + \
-               sorted(root.glob("chromium-*/chrome-linux*/chrome"), reverse=True)
+               sorted(root.glob("chromium-*/chrome-linux*/chrome"), reverse=True) + \
+               sorted(root.glob("chromium-*/chrome-win*/chrome.exe"), reverse=True)
         if hits:
             return str(hits[0])
     return None

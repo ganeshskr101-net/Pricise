@@ -134,7 +134,8 @@ async def check_timer(check_id: str, url: str, page: PageFacts, gap: Optional[fl
     ev += [{"kind": "screenshot", "ref": f["screenshot"], "label": f"Visit {f['visit']} · {f['time']} · {f['shown']}"} for f in frames]
     out.findings.append(finding(check_id, "resetting_timer", "confirmed", summary, ev, confidence=0.97 if same else 0.9,
                                 model="hidden browser, 3 fresh visits + rules"))
-    out.evidence_data["timer_frames"] = [{"visit": f["visit"], "time": f["time"], "shown": f["shown"], "screenshot": f["screenshot"]}
+    out.evidence_data["timer_frames"] = [{"visit": f["visit"], "time": f["time"], "shown": f["shown"], "screenshot": f["screenshot"],
+                                          "at": f["at"], "remaining_s": f["remaining_s"]}  # for skeptic.visits_from_frames
                                          for f in frames]
     return out
 
@@ -145,7 +146,7 @@ def passthrough(check_id: str, sig: Optional[PageSignal]) -> ToolResult:
     if not sig:
         return out
     ev = [{"kind": "selector", "ref": sig.selector, "label": "Timer resets" if sig.type == "resetting_timer" else "Countdown"}] \
-        if sig.selector else []
+        if sig.selector else [{"kind": "log", "ref": f"page-signal:{sig.type}", "label": " ".join(sig.text.split())[:70]}]
     if sig.type == "resetting_timer":
         d = sig.detail or {}
         extra = f" (it showed more time left after {d['seconds_since_last_visit']} s)" if d.get("seconds_since_last_visit") else ""
