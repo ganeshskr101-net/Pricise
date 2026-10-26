@@ -30,6 +30,17 @@ if ($LASTEXITCODE -ne 0) {
     Write-Host "WARNING: couldn't download Playwright's Chromium. Stub mode works without it; for the real Deal Agent run:"
     Write-Host "         .venv\Scripts\python.exe -m playwright install chromium"
 }
+# The engine sidecar (World Model, Scout, H-MEM, Markovian). Optional: needs Node 20+; the backend works without it.
+$nodeMajor = 0
+if (Get-Command node -ErrorAction SilentlyContinue) { $nodeMajor = [int](& node -p "process.versions.node.split('.')[0]") }
+if ($nodeMajor -ge 20) {
+    Push-Location "backend\engines\world_model_ts"
+    & npm install --ignore-scripts --no-audit --no-fund
+    if ($LASTEXITCODE -ne 0) { Write-Host "WARNING: npm install failed in backend\engines\world_model_ts; the engine sidecar won't start." }
+    Pop-Location
+} else {
+    Write-Host "NOTE: Node 20+ not found, so the optional engine sidecar is not installed (https://nodejs.org)."
+}
 if (-not (Test-Path ".env")) {
     Copy-Item ".env.example" ".env"
     Write-Host "Created .env from .env.example (stub mode, no keys needed)."

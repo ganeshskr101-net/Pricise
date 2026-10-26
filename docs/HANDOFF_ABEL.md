@@ -1,6 +1,8 @@
 # Handoff: Abel (Meterless, Nemotron, engines, orchestrator)
 
-State on 25 Oct 2026, from the code on `main`. Tests: **436 passed, 1 failed** (the known Markovian one, below).
+State on 25 Oct 2026, from the code on `main`. Updated 26 Oct 2026 (branch `abel/price-ready`): the test counts and the
+Zetaris and orchestrator lines below. For the current counts run `scripts/test.sh`; on 26 Oct, before that branch's
+changes, the suite gave 432 passed, 5 skipped, 0 failed.
 
 ## 1. What works now
 
@@ -9,7 +11,7 @@ State on 25 Oct 2026, from the code on `main`. Tests: **436 passed, 1 failed** (
 | Deal Agent | Live: fake discount, resetting timer, pre-ticked add-on, late fees (hidden browser, Store Lab only) | `backend/agents/deal.py`, `backend/tools/` |
 | Trust Agent | Live: domain age, company record, copied photos, reviews, returns; vets every store the Price Agent considers | `backend/agents/trust.py` |
 | Price Agent | Live: same model + condition, true total = price + shipping + fees − card offers; only stores Trust calls safe | `backend/agents/price.py` |
-| Zetaris | Live: reads go through Zetaris REST from the `pricise_pg` datasource (the Pricise Postgres on :5433); writes go straight to that Postgres (Zetaris can't UPDATE a JDBC source) | `backend/data/` |
+| Zetaris | Live **only with `DATA_SOURCE=zetaris` and `PRICISE_PG_*` set** (and `pricise_pg` registered, the Postgres seeded): reads go through Zetaris REST from the `pricise_pg` datasource (the Pricise Postgres on :5433); writes go straight to that Postgres (Zetaris can't UPDATE a JDBC source). Otherwise the in-memory fixture is used; the data is synthetic in every mode | `backend/data/` |
 | UI | Side panel, quick card, red outlines, evidence page (chart, fees, replay, store table, Zetaris SQL), chat, untick, wishlist + Day 9 notification | `extension/` |
 
 **Full live check (one command), then open http://localhost:8787/storelab/audiodealz/ in Chrome with the extension loaded:**
@@ -70,8 +72,8 @@ So the AudioDealz live check makes **no model call** unless someone uses the cha
 | H-MEM (`hmem.py`) | Tests only: no caller in the backend |
 | Markovian (`markovian.py`) | Only via `backend/watch.py` and `bench/run_watch.py`; `watch.py` isn't wired into `stub_server.py` (the wishlist Day 9 alert is scripted + Price Agent) |
 
-- [ ] **`AGENT_ORCH=on` skips the Price Agent and Zetaris findings storage.** `backend/orchestrator_stub.py` `stub_agents()` has only the scripted rows + Deal + Trust. Add `price.assess_async(..., use_trust=...)`, `stub_server._apply_price()` and `_store_findings()` before making the orchestrator the default.
-- [ ] **Known failing test** (also fails on `main`): `backend/tests/test_markovian_sidecar.py::test_losing_the_sidecar_mid_run_loses_nothing`, `assert 30 == 11` on `KillAfterDay10.prompts` (30 prompts recorded, test expects 11).
+- [x] **`AGENT_ORCH=on` skips the Price Agent and Zetaris findings storage.** Done on `abel/price-ready`: with `AGENT_PRICE=real` the Price Agent runs in the orchestrator, the Skeptic re-checks every best price, and findings are stored after the run (`docs/price_agent_contract.md`).
+- [x] **Known failing test** `test_markovian_sidecar.py::test_losing_the_sidecar_mid_run_loses_nothing`: passes on 26 Oct 2026.
 
 ## 4. Switches and tests
 
