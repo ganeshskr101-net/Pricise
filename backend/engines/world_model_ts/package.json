@@ -1,0 +1,14 @@
+{
+  "name": "@pricise/world-model-sidecar",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Pricise shared finding state: the Meterless World Model reference engine (src/, Apache-2.0) behind a 127.0.0.1 HTTP sidecar. Install with: npm install --ignore-scripts",
+  "license": "Apache-2.0",
+  "scripts": {
+    "start": "tsx server.ts"
+  },
+  "devDependencies": {
+    "tsx": "4.23.0"
+  }
+}

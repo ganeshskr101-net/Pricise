@@ -5,7 +5,9 @@ Store Lab listing with its price on the demo day and its true total = price + sh
 Explicit rules (no model) then decide, and every decision is a finding:
   - a different model in the same family (e.g. WH-1000XM4)  -> rejected: not the same item
   - a different condition (refurbished vs new)               -> rejected: not the same item
-  - a store flagged as a scam (or risky) in the seeded data  -> rejected (the Trust Agent will replace these flags)
+  - store safety, with use_trust=True (AGENT_TRUST=real): the Trust Agent vets every candidate store
+      unsafe -> rejected (challenged_by "trust") · caution -> rejected ("be careful") · didn't answer -> unverified, skipped
+    with use_trust=False (AGENT_TRUST=stub): the seeded flags in the catalog (scam / risky -> rejected) are the fallback
   - a store that is down                                     -> unverified, skipped
   - the cheapest remaining true total wins. Evidence cites the SQL.
 Real sites: read only, no scraping of other stores: one "unverified" finding that the comparison covers our demo catalog only.
@@ -13,10 +15,12 @@ Never raises: if Zetaris fails it falls back to the in-memory catalog and says s
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 from backend.contracts import BestPrice, Evidence, Finding, PageFacts, Reason
 from backend.data import catalog, repo
@@ -26,6 +30,7 @@ from backend.tools.discount import store_key
 
 log = logging.getLogger("pricise.price")
 RULES = "rules (no model)"
+TRUST_REASONS_SHOWN = 2
 
 
 @dataclass
@@ -36,6 +41,16 @@ class PriceResult:
     stores: list[dict] = field(default_factory=list)  # evidence page rows: {"store", "total", "note", "status"}
     sql: Optional[str] = None
     source: str = ""
+    trust: str = "seeded"            # where store safety came from: "trust agent" or "seeded" (catalog flags)
+
+
+@dataclass
+class Judgement:
+    status: str               # evidence table: ok | rejected | skipped
+    finding_status: str = ""  # rejected | unverified ("" when ok)
+    why: str = ""             # finding text after "Store X, $Y: "
+    short: str = ""           # for "Skipped Store D (short), ..."
+    by: Optional[str] = None  # challenged_by
 
 
 def _f(check_id: str, type_: str, status: str, summary: str, evidence: Optional[list[dict]] = None,
@@ -68,6 +83,12 @@ def _sql_ev(res: PriceResult, n: int) -> list[dict]:
     if not res.sql:
         return [{"kind": "log", "ref": f"catalog:{res.source}", "label": f"{n} listings from the Store Lab catalog ({res.source})"}]
     return [{"kind": "sql", "ref": res.sql, "label": f"Zetaris returned {n} Store Lab listings"}]
+
+
+def _at_origin(store_url: str, page_url: str) -> str:
+    """The catalog's store URL served by the same backend as the page (so Trust vets, and "Go" links, hit the running server)."""
+    s, p = urlsplit(store_url), urlsplit(page_url)
+    return urlunsplit((p.scheme, p.netloc, s.path, s.query, ""))
 
 
 def _real_site(check_id: str, page: PageFacts) -> PriceResult:
@@ -108,27 +129,85 @@ def _identify(rows: list[dict], here: str, page: PageFacts) -> tuple[Optional[di
     return None, ({**other, "condition": "new"} if other else None)  # a store outside the catalog: assume new
 
 
-def _judge(r: dict, item: dict) -> tuple[str, str, str]:
-    """(status for the evidence table, finding status, short reason) for one candidate listing."""
-    if r["model_key"] != item["model_key"]:
-        return "rejected", "rejected", f"{r['model']} is a different model, not the same item"
-    if r["condition"] != item["condition"]:
-        return "rejected", "rejected", f"{r['condition']}, not the same item"
+# ----------------------------------------------------------------------------- store safety
+
+
+async def vet_stores(check_id: str, store_urls: dict[str, str]) -> dict[str, dict]:
+    """Ask the Trust Agent about each store, concurrently: {store_id: {"verdict", "reasons", "checked"}}.
+    Each vet gets its own check id so a candidate's trust findings never overwrite the page's own rows."""
+    from backend.agents import trust as trust_agent
+
+    ids = list(store_urls)
+    tvs = await asyncio.gather(*(trust_agent.assess_store(store_urls[s], f"{check_id}:vet:{s}") for s in ids))
+    return {s: {"verdict": tv["verdict"], "reasons": tv["reasons"], "checked": tv["checked"]} for s, tv in zip(ids, tvs)}
+
+
+def _trust_text(tv: dict) -> str:
+    return "; ".join(r.rstrip(".") for r in tv["reasons"][:TRUST_REASONS_SHOWN])
+
+
+def _safety(r: dict, trust: Optional[dict[str, dict]]) -> Optional[Judgement]:
+    """None = safe enough to compete. Trust Agent verdicts when given, else the seeded catalog flags."""
+    if trust is not None:
+        tv = trust.get(r["store_id"])
+        if tv is None or not tv["checked"]:
+            return Judgement("skipped", "unverified", "the Trust Agent couldn't check this store (it did not respond)",
+                             "couldn't check", "trust")
+        if tv["verdict"] == "unsafe":
+            return Judgement("rejected", "rejected", f"blocked by the Trust Agent ({_trust_text(tv)})", "unsafe store", "trust")
+        if tv["verdict"] == "caution":
+            return Judgement("rejected", "rejected", f"the Trust Agent says be careful ({_trust_text(tv)})", "be careful",
+                             "trust")
+        return None
     if r["trust"] == "scam":
-        return "rejected", "rejected", "flagged as a scam in our store data"
+        return Judgement("rejected", "rejected", "flagged as a scam in our store data", "scam")
     if r["trust"] != "ok":
-        return "rejected", "rejected", "not a trusted store (risk signals in our store data)"
+        return Judgement("rejected", "rejected", "not a trusted store (risk signals in our store data)", "risky store")
+    return None
+
+
+def _judge(r: dict, item: dict, trust: Optional[dict[str, dict]]) -> Judgement:
+    if r["model_key"] != item["model_key"]:
+        return Judgement("rejected", "rejected", f"{r['model']} is a different model, not the same item", r["model"])
+    if r["condition"] != item["condition"]:
+        return Judgement("rejected", "rejected", f"{r['condition']}, not the same item", r["condition"])
+    unsafe = _safety(r, trust)
+    if unsafe:
+        return unsafe
     if r["status"] == "outage":
-        return "skipped", "unverified", "site down during the check"
-    return "ok", "", ""
+        return Judgement("skipped", "unverified", "site down during the check", "site down")
+    return Judgement("ok")
 
 
-def assess(check_id: str, url: str, page: PageFacts, day: int = 1) -> PriceResult:
-    """The Price Agent's findings and "Best safe price" verdict for one page on demo `day` (1..9). Never raises."""
+def _own_is_safe(own: dict, trust: Optional[dict[str, dict]]) -> bool:
+    if own["status"] == "outage":
+        return False
+    if trust is not None:
+        tv = trust.get(own["store_id"])
+        return bool(tv and tv["checked"] and tv["verdict"] == "safe")
+    return own["trust"] == "ok"
+
+
+# ----------------------------------------------------------------------------- the agent
+
+
+async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, use_trust: bool = False) -> PriceResult:
+    """The Price Agent's findings and "Best safe price" verdict for one page on demo `day` (1..9). Never raises.
+    use_trust=True asks the Trust Agent about every candidate store (AGENT_TRUST=real); False uses the seeded flags."""
     if not is_storelab(url):
         return _real_site(check_id, page)
     try:
-        return _assess_storelab(check_id, url, page, day)
+        rows, sql, source = await asyncio.to_thread(_load, day)
+        rows = [{**r, "url": _at_origin(r["url"], url)} for r in rows]
+        here = store_key(url, page).removeprefix("storelab/")
+        own, item = _identify(rows, here, page)
+        trust = None
+        if use_trust and item:
+            urls = {r["store_id"]: r["url"] for r in rows if r["family"] == item["family"]}
+            trust = await vet_stores(check_id, urls)
+        res = _decide(check_id, day, rows, sql, source, here, own, item, trust)
+        res.trust = "trust agent" if trust is not None else "seeded"
+        return res
     except Exception as e:  # never break a check
         log.exception("price agent failed")
         res = PriceResult(source="error")
@@ -139,11 +218,14 @@ def assess(check_id: str, url: str, page: PageFacts, day: int = 1) -> PriceResul
         return res
 
 
-def _assess_storelab(check_id: str, url: str, page: PageFacts, day: int) -> PriceResult:
-    rows, sql, source = _load(day)
+def assess(check_id: str, url: str, page: PageFacts, day: int = 1, use_trust: bool = False) -> PriceResult:
+    """Blocking version of assess_async, for callers without an event loop (scripts, tests)."""
+    return asyncio.run(assess_async(check_id, url, page, day, use_trust))
+
+
+def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], source: str, here: str,
+            own: Optional[dict], item: Optional[dict], trust: Optional[dict[str, dict]]) -> PriceResult:
     res = PriceResult(sql=sql, source=source)
-    here = store_key(url, page).removeprefix("storelab/")
-    own, item = _identify(rows, here, page)
     if not item:
         res.findings.append(_f(check_id, "catalog_match", "unverified",
                                "This item isn't in the Store Lab catalog, so other stores weren't compared.",
@@ -160,31 +242,31 @@ def _assess_storelab(check_id: str, url: str, page: PageFacts, day: int) -> Pric
                            _sql_ev(res, len(rows)), confidence=0.95))
     ok, groups = [], {}
     for r in family:
-        status, f_status, why = _judge(r, item)
-        res.stores.append({"store": r["store"], "total": r["true_total"], "status": status,
-                           "note": f"{why[0].upper()}{why[1:]}" if why else f"{_math(r)} · {r['condition']}"})
-        if status == "ok":
+        j = _judge(r, item, trust)
+        res.stores.append({"store": r["store"], "total": r["true_total"], "status": j.status,
+                           "note": f"{j.why[0].upper()}{j.why[1:]}" if j.why else f"{_math(r)} · {r['condition']}"})
+        if j.status == "ok":
             ok.append(r)
         else:
-            groups.setdefault((why, f_status), []).append(r)
+            groups.setdefault((j.why, j.finding_status, j.short, j.by), []).append(r)
     skipped = []
-    for (why, f_status), group in groups.items():
+    for (why, f_status, short, by), group in groups.items():
         if group[0]["model_key"] == item["model_key"]:
-            skipped.append((group, why))
+            skipped.append((group, short))
         if len(group) > 2:  # many stores with the same reason: one finding, not a wall of rows
             text = f"{len(group)} stores skipped ({', '.join(r['store'] for r in group)}): {why}."
         else:
             text = " ".join(f"{r['store']}, {money(r['true_total'])}: {why}." for r in group)
+        extra = {"challenged_by": by, "rounds": 1} if by else {}
         res.findings.append(_f(check_id, "candidate", f_status, text, [{"kind": "url", "ref": r["url"]} for r in group],
-                               confidence=0.9 if f_status == "rejected" else 0.0))
+                               confidence=0.9 if f_status == "rejected" else 0.0, **extra))
 
     best = min(ok, key=lambda r: (r["true_total"], r["store"])) if ok else None
-    here_best = own is not None and own["trust"] == "ok" and own["status"] != "outage" and \
-        (best is None or own["true_total"] <= best["true_total"])
+    here_best = own is not None and _own_is_safe(own, trust) and (best is None or own["true_total"] <= best["true_total"])
     if here_best:
         best = own
-    skipped_text = _and([f"{len(g)} stores ({_short(why)})" if len(g) > 2 else
-                         _and([f"{r['store']} ({_short(why)})" for r in g]) for g, why in skipped])
+    skipped_text = _and([f"{len(g)} stores ({short})" if len(g) > 2 else _and([f"{r['store']} ({short})" for r in g])
+                         for g, short in skipped])
     if not best:
         res.best_price = BestPrice(status="unknown", headline="No safe match",
                                    reasons=[Reason(text="No trusted store has the exact same item", tone="unknown")])
@@ -198,10 +280,11 @@ def _assess_storelab(check_id: str, url: str, page: PageFacts, day: int) -> Pric
                               "note": f"This store · {_math(best)} · {best['condition']}"})
     price_row = {"kind": "price_row", "ref": f"listing:{best['store_id']}:{best['product_id']}:day{day}",
                  "label": f"{_math(best)} = {money(best['true_total'])}"}
+    trusted = "checked by the Trust Agent" if trust is not None else "trusted"
     where = "This store already has the best safe price" if here_best else f"{best['store']}, {money(best['true_total'])}"
     res.findings.append(_f(check_id, "best_price", "confirmed",
                            f"{where}: exact match ({item['condition']}, same model), {_math(best)}."
-                           + (f" Cheapest true total of {len(ok) + (1 if here_best else 0)} trusted stores." if ok else ""),
+                           + (f" Cheapest true total of {len(ok) + (1 if here_best else 0)} {trusted} stores." if ok else ""),
                            [{"kind": "url", "ref": best["url"]}, price_row] + _sql_ev(res, len(rows)), confidence=0.94))
     reasons = [Reason(text=f"Exact match: same model, {item['condition']}", tone="good", proof="stores"),
                Reason(text=_math(best), tone="good", proof="stores")]
@@ -220,15 +303,16 @@ def _and(items: list[str]) -> str:
     return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1] if items else ""
 
 
-def _short(why: str) -> str:
-    return {"flagged as a scam in our store data": "scam", "site down during the check": "site down",
-            "not a trusted store (risk signals in our store data)": "risky store"}.get(why, why.split(",")[0])
-
-
-def best_for(model: str, condition: str = "new", day: int = 1) -> Optional[dict]:
-    """The best safe listing for a model on demo `day` across all Store Lab stores (the wishlist watch uses this)."""
+def best_for(model: str, condition: str = "new", day: int = 1, origin: Optional[str] = None,
+             use_trust: bool = False) -> Optional[dict]:
+    """The best safe listing for a model on demo `day` across all Store Lab stores (the wishlist watch uses this).
+    use_trust=True vets the stores with the Trust Agent at `origin` (the running backend); blocking: no event loop here."""
     rows, _, _ = _load(day)
     want = catalog.key(model)
-    ok = [r for r in rows if r["model_key"] == want and r["condition"] == condition and r["trust"] == "ok"
-          and r["status"] != "outage"]
+    rows = [r for r in rows if r["model_key"] == want and r["condition"] == condition and r["status"] != "outage"]
+    trust = None
+    if use_trust and origin:
+        rows = [{**r, "url": _at_origin(r["url"], origin)} for r in rows]
+        trust = asyncio.run(vet_stores("wishlist", {r["store_id"]: r["url"] for r in rows}))
+    ok = [r for r in rows if _safety(r, trust) is None]
     return min(ok, key=lambda r: (r["true_total"], r["store"])) if ok else None

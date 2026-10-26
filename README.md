@@ -7,6 +7,8 @@ work, every claim links to its proof, nothing is bought without your approval, a
 Built for the Open Agent Hackathon 2026 (Track 3: Reasoning Architecture) with Cursor, Zetaris, Meterless Nightshift and
 NVIDIA Nemotron.
 
+**Picking up Meterless / Nemotron / engines?** Start with [docs/HANDOFF_ABEL.md](docs/HANDOFF_ABEL.md).
+
 ![Pricise side panel and quick cards](docs/mockups/ui-v2/pricise_ui_v2.png)
 
 ## Quickstart
@@ -47,12 +49,13 @@ runs in stub mode.
 | `AGENT_DEAL` | `stub` (default) · `real` | `real` runs the Deal Agent (`backend/agents/deal.py`) instead of the scripted deal findings. Shortcut: `scripts/run.sh --real` |
 | `SAMPLE_MODE` | `true` (default) · `false` | Demo-friendly timings for the Store Lab tools |
 | `TIMER_GAP_S` | seconds, default `3` in sample mode | Gap between the timer test's 3 fresh page loads |
-| `AGENT_PRICE` | `stub` (default) · `real` | `real` runs the Price Agent (`backend/agents/price.py`): best safe price from the Store Lab catalog, following the demo clock |
+| `AGENT_TRUST` | `stub` (default) · `real` | `real` runs the Trust Agent (`backend/agents/trust.py`) for "Shop safe?"; with `AGENT_PRICE=real` it also vets every store the Price Agent considers |
+| `AGENT_PRICE` | `stub` (default) · `real` | `real` runs the Price Agent (`backend/agents/price.py`): best safe price from the Store Lab catalog, following the demo clock. Store safety comes from the Trust Agent when `AGENT_TRUST=real`, else from seeded flags |
 | `DATA_SOURCE` | `fixture` (default) · `zetaris` | `zetaris` reads price history, listings and the wishlist through Zetaris and stores findings; falls back to the fixture if Zetaris fails |
 | `PLAYWRIGHT_CHROMIUM_PATH` | path, optional | Use this Chromium for the hidden browser |
 | `METERLESS_*`, `NEMOTRON_*` | see `.env.example` | Model calls through Meterless Nightshift. Unset = rule-based answers, everything still works |
 
-More agents follow the same pattern as they land (`AGENT_TRUST`, `AGENT_PRICE`, …): stub first, swapped to real one at a time.
+More agents follow the same pattern as they land: stub first, swapped to real one at a time.
 
 ## Project structure
 
@@ -99,6 +102,32 @@ Everything runs without keys today. When you plug in a real service, put its val
 - **Trust Agent (Raj), Price Agent (Josh), orchestrator + Skeptic (Abel).** Implement your agent, add an `AGENT_<NAME>=real`
   switch in `backend/stub_server.py` (or the orchestrator) the way `AGENT_DEAL` works, keep the Finding / FinalCard shapes from
   `backend/contracts.py`, and keep `stub` the default so the demo never breaks.
+
+## World Model (shared finding state)
+
+With `AGENT_ORCH=on`, the orchestrator writes every finding to one shared state: the
+[Meterless World Model](https://github.com/Meterless/Meterless/tree/main/engines/world-model) reference engine, vendored
+unchanged in `backend/engines/world_model_ts/src/` (Apache-2.0, see `LICENSE` and `NOTICE` there) and run as a small Node
+sidecar on `127.0.0.1:8788`. A finding is identified by check, agent, type and evidence (not its wording): the same
+finding again shows nothing new, a changed one (e.g. its status) becomes a new version of the same entry. The trace
+(`traces/{check_id}.json`) is read back from the sidecar.
+
+The sidecar is optional. If it isn't running, the backend logs one warning and deduplicates in memory instead; checks never
+fail. With `AGENT_ORCH` unset nothing changes.
+
+```bash
+cd backend/engines/world_model_ts
+npm install --ignore-scripts     # once; installs tsx only (Node 20+)
+npx tsx server.ts                # leave running; port from WORLD_MODEL_URL (default http://127.0.0.1:8788)
+```
+
+It listens on `127.0.0.1` only, accepts only finding JSON, keeps everything in memory (a restart starts empty) and never logs
+request bodies. Conformance check (needs a clone of Meterless and `npm install --ignore-scripts` in its
+`engines/world-model/reference/`), run from that `reference/` folder:
+
+```bash
+WORLD_MODEL_IMPL="/abs/path/to/Pricise/backend/engines/world_model_ts/src/index.ts" npx tsx ../conformance/runner.ts
+```
 
 ## Safety rules
 

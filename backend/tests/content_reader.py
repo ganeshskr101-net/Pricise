@@ -28,9 +28,15 @@ class _Quiet(SimpleHTTPRequestHandler):
         pass
 
 
+class _Server(ThreadingHTTPServer):
+    # The default listen backlog (5) drops connections when the Trust Agent fetches ~10 store files at once (seen as a
+    # flaky "photos are the store's own" on Store D). uvicorn's backlog is 2048, so only this test server needs it.
+    request_queue_size = 128
+
+
 def serve_repo() -> tuple[ThreadingHTTPServer, str]:
     """Starts a background HTTP server on 127.0.0.1 serving the repo root. Returns (server, base_url)."""
-    server = ThreadingHTTPServer(("127.0.0.1", 0), functools.partial(_Quiet, directory=str(ROOT)))
+    server = _Server(("127.0.0.1", 0), functools.partial(_Quiet, directory=str(ROOT)))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     return server, f"http://127.0.0.1:{server.server_address[1]}"
 
