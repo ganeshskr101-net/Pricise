@@ -1,7 +1,7 @@
 {
   "mode": "full",
   "mode_detail": "hidden-browser run-ahead and timer test on; Nightshift model calls allowed; price history from the fixture; Trust Agent real",
-  "date": "2026-10-26T05:23:52+00:00",
+  "date": "2026-10-26T06:50:57+00:00",
   "notes": [
     "confirmed = Deal Agent confirmed it with evidence; the Skeptic checked evidence (its rechecker covers best_price only, with AGENT_PRICE=real)",
     "trick detection = planted pages (expected=1) only; honest controls (expected=0) are scored in false alarms; every other page is listed as excluded with its reason",
@@ -116,12 +116,10 @@
     "left_out": []
   },
   "false_alarms_visible": {
-    "k": 1,
+    "k": 0,
     "n": 8,
-    "rate": 0.125,
-    "pages": [
-      "deal/ad-06.html"
-    ]
+    "rate": 0.0,
+    "pages": []
   },
   "exact_match": {
     "status": "n/a",
@@ -143,9 +141,9 @@
   },
   "trust_mismatches": [],
   "timing": {
-    "median_load_to_card_s": 0.7898181000000477,
-    "median_read_s": 0.053714600000148494,
-    "median_check_s": 0.7319054000004144,
+    "median_load_to_card_s": 0.7724753000002238,
+    "median_read_s": 0.04836844999954337,
+    "median_check_s": 0.7270884999998088,
     "pages_timed": 38
   },
   "na_types": [
@@ -201,17 +199,17 @@
         }
       ],
       "card": {
-        "tone": "good",
-        "tricks": 0,
+        "tone": "caution",
+        "tricks": 1,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 1.0648999999993976,
-      "read_s": 0.10208779999993567,
-      "check_s": 0.9628121999994619,
+      "load_to_card_s": 1.08267110000088,
+      "read_s": 0.08907990000079735,
+      "check_s": 0.9935912000000826,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -253,17 +251,17 @@
         }
       ],
       "card": {
-        "tone": "good",
-        "tricks": 0,
+        "tone": "caution",
+        "tricks": 1,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7412078000006659,
-      "read_s": 0.05602620000081515,
-      "check_s": 0.6851815999998507,
+      "load_to_card_s": 0.7390120999989449,
+      "read_s": 0.04827909999949043,
+      "check_s": 0.6907329999994545,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -280,16 +278,16 @@
       ],
       "findings": [
         {
-          "agent": "page",
-          "type": "product",
-          "status": "confirmed",
-          "evidence": 1
-        },
-        {
           "agent": "deal",
           "type": "fake_discount",
           "status": "confirmed",
           "evidence": 2
+        },
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
         },
         {
           "agent": "price",
@@ -305,17 +303,17 @@
         }
       ],
       "card": {
-        "tone": "good",
-        "tricks": 0,
+        "tone": "caution",
+        "tricks": 1,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7183787999993001,
-      "read_s": 0.05608639999991283,
-      "check_s": 0.6622923999993873,
+      "load_to_card_s": 0.7133874999999534,
+      "read_s": 0.04500680000091961,
+      "check_s": 0.6683806999990338,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -357,17 +355,17 @@
         }
       ],
       "card": {
-        "tone": "good",
-        "tricks": 0,
+        "tone": "caution",
+        "tricks": 1,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8092962999999145,
-      "read_s": 0.04041959999995015,
-      "check_s": 0.7688766999999643,
+      "load_to_card_s": 0.7668192000001,
+      "read_s": 0.04506930000025022,
+      "check_s": 0.7217498999998497,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -409,17 +407,17 @@
         }
       ],
       "card": {
-        "tone": "good",
-        "tricks": 0,
+        "tone": "caution",
+        "tricks": 1,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.6805605999998079,
-      "read_s": 0.053840800000216404,
-      "check_s": 0.6267197999995915,
+      "load_to_card_s": 0.754908400000204,
+      "read_s": 0.04351899999892339,
+      "check_s": 0.7113894000012806,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -467,9 +465,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.6872352000000319,
-      "read_s": 0.04315039999983128,
-      "check_s": 0.6440848000002006,
+      "load_to_card_s": 0.7480405000005703,
+      "read_s": 0.04665510000086215,
+      "check_s": 0.7013853999997082,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -517,9 +515,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.6625325999993947,
-      "read_s": 0.042950699999892095,
-      "check_s": 0.6195818999995026,
+      "load_to_card_s": 0.7081793999986985,
+      "read_s": 0.04558329999963462,
+      "check_s": 0.6625960999990639,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -569,9 +567,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.106694100000823,
-      "read_s": 1.3639358000000357,
-      "check_s": 7.742758300000787,
+      "load_to_card_s": 9.203145600000425,
+      "read_s": 1.3654275000008056,
+      "check_s": 7.83771809999962,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -621,9 +619,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.071962899999562,
-      "read_s": 1.3500248000000283,
-      "check_s": 7.721938099999534,
+      "load_to_card_s": 9.193648500000563,
+      "read_s": 1.3493489000011323,
+      "check_s": 7.844299599999431,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -673,9 +671,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.130256600000394,
-      "read_s": 1.3661062000001039,
-      "check_s": 7.76415040000029,
+      "load_to_card_s": 9.241585300000224,
+      "read_s": 1.3602344999999332,
+      "check_s": 7.881350800000291,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -725,9 +723,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.253894800000126,
-      "read_s": 1.3555827999998655,
-      "check_s": 7.89831200000026,
+      "load_to_card_s": 9.318484699999317,
+      "read_s": 1.356187299999874,
+      "check_s": 7.962297399999443,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -769,9 +767,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.161985800000366,
-      "read_s": 1.3528557999998156,
-      "check_s": 7.80913000000055,
+      "load_to_card_s": 9.18088379999972,
+      "read_s": 1.3640848999984883,
+      "check_s": 7.816798900001231,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -813,9 +811,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.223816699999588,
-      "read_s": 1.3688928999999916,
-      "check_s": 7.854923799999597,
+      "load_to_card_s": 9.111609599998701,
+      "read_s": 1.3469107999990229,
+      "check_s": 7.764698799999678,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -865,9 +863,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8999639000003299,
-      "read_s": 0.050938700000187964,
-      "check_s": 0.8490252000001419,
+      "load_to_card_s": 0.9414342000000033,
+      "read_s": 0.05114949999915552,
+      "check_s": 0.8902847000008478,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -917,9 +915,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7260688999995182,
-      "read_s": 0.04148129999975936,
-      "check_s": 0.6845875999997588,
+      "load_to_card_s": 0.8443779999997787,
+      "read_s": 0.04497509999964677,
+      "check_s": 0.7994029000001319,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -969,9 +967,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8747149999999237,
-      "read_s": 0.057889899999281624,
-      "check_s": 0.8168251000006421,
+      "load_to_card_s": 0.9268713000001298,
+      "read_s": 0.04845779999959632,
+      "check_s": 0.8784135000005335,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1013,9 +1011,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8408088999995016,
-      "read_s": 0.05868229999941832,
-      "check_s": 0.7821266000000833,
+      "load_to_card_s": 0.8705872999998974,
+      "read_s": 0.04820400000062364,
+      "check_s": 0.8223832999992737,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1057,9 +1055,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8545345999991696,
-      "read_s": 0.04575069999918924,
-      "check_s": 0.8087838999999803,
+      "load_to_card_s": 0.9596777000006114,
+      "read_s": 0.08695080000143207,
+      "check_s": 0.8727268999991793,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1109,9 +1107,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.9421903000002203,
-      "read_s": 0.04832970000006753,
-      "check_s": 0.8938606000001528,
+      "load_to_card_s": 0.9223804000012024,
+      "read_s": 0.0405841000010696,
+      "check_s": 0.8817963000001328,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1161,9 +1159,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 3.0124384999999165,
-      "read_s": 0.040297699999428005,
-      "check_s": 2.9721408000004885,
+      "load_to_card_s": 3.2942191000001912,
+      "read_s": 0.04271049999988463,
+      "check_s": 3.2515086000003066,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1213,9 +1211,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.681223300000056,
-      "read_s": 0.04486890000043786,
-      "check_s": 0.6363543999996182,
+      "load_to_card_s": 0.6976515999995172,
+      "read_s": 0.04822039999999106,
+      "check_s": 0.6494311999995261,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1265,9 +1263,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7392146000001958,
-      "read_s": 0.0487779999994018,
-      "check_s": 0.690436600000794,
+      "load_to_card_s": 0.7716755000001285,
+      "read_s": 0.044754399999874295,
+      "check_s": 0.7269211000002542,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1317,9 +1315,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.6636618999991697,
-      "read_s": 0.04573379999965255,
-      "check_s": 0.6179280999995171,
+      "load_to_card_s": 0.7144926999990275,
+      "read_s": 0.04785319999973581,
+      "check_s": 0.6666394999992917,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1369,9 +1367,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7502974999997605,
-      "read_s": 0.053273100000296836,
-      "check_s": 0.6970243999994636,
+      "load_to_card_s": 0.735824399998819,
+      "read_s": 0.05273059999854013,
+      "check_s": 0.6830938000002789,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1413,9 +1411,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.781437200000255,
-      "read_s": 0.06915550000030635,
-      "check_s": 0.7122816999999486,
+      "load_to_card_s": 0.6970143999988068,
+      "read_s": 0.05029649999960384,
+      "check_s": 0.6467178999992029,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1456,16 +1454,16 @@
       ],
       "card": {
         "tone": "caution",
-        "tricks": 1,
+        "tricks": 0,
         "safe": "unknown",
         "safe_reasons": [
           "Couldn't check this store: it did not respond."
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7017224000001079,
-      "read_s": 0.052129900000181806,
-      "check_s": 0.6495924999999261,
+      "load_to_card_s": 0.8157207999993261,
+      "read_s": 0.04679439999927126,
+      "check_s": 0.7689264000000549,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1511,7 +1509,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "bad",
         "tricks": 0,
         "safe": "bad",
         "safe_reasons": [
@@ -1521,9 +1519,9 @@
         ],
         "trust_verdict": "unsafe"
       },
-      "load_to_card_s": 1.3657868000000235,
-      "read_s": 0.04889699999966979,
-      "check_s": 1.3168898000003537,
+      "load_to_card_s": 1.251466599998821,
+      "read_s": 0.04927959999986342,
+      "check_s": 1.2021869999989576,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1569,7 +1567,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "bad",
         "tricks": 0,
         "safe": "bad",
         "safe_reasons": [
@@ -1579,9 +1577,9 @@
         ],
         "trust_verdict": "unsafe"
       },
-      "load_to_card_s": 0.7732657000005929,
-      "read_s": 0.08822220000001835,
-      "check_s": 0.6850435000005746,
+      "load_to_card_s": 0.7590202000010322,
+      "read_s": 0.06195260000095004,
+      "check_s": 0.6970676000000822,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1621,7 +1619,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "caution",
         "tricks": 0,
         "safe": "caution",
         "safe_reasons": [
@@ -1630,9 +1628,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7908095000002504,
-      "read_s": 0.05358840000008058,
-      "check_s": 0.7372211000001698,
+      "load_to_card_s": 0.7566613999988476,
+      "read_s": 0.047938699999576784,
+      "check_s": 0.7087226999992708,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1672,7 +1670,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "bad",
         "tricks": 0,
         "safe": "bad",
         "safe_reasons": [
@@ -1681,9 +1679,9 @@
         ],
         "trust_verdict": "unsafe"
       },
-      "load_to_card_s": 0.8165784000002532,
-      "read_s": 0.05728920000001381,
-      "check_s": 0.7592892000002394,
+      "load_to_card_s": 0.7732751000003191,
+      "read_s": 0.044125100001110695,
+      "check_s": 0.7291499999992084,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1723,7 +1721,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "caution",
         "tricks": 0,
         "safe": "caution",
         "safe_reasons": [
@@ -1732,9 +1730,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7577273999995668,
-      "read_s": 0.059573399999862886,
-      "check_s": 0.698153999999704,
+      "load_to_card_s": 0.7398866999992606,
+      "read_s": 0.04924099999880127,
+      "check_s": 0.6906457000004593,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1780,7 +1778,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "caution",
         "tricks": 0,
         "safe": "caution",
         "safe_reasons": [
@@ -1790,9 +1788,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.7403678999999102,
-      "read_s": 0.04919519999930344,
-      "check_s": 0.6911727000006067,
+      "load_to_card_s": 0.7505578000000241,
+      "read_s": 0.050747200000841985,
+      "check_s": 0.6998105999991822,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1832,7 +1830,7 @@
         }
       ],
       "card": {
-        "tone": "good",
+        "tone": "caution",
         "tricks": 0,
         "safe": "caution",
         "safe_reasons": [
@@ -1841,9 +1839,9 @@
         ],
         "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.798907400000644,
-      "read_s": 0.06740160000026663,
-      "check_s": 0.7315058000003773,
+      "load_to_card_s": 0.7617857000004733,
+      "read_s": 0.0455102000014449,
+      "check_s": 0.7162754999990284,
       "reason": "",
       "error": null,
       "scored_in": "scam_detection",
@@ -1879,9 +1877,9 @@
         ],
         "trust_verdict": "safe"
       },
-      "load_to_card_s": 0.7473442000000432,
-      "read_s": 0.048228800000288174,
-      "check_s": 0.699115399999755,
+      "load_to_card_s": 0.7693497000000207,
+      "read_s": 0.04429819999859319,
+      "check_s": 0.7250515000014275,
       "reason": "",
       "error": null,
       "scored_in": "trust_false_alarms",
@@ -1917,9 +1915,9 @@
         ],
         "trust_verdict": "safe"
       },
-      "load_to_card_s": 0.7173203000002104,
-      "read_s": 0.050217699999848264,
-      "check_s": 0.6671026000003621,
+      "load_to_card_s": 0.8316810999986046,
+      "read_s": 0.051350199999433244,
+      "check_s": 0.7803308999991714,
       "reason": "",
       "error": null,
       "scored_in": "trust_false_alarms",
@@ -1968,9 +1966,9 @@
         ],
         "trust_verdict": "safe"
       },
-      "load_to_card_s": 0.7980146999998396,
-      "read_s": 0.05159910000020318,
-      "check_s": 0.7464155999996365,
+      "load_to_card_s": 0.7754832999999053,
+      "read_s": 0.04822740000054182,
+      "check_s": 0.7272558999993635,
       "reason": "",
       "error": null,
       "scored_in": "trust_false_alarms",
@@ -2012,9 +2010,9 @@
         ],
         "trust_verdict": "safe"
       },
-      "load_to_card_s": 0.788826699999845,
-      "read_s": 0.056521699999393604,
-      "check_s": 0.7323050000004514,
+      "load_to_card_s": 0.7311176000002888,
+      "read_s": 0.050904899999295594,
+      "check_s": 0.6802127000009932,
       "reason": "",
       "error": null,
       "scored_in": "trust_false_alarms",
@@ -2050,9 +2048,9 @@
         ],
         "trust_verdict": "safe"
       },
-      "load_to_card_s": 0.7315898999995625,
-      "read_s": 0.05546039999990171,
-      "check_s": 0.6761294999996608,
+      "load_to_card_s": 0.745258199998716,
+      "read_s": 0.055518299999675946,
+      "check_s": 0.6897398999990401,
       "reason": "",
       "error": null,
       "scored_in": "trust_false_alarms",
