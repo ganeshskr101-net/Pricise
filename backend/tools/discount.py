@@ -50,6 +50,17 @@ def claimed_was(page: PageFacts) -> tuple[Optional[float], Optional[int]]:
     return was, pct
 
 
+def _sql_evidence(rows) -> Optional[dict]:
+    """When the history came from Zetaris: the query itself, labelled with the rows it returned (price x days)."""
+    if not getattr(rows, "sql", None):
+        return None
+    counts: dict[float, int] = {}
+    for _, p in rows:
+        counts[p] = counts.get(p, 0) + 1
+    shown = ", ".join(f"{money(p)} x {n}" for p, n in sorted(counts.items(), key=lambda kv: -kv[1]))
+    return {"kind": "sql", "ref": rows.sql, "label": f"Zetaris returned {len(rows)} daily rows: {shown}"}
+
+
 def _history(url: str, page: PageFacts):
     host = store_key(url, page)
     p = page.product
@@ -97,6 +108,9 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
     }
     rows_ev = {"kind": "price_row", "ref": f"history:{host}:{ident}",
                "label": f"{money(price)} on {days_at_price} of {len(recent)} days; {money(was)} on {days_at_was} days; median {money(typical)}"}
+    sql_ev = _sql_evidence(rows)
+    if sql_ev:
+        out.evidence_data["price_history"].update(sql=sql_ev["ref"], source="Zetaris")
 
     if days_at_was <= MAX_DAYS_AT_WAS and _same(price, typical):
         summary = (f"\"{pct_shown}% off\" is not real: the price was {money(price)} for {days_at_price} of the last {len(recent)} days. "
@@ -105,7 +119,8 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
             summary = (f"This was-price isn't supported by the price history we found: {money(price)} was the usual price "
                        f"({days_at_price} of {len(recent)} days) and {money(was)} appeared on only {days_at_was} days.")
         ev = [{"kind": "selector", "ref": r, "label": f"Fake {pct_shown}% off" if i == 0 else ""} for i, r in enumerate(sel)]
-        out.findings.append(finding(check_id, "fake_discount", "confirmed", summary, ev + [rows_ev], confidence=0.93))
+        out.findings.append(finding(check_id, "fake_discount", "confirmed", summary, ev + [rows_ev] + ([sql_ev] if sql_ev else []),
+                                    confidence=0.93))
     else:
         summary = (f"The price history supports this discount: {money(was)} was charged on {days_at_was} of the last {len(recent)} days "
                    f"and the usual price is {money(typical)}.")

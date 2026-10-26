@@ -47,6 +47,8 @@ runs in stub mode.
 | `AGENT_DEAL` | `stub` (default) · `real` | `real` runs the Deal Agent (`backend/agents/deal.py`) instead of the scripted deal findings. Shortcut: `scripts/run.sh --real` |
 | `SAMPLE_MODE` | `true` (default) · `false` | Demo-friendly timings for the Store Lab tools |
 | `TIMER_GAP_S` | seconds, default `3` in sample mode | Gap between the timer test's 3 fresh page loads |
+| `AGENT_PRICE` | `stub` (default) · `real` | `real` runs the Price Agent (`backend/agents/price.py`): best safe price from the Store Lab catalog, following the demo clock |
+| `DATA_SOURCE` | `fixture` (default) · `zetaris` | `zetaris` reads price history, listings and the wishlist through Zetaris and stores findings; falls back to the fixture if Zetaris fails |
 | `PLAYWRIGHT_CHROMIUM_PATH` | path, optional | Use this Chromium for the hidden browser |
 | `METERLESS_*`, `NEMOTRON_*` | see `.env.example` | Model calls through Meterless Nightshift. Unset = rule-based answers, everything still works |
 
@@ -84,9 +86,16 @@ Everything runs without keys today. When you plug in a real service, put its val
   `NEMOTRON_DEEP_MODEL`. All model calls go through `backend/llm/meterless.py` (`complete(prompt, lane="fast"|"deep")`); it
   returns `""` when unconfigured and callers fall back to rules. Abel replaces the minimal client with the full one (engines in
   `backend/engines/`).
-- **Zetaris (Josh).** Fill in `ZETARIS_REST_URL`, `ZETARIS_API_KEY`, `ZETARIS_ORG_ID` (start the Zetaris Docker first).
-  Swap the JSON fixture behind `get_price_history(host, product)` in `backend/data/history.py` for a Zetaris query with the
-  same signature; nothing else changes.
+- **Zetaris (Josh).** Fill in `ZETARIS_REST_URL`, `ZETARIS_API_KEY`, `ZETARIS_ORG_ID` and the `PRICISE_PG_*` values (start the
+  Zetaris Docker first). Zetaris can't read files on your laptop, so Pricise data lives in its own Postgres that Zetaris queries:
+  ```bash
+  .venv/bin/python scripts/check_zetaris.py                               # SELECT 1 + SHOW LIGHTNING DATABASES
+  docker compose -f docker-compose.pricise.yml --env-file .env up -d      # Pricise Postgres on 127.0.0.1:5433
+  .venv/bin/python scripts/seed.py                                        # synthetic Store Lab data
+  .venv/bin/python scripts/register_zetaris.py                            # dry run; add --yes to register pricise_pg
+  ```
+  Then set `DATA_SOURCE=zetaris` (and `AGENT_PRICE=real`). Reads go through Zetaris REST; writes (wishlist, findings) go
+  straight to the Pricise Postgres, because Zetaris can't UPDATE a JDBC datasource and its INSERT ignores column defaults.
 - **Trust Agent (Raj), Price Agent (Josh), orchestrator + Skeptic (Abel).** Implement your agent, add an `AGENT_<NAME>=real`
   switch in `backend/stub_server.py` (or the orchestrator) the way `AGENT_DEAL` works, keep the Finding / FinalCard shapes from
   `backend/contracts.py`, and keep `stub` the default so the demo never breaks.

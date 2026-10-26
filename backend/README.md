@@ -8,10 +8,11 @@ The local Pricise backend (FastAPI on http://localhost:8787) and the agents behi
 | `contracts.py` | Shared data shapes (Finding, FinalCard, PageFacts…). **Change only with Abel's OK** | Abel |
 | `agents/deal.py` | Deal Agent: fake discount, resetting timer, pre-ticked add-on, drip fees | Emmanuel |
 | `agents/chat.py` | "Ask about this page": answers only from the stored check | Shriganesh |
-| `agents/trust.py`, `price.py`, `skeptic.py` | Not written yet | Raj, Josh, Abel |
+| `agents/price.py` | Price Agent: exact same item (model + condition) at a trusted Store Lab store, by true total (price + shipping + fees − card offers). `AGENT_PRICE=real` | Josh |
+| `agents/trust.py`, `skeptic.py` | Not written yet | Raj, Abel |
 | `tools/` | Deal tools: `runahead.py` (checkout walk + pay guard), `timer_test.py`, `discount.py`, `addons.py`, `browser.py` (shared headless Chromium) | Emmanuel |
 | `llm/meterless.py` | The only way to call a model (Meterless Nightshift). Minimal client for now | Abel |
-| `data/` | `history.py` (`get_price_history`, JSON fixture today, Zetaris later) | Josh |
+| `data/` | `zetaris.py` (REST client, `run_sql`), `history.py` (`get_price_history`), `repo.py` (listings, wishlist, findings), `catalog.py` (the synthetic Store Lab data), `schema.sql` + `pg.py` (the Pricise Postgres Zetaris reads). `DATA_SOURCE=fixture\|zetaris` | Josh |
 | `engines/` | Meterless engines (World Model, H-MEM, Scout Intent, Markovian): not written yet | Abel |
 | `env.py` | Loads `.env` at startup (shell variables win; no `.env` is fine) | |
 | `tests/` | pytest suite | everyone |

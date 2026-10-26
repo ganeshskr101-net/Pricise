@@ -2,4 +2,5 @@
 fastapi==0.162.0
 uvicorn==0.54.0
 pydantic==2.14.1
+psycopg[binary]==3.2.10   # Pricise Postgres (seeding + writes); reads go through Zetaris REST
 playwright==1.64.1   # hidden browser for Store Lab only; after installing run: python -m playwright install chromium

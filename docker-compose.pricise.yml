@@ -1,0 +1,26 @@
+# Pricise's own Postgres: the synthetic Store Lab data that Zetaris queries (registered as the pricise_pg datasource).
+# Separate from the Zetaris platform's postgres: own project name, own port (5433), own volume.
+# Start:  docker compose -f docker-compose.pricise.yml --env-file .env up -d
+# Seed:   .venv/bin/python scripts/seed.py
+name: pricise
+
+services:
+  pricise-pg:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${PRICISE_PG_DB:-pricise}
+      POSTGRES_USER: ${PRICISE_PG_USER:-pricise}
+      POSTGRES_PASSWORD: ${PRICISE_PG_PASSWORD:?set PRICISE_PG_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:${PRICISE_PG_PORT:-5433}:5432"  # localhost only; Zetaris (in Docker) reaches it as host.docker.internal:5433
+    volumes:
+      - pricise-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+volumes:
+  pricise-pgdata:
