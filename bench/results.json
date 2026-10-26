@@ -1,25 +1,32 @@
 {
   "mode": "full",
-  "mode_detail": "hidden-browser run-ahead and timer test on; Nightshift model calls allowed; price history from the fixture",
-  "date": "2026-10-25T17:46:11+00:00",
+  "mode_detail": "hidden-browser run-ahead and timer test on; Nightshift model calls allowed; price history from the fixture; Trust Agent real",
+  "date": "2026-10-26T05:23:52+00:00",
   "notes": [
-    "confirmed = Deal Agent confirmed it with evidence; the Skeptic only checked evidence (no rechecker connected)",
+    "confirmed = Deal Agent confirmed it with evidence; the Skeptic checked evidence (its rechecker covers best_price only, with AGENT_PRICE=real)",
     "trick detection = planted pages (expected=1) only; honest controls (expected=0) are scored in false alarms; every other page is listed as excluded with its reason",
     "false alarm = a confirmed fake_discount, resetting_timer, drip_fees or prechecked_addon finding on a clean page (expected=0 or clean_control); trust/no_https and not_connected findings do not count",
+    "shopper-visible false alarm = a clean page whose card shows >= 1 trick (card.tricks), whatever the finding's status; listed next to the confirmed-only line because the two can differ",
+    "scam detection = risky stores (expected=1) whose card.safe is caution or bad (unsafe); trust false alarms = legitimate stores (expected=0) flagged the same way; Trust findings are never 'confirmed', so the card decides",
+    "exact match = look-alike listings (lookalike_listing labels) the Price Agent rejects; no page is labelled yet, so it is n/a, never a made-up rate",
+    "card fields: trick detection and confirmed false alarms read the findings, not the card; shopper-visible false alarms read card.tricks (what the card shows the shopper); scam detection reads card.safe. Per-page columns: Tone/tricks = card.tone/card.tricks, Safe = card.safe. The card headline (title, tone) is not scored",
     "timer pages take longer in full mode: the timer test makes 3 fresh visits TIMER_GAP_S seconds apart; the median is page load (page.goto) to the last final card, one page at a time"
   ],
   "settings": {
     "TIMER_GAP_S": "3",
-    "sidecar": "not reachable, findings deduplicated locally",
+    "AGENT_TRUST": "real",
+    "AGENT_PRICE": "real",
+    "sidecar": "reachable",
     "pages": "one at a time"
   },
-  "pages_labelled": 26,
+  "pages_labelled": 38,
   "pages_planned": 50,
   "accounting": {
-    "labelled": 26,
+    "labelled": 38,
     "trick_detection": 18,
     "false_alarms": 8,
-    "scam_detection": 0,
+    "scam_detection": 7,
+    "trust_false_alarms": 5,
     "excluded": []
   },
   "per_type": {
@@ -71,15 +78,26 @@
         "rate": 1.0
       }
     },
-    "scam_store": {
-      "status": "n/a",
-      "reason": "agent not connected",
-      "pages": 0,
-      "planned": 7
+    "risky_store": {
+      "status": "scored",
+      "pages": 12,
+      "planned": 7,
+      "planted": 7,
+      "honest": 5,
+      "detection": {
+        "k": 7,
+        "n": 7,
+        "rate": 1.0
+      },
+      "false_alarms": {
+        "k": 0,
+        "n": 5,
+        "rate": 0.0
+      }
     },
     "lookalike_listing": {
       "status": "n/a",
-      "reason": "agent not connected",
+      "reason": "0 labelled pages",
       "pages": 0,
       "planned": 7
     },
@@ -97,34 +115,43 @@
     "planned": 10,
     "left_out": []
   },
+  "false_alarms_visible": {
+    "k": 1,
+    "n": 8,
+    "rate": 0.125,
+    "pages": [
+      "deal/ad-06.html"
+    ]
+  },
   "exact_match": {
     "status": "n/a",
-    "reason": "agent not connected",
+    "reason": "0 labelled pages",
     "pages": 0,
     "planned": 7
   },
   "scam_detection": {
-    "status": "n/a",
-    "reason": "agent not connected",
-    "pages": 0,
-    "planned": 7
+    "k": 7,
+    "n": 7,
+    "rate": 1.0,
+    "status": "scored"
   },
+  "trust_false_alarms": {
+    "k": 0,
+    "n": 5,
+    "rate": 0.0,
+    "status": "scored"
+  },
+  "trust_mismatches": [],
   "timing": {
-    "median_load_to_card_s": 0.8422725499985972,
-    "median_read_s": 0.0792416000040248,
-    "median_check_s": 0.7603236499999184,
-    "pages_timed": 26
+    "median_load_to_card_s": 0.7898181000000477,
+    "median_read_s": 0.053714600000148494,
+    "median_check_s": 0.7319054000004144,
+    "pages_timed": 38
   },
   "na_types": [
     {
-      "type": "scam_store",
-      "reason": "agent not connected",
-      "pages": 0,
-      "planned": 7
-    },
-    {
       "type": "lookalike_listing",
-      "reason": "agent not connected",
+      "reason": "0 labelled pages",
       "pages": 0,
       "planned": 7
     }
@@ -134,12 +161,14 @@
     "false_alarms": "<= 10%",
     "exact_match": ">= 90%",
     "scam_detection": ">= 85%",
+    "trust_false_alarms": "-",
     "median_s": "<= 10 s"
   },
   "pages": [
     {
       "page": "deal/fd-01.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -147,44 +176,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "fake_discount",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "fake_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 4.192202999984147,
-      "read_s": 0.15089669998269528,
-      "check_s": 4.041306300001452,
+      "load_to_card_s": 1.0648999999993976,
+      "read_s": 0.10208779999993567,
+      "check_s": 0.9628121999994619,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -193,6 +220,7 @@
     {
       "page": "deal/fd-02.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -200,44 +228,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "fake_discount",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "fake_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8106877999962308,
-      "read_s": 0.05494070000713691,
-      "check_s": 0.7557470999890938,
+      "load_to_card_s": 0.7412078000006659,
+      "read_s": 0.05602620000081515,
+      "check_s": 0.6851815999998507,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -246,6 +272,7 @@
     {
       "page": "deal/fd-03.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -253,44 +280,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "fake_discount",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "fake_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8289722999907099,
-      "read_s": 0.06842389999656007,
-      "check_s": 0.7605483999941498,
+      "load_to_card_s": 0.7183787999993001,
+      "read_s": 0.05608639999991283,
+      "check_s": 0.6622923999993873,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -299,6 +324,7 @@
     {
       "page": "deal/fd-04.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -306,44 +332,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "fake_discount",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "fake_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8084277000161819,
-      "read_s": 0.058283899998059496,
-      "check_s": 0.7501438000181224,
+      "load_to_card_s": 0.8092962999999145,
+      "read_s": 0.04041959999995015,
+      "check_s": 0.7688766999999643,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -352,6 +376,7 @@
     {
       "page": "deal/fd-05.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -359,44 +384,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "fake_discount",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "fake_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8200903999968432,
-      "read_s": 0.05999149999115616,
-      "check_s": 0.760098900005687,
+      "load_to_card_s": 0.6805605999998079,
+      "read_s": 0.053840800000216404,
+      "check_s": 0.6267197999995915,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -405,16 +428,11 @@
     {
       "page": "deal/fd-06.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
       "findings": [
-        {
-          "agent": "deal",
-          "type": "claimed_discount",
-          "status": "confirmed",
-          "evidence": 1
-        },
         {
           "agent": "page",
           "type": "product",
@@ -422,32 +440,36 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "claimed_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 1
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8324301000102423,
-      "read_s": 0.07880250000744127,
-      "check_s": 0.753627600002801,
+      "load_to_card_s": 0.6872352000000319,
+      "read_s": 0.04315039999983128,
+      "check_s": 0.6440848000002006,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -456,16 +478,11 @@
     {
       "page": "deal/fd-07.html",
       "trick": "fake_discount",
+      "label_trick": "fake_discount",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
       "findings": [
-        {
-          "agent": "deal",
-          "type": "claimed_discount",
-          "status": "confirmed",
-          "evidence": 1
-        },
         {
           "agent": "page",
           "type": "product",
@@ -473,32 +490,36 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "claimed_discount",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 1
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8157109000021592,
-      "read_s": 0.06508499998017214,
-      "check_s": 0.750625900021987,
+      "load_to_card_s": 0.6625325999993947,
+      "read_s": 0.042950699999892095,
+      "check_s": 0.6195818999995026,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -507,6 +528,7 @@
     {
       "page": "deal/tm-01.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -520,22 +542,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -547,11 +563,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 8.998757099994691,
-      "read_s": 1.377402300015092,
-      "check_s": 7.621354799979599,
+      "load_to_card_s": 9.106694100000823,
+      "read_s": 1.3639358000000357,
+      "check_s": 7.742758300000787,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -560,6 +580,7 @@
     {
       "page": "deal/tm-02.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -573,22 +594,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -600,11 +615,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 8.989060899999458,
-      "read_s": 1.3818059000186622,
-      "check_s": 7.607254999980796,
+      "load_to_card_s": 9.071962899999562,
+      "read_s": 1.3500248000000283,
+      "check_s": 7.721938099999534,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -613,6 +632,7 @@
     {
       "page": "deal/tm-03.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -626,22 +646,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -653,11 +667,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.010902100009844,
-      "read_s": 1.3767558000108693,
-      "check_s": 7.634146299998974,
+      "load_to_card_s": 9.130256600000394,
+      "read_s": 1.3661062000001039,
+      "check_s": 7.76415040000029,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -666,6 +684,7 @@
     {
       "page": "deal/tm-04.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -679,22 +698,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -706,11 +719,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 10.934972099988954,
-      "read_s": 1.3793653000029735,
-      "check_s": 9.55560679998598,
+      "load_to_card_s": 9.253894800000126,
+      "read_s": 1.3555827999998655,
+      "check_s": 7.89831200000026,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -719,6 +736,7 @@
     {
       "page": "deal/tm-05.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
@@ -730,32 +748,30 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 8.964715900016017,
-      "read_s": 1.36788649999653,
-      "check_s": 7.596829400019487,
+      "load_to_card_s": 9.161985800000366,
+      "read_s": 1.3528557999998156,
+      "check_s": 7.80913000000055,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -764,6 +780,7 @@
     {
       "page": "deal/tm-06.html",
       "trick": "resetting_timer",
+      "label_trick": "resetting_timer",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
@@ -775,32 +792,30 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 9.058008099993458,
-      "read_s": 1.3903528999944683,
-      "check_s": 7.66765519999899,
+      "load_to_card_s": 9.223816699999588,
+      "read_s": 1.3688928999999916,
+      "check_s": 7.854923799999597,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -809,6 +824,7 @@
     {
       "page": "deal/df-01.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -822,38 +838,36 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "trust",
-          "type": "not_connected",
+          "type": "store_unreachable",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
         },
         {
           "agent": "deal",
           "type": "drip_fees",
           "status": "confirmed",
           "evidence": 3
-        },
-        {
-          "agent": "price",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.83219950000057,
-      "read_s": 0.07325409998884425,
-      "check_s": 0.7589454000117257,
+      "load_to_card_s": 0.8999639000003299,
+      "read_s": 0.050938700000187964,
+      "check_s": 0.8490252000001419,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -862,6 +876,7 @@
     {
       "page": "deal/df-02.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -875,38 +890,36 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "trust",
-          "type": "not_connected",
+          "type": "store_unreachable",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
         },
         {
           "agent": "deal",
           "type": "drip_fees",
           "status": "confirmed",
           "evidence": 3
-        },
-        {
-          "agent": "price",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8528165000025183,
-      "read_s": 0.0933556999952998,
-      "check_s": 0.7594608000072185,
+      "load_to_card_s": 0.7260688999995182,
+      "read_s": 0.04148129999975936,
+      "check_s": 0.6845875999997588,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -915,6 +928,7 @@
     {
       "page": "deal/df-03.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -928,22 +942,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -955,11 +963,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.9958602999977302,
-      "read_s": 0.11131059998297133,
-      "check_s": 0.8845497000147589,
+      "load_to_card_s": 0.8747149999999237,
+      "read_s": 0.057889899999281624,
+      "check_s": 0.8168251000006421,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -968,6 +980,7 @@
     {
       "page": "deal/df-04.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
@@ -979,32 +992,30 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.9867810999858193,
-      "read_s": 0.0925091999815777,
-      "check_s": 0.8942719000042416,
+      "load_to_card_s": 0.8408088999995016,
+      "read_s": 0.05868229999941832,
+      "check_s": 0.7821266000000833,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1013,6 +1024,7 @@
     {
       "page": "deal/df-05.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
@@ -1024,32 +1036,30 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 4.118138399993768,
-      "read_s": 0.09135380000225268,
-      "check_s": 4.026784599991515,
+      "load_to_card_s": 0.8545345999991696,
+      "read_s": 0.04575069999918924,
+      "check_s": 0.8087838999999803,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1058,6 +1068,7 @@
     {
       "page": "deal/df-06.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1071,22 +1082,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -1098,11 +1103,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8502727999875788,
-      "read_s": 0.07968070000060834,
-      "check_s": 0.7705920999869704,
+      "load_to_card_s": 0.9421903000002203,
+      "read_s": 0.04832970000006753,
+      "check_s": 0.8938606000001528,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1111,6 +1120,7 @@
     {
       "page": "deal/df-07.html",
       "trick": "drip_fees",
+      "label_trick": "drip_fees",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1124,22 +1134,16 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         },
         {
           "agent": "deal",
@@ -1151,11 +1155,15 @@
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 3.3323820999939926,
-      "read_s": 0.07873189999372698,
-      "check_s": 3.2536502000002656,
+      "load_to_card_s": 3.0124384999999165,
+      "read_s": 0.040297699999428005,
+      "check_s": 2.9721408000004885,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1164,6 +1172,7 @@
     {
       "page": "deal/ad-01.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1171,44 +1180,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "prechecked_addon",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "prechecked_addon",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8339807000011206,
-      "read_s": 0.07816860001184978,
-      "check_s": 0.7558120999892708,
+      "load_to_card_s": 0.681223300000056,
+      "read_s": 0.04486890000043786,
+      "check_s": 0.6363543999996182,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1217,6 +1224,7 @@
     {
       "page": "deal/ad-02.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1224,44 +1232,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "prechecked_addon",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "prechecked_addon",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8342723000096157,
-      "read_s": 0.082570400001714,
-      "check_s": 0.7517019000079017,
+      "load_to_card_s": 0.7392146000001958,
+      "read_s": 0.0487779999994018,
+      "check_s": 0.690436600000794,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1270,6 +1276,7 @@
     {
       "page": "deal/ad-03.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1277,44 +1284,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "prechecked_addon",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "prechecked_addon",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8250822999980301,
-      "read_s": 0.07430189999286085,
-      "check_s": 0.7507804000051692,
+      "load_to_card_s": 0.6636618999991697,
+      "read_s": 0.04573379999965255,
+      "check_s": 0.6179280999995171,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1323,6 +1328,7 @@
     {
       "page": "deal/ad-04.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 1,
       "caught": true,
       "deal_flags": [
@@ -1330,44 +1336,42 @@
       ],
       "findings": [
         {
-          "agent": "deal",
-          "type": "prechecked_addon",
-          "status": "confirmed",
-          "evidence": 2
-        },
-        {
           "agent": "page",
           "type": "product",
           "status": "confirmed",
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
+          "agent": "deal",
+          "type": "prechecked_addon",
           "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.823584799974924,
-      "read_s": 0.06947499999660067,
-      "check_s": 0.7541097999783233,
+      "load_to_card_s": 0.7502974999997605,
+      "read_s": 0.053273100000296836,
+      "check_s": 0.6970243999994636,
       "reason": "",
       "error": null,
       "scored_in": "trick_detection",
@@ -1376,6 +1380,7 @@
     {
       "page": "deal/ad-05.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
@@ -1387,32 +1392,30 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
-        },
-        {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "good",
         "tricks": 0,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8222488999890629,
-      "read_s": 0.0731763000076171,
-      "check_s": 0.7490725999814458,
+      "load_to_card_s": 0.781437200000255,
+      "read_s": 0.06915550000030635,
+      "check_s": 0.7122816999999486,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
@@ -1421,16 +1424,11 @@
     {
       "page": "deal/ad-06.html",
       "trick": "prechecked_addon",
+      "label_trick": "prechecked_addon",
       "expected": 0,
       "caught": false,
       "deal_flags": [],
       "findings": [
-        {
-          "agent": "deal",
-          "type": "prechecked_addon",
-          "status": "proposed",
-          "evidence": 2
-        },
         {
           "agent": "page",
           "type": "product",
@@ -1438,35 +1436,626 @@
           "evidence": 1
         },
         {
-          "agent": "trust",
-          "type": "no_https",
-          "status": "confirmed",
-          "evidence": 0
-        },
-        {
-          "agent": "trust",
-          "type": "not_connected",
-          "status": "unverified",
-          "evidence": 0
+          "agent": "deal",
+          "type": "prechecked_addon",
+          "status": "proposed",
+          "evidence": 2
         },
         {
           "agent": "price",
-          "type": "not_connected",
+          "type": "catalog_match",
           "status": "unverified",
-          "evidence": 0
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "store_unreachable",
+          "status": "unverified",
+          "evidence": 1
         }
       ],
       "card": {
         "tone": "caution",
         "tricks": 1,
-        "safe": "bad"
+        "safe": "unknown",
+        "safe_reasons": [
+          "Couldn't check this store: it did not respond."
+        ],
+        "trust_verdict": "caution"
       },
-      "load_to_card_s": 0.8243176999967545,
-      "read_s": 0.0729614999727346,
-      "check_s": 0.7513562000240199,
+      "load_to_card_s": 0.7017224000001079,
+      "read_s": 0.052129900000181806,
+      "check_s": 0.6495924999999261,
       "reason": "",
       "error": null,
       "scored_in": "false_alarms",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-01/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "domain_age",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "no_company",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "copied_photos",
+          "status": "proposed",
+          "evidence": 3
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "bad",
+        "safe_reasons": [
+          "Domain registered 4 days ago",
+          "No address or company record found for this store",
+          "Product photos are copied from another store"
+        ],
+        "trust_verdict": "unsafe"
+      },
+      "load_to_card_s": 1.3657868000000235,
+      "read_s": 0.04889699999966979,
+      "check_s": 1.3168898000003537,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-02/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "domain_age",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "review_burst",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "duplicate_reviews",
+          "status": "proposed",
+          "evidence": 2
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "bad",
+        "safe_reasons": [
+          "Domain registered 11 days ago",
+          "70% of reviews were posted in a single week",
+          "10 reviews repeat the same text"
+        ],
+        "trust_verdict": "unsafe"
+      },
+      "load_to_card_s": 0.7732657000005929,
+      "read_s": 0.08822220000001835,
+      "check_s": 0.6850435000005746,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-03/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "no_company",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "bad_returns",
+          "status": "proposed",
+          "evidence": 2
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "caution",
+        "safe_reasons": [
+          "No address or company record found for this store",
+          "The store says it accepts no returns"
+        ],
+        "trust_verdict": "caution"
+      },
+      "load_to_card_s": 0.7908095000002504,
+      "read_s": 0.05358840000008058,
+      "check_s": 0.7372211000001698,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-04/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "domain_age",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "copied_photos",
+          "status": "proposed",
+          "evidence": 3
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "bad",
+        "safe_reasons": [
+          "Domain registered 19 days ago",
+          "Product photos are copied from another store"
+        ],
+        "trust_verdict": "unsafe"
+      },
+      "load_to_card_s": 0.8165784000002532,
+      "read_s": 0.05728920000001381,
+      "check_s": 0.7592892000002394,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-05/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "domain_age",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "bad_returns",
+          "status": "proposed",
+          "evidence": 2
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "caution",
+        "safe_reasons": [
+          "Domain registered 2 days ago",
+          "Only 3 days to return items"
+        ],
+        "trust_verdict": "caution"
+      },
+      "load_to_card_s": 0.7577273999995668,
+      "read_s": 0.059573399999862886,
+      "check_s": 0.698153999999704,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-06/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "review_burst",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "duplicate_reviews",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "bad_returns",
+          "status": "proposed",
+          "evidence": 1
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "caution",
+        "safe_reasons": [
+          "70% of reviews were posted in a single week",
+          "10 reviews repeat the same text",
+          "No returns policy found"
+        ],
+        "trust_verdict": "caution"
+      },
+      "load_to_card_s": 0.7403678999999102,
+      "read_s": 0.04919519999930344,
+      "check_s": 0.6911727000006067,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-07/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 1,
+      "caught": true,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "no_company",
+          "status": "proposed",
+          "evidence": 2
+        },
+        {
+          "agent": "trust",
+          "type": "copied_photos",
+          "status": "proposed",
+          "evidence": 3
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "caution",
+        "safe_reasons": [
+          "Product photos are copied from another store",
+          "No company registration number listed"
+        ],
+        "trust_verdict": "caution"
+      },
+      "load_to_card_s": 0.798907400000644,
+      "read_s": 0.06740160000026663,
+      "check_s": 0.7315058000003773,
+      "reason": "",
+      "error": null,
+      "scored_in": "scam_detection",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-08/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 0,
+      "caught": false,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "good",
+        "safe_reasons": [
+          "No warning signs found"
+        ],
+        "trust_verdict": "safe"
+      },
+      "load_to_card_s": 0.7473442000000432,
+      "read_s": 0.048228800000288174,
+      "check_s": 0.699115399999755,
+      "reason": "",
+      "error": null,
+      "scored_in": "trust_false_alarms",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-09/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 0,
+      "caught": false,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "good",
+        "safe_reasons": [
+          "No warning signs found"
+        ],
+        "trust_verdict": "safe"
+      },
+      "load_to_card_s": 0.7173203000002104,
+      "read_s": 0.050217699999848264,
+      "check_s": 0.6671026000003621,
+      "reason": "",
+      "error": null,
+      "scored_in": "trust_false_alarms",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-10/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 0,
+      "caught": false,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "review_burst",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "duplicate_reviews",
+          "status": "unverified",
+          "evidence": 1
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "good",
+        "safe_reasons": [
+          "No warning signs found",
+          "Too few reviews to judge (6)"
+        ],
+        "trust_verdict": "safe"
+      },
+      "load_to_card_s": 0.7980146999998396,
+      "read_s": 0.05159910000020318,
+      "check_s": 0.7464155999996365,
+      "reason": "",
+      "error": null,
+      "scored_in": "trust_false_alarms",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-11/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 0,
+      "caught": false,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        },
+        {
+          "agent": "trust",
+          "type": "bad_returns",
+          "status": "proposed",
+          "evidence": 2
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "good",
+        "safe_reasons": [
+          "Only 5 days to return items"
+        ],
+        "trust_verdict": "safe"
+      },
+      "load_to_card_s": 0.788826699999845,
+      "read_s": 0.056521699999393604,
+      "check_s": 0.7323050000004514,
+      "reason": "",
+      "error": null,
+      "scored_in": "trust_false_alarms",
+      "excluded_reason": null
+    },
+    {
+      "page": "trust/t-12/index.html",
+      "trick": "risky_store",
+      "label_trick": "risky_store",
+      "expected": 0,
+      "caught": false,
+      "deal_flags": [],
+      "findings": [
+        {
+          "agent": "page",
+          "type": "product",
+          "status": "confirmed",
+          "evidence": 1
+        },
+        {
+          "agent": "price",
+          "type": "catalog_match",
+          "status": "unverified",
+          "evidence": 1
+        }
+      ],
+      "card": {
+        "tone": "good",
+        "tricks": 0,
+        "safe": "good",
+        "safe_reasons": [
+          "No warning signs found"
+        ],
+        "trust_verdict": "safe"
+      },
+      "load_to_card_s": 0.7315898999995625,
+      "read_s": 0.05546039999990171,
+      "check_s": 0.6761294999996608,
+      "reason": "",
+      "error": null,
+      "scored_in": "trust_false_alarms",
       "excluded_reason": null
     }
   ]

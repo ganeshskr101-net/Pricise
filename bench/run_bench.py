@@ -43,13 +43,21 @@ PLANNED = {"fake_discount": 7, "resetting_timer": 6, "drip_fees": 7, "prechecked
 PLANNED_TOTAL = 50
 TARGETS = {"trick_detection": ">= 85%", "false_alarms": "<= 10%", "exact_match": ">= 90%", "scam_detection": ">= 85%",
            "trust_false_alarms": "-", "median_s": "<= 10 s"}  # reference only: never used to compute or change a result
-NOT_CONNECTED = {LOOKALIKE: "agent not connected"}  # Price Agent not merged yet
+NOT_CONNECTED: dict[str, str] = {}  # every agent is connected (the Price Agent runs with AGENT_PRICE=real)
 SAMPLE_OFF = {"resetting_timer": "hidden browser off", "drip_fees": "hidden browser off"}  # no timer test, no run-ahead
 MODES = {"full": "hidden-browser run-ahead and timer test on; Nightshift model calls allowed; price history from the fixture; "
                  "Trust Agent real",
          "sample": "Chromium reads the pages only; run-ahead, timer test and model calls off; price history from the fixture; "
                    "Trust Agent real (no browser needed)"}
-CONFIRMED_NOTE = "confirmed = Deal Agent confirmed it with evidence; the Skeptic only checked evidence (no rechecker connected)"
+CONFIRMED_NOTE = ("confirmed = Deal Agent confirmed it with evidence; the Skeptic checked evidence (its rechecker covers "
+                  "best_price only, with AGENT_PRICE=real)")
+CARD_NOTE = ("card fields: trick detection and confirmed false alarms read the findings, not the card; shopper-visible "
+             "false alarms read card.tricks (what the card shows the shopper); scam detection reads card.safe. Per-page "
+             "columns: Tone/tricks = card.tone/card.tricks, Safe = card.safe. The card headline (title, tone) is not scored")
+VISIBLE_NOTE = ("shopper-visible false alarm = a clean page whose card shows >= 1 trick (card.tricks), whatever the "
+                "finding's status; listed next to the confirmed-only line because the two can differ")
+EXACT_NOTE = ("exact match = look-alike listings (lookalike_listing labels) the Price Agent rejects; no page is labelled yet, "
+              "so it is n/a, never a made-up rate")
 FALSE_ALARM_NOTE = ("false alarm = a confirmed fake_discount, resetting_timer, drip_fees or prechecked_addon finding on a clean "
                     "page (expected=0 or clean_control); trust/no_https and not_connected findings do not count")
 TRICK_NOTE = ("trick detection = planted pages (expected=1) only; honest controls (expected=0) are scored in false alarms; "
@@ -60,6 +68,18 @@ METRICS = ("trick_detection", "false_alarms", "scam_detection", "trust_false_ala
 TIMER_NOTE = ("timer pages take longer in full mode: the timer test makes 3 fresh visits TIMER_GAP_S seconds apart; "
               "the median is page load (page.goto) to the last final card, one page at a time")
 PENDING = "pending"  # backend.agents.deal.PENDING: a "still checking" placeholder row, replaced by the tool's real finding
+# content_reader.FAKE_CHROME, but Chromium defines window.chrome as non-configurable, so redefining it throws and
+# window.__priciseRead never exists: the fake APIs then go onto the existing window.chrome object instead.
+BENCH_CHROME = """
+(() => {
+  let listener = null;
+  const fake = { storage: { local: { get: async () => ({}), set: async () => {} } },
+                 runtime: { onMessage: { addListener: (fn) => { listener = fn; } } } };
+  try { Object.defineProperty(window, 'chrome', { value: fake, configurable: true, writable: true }); }
+  catch { Object.assign(window.chrome, fake); }
+  window.__priciseRead = () => new Promise((resolve) => listener({ type: 'pricise:read' }, {}, resolve));
+})();
+"""
 
 
 # ----------------------------------------------------------------------------- scoring (pure: no browser, no network)
@@ -160,6 +180,8 @@ def score(outcomes: list[dict], mode: str) -> dict:
                            "detection": rate(sum(o["caught"] for o in planted), len(planted))}
         elif t == CLEAN:
             per_type[t] = {"status": "clean pages (see false_alarms)", "pages": len(rows), "planned": PLANNED[t]}
+        elif t == LOOKALIKE:  # measured only: no labelled pages, no rate
+            per_type[t] = _na(t, "no scorer for look-alikes yet" if rows else "0 labelled pages", outcomes)
         elif t == SCAM:  # caught = card.safe caution or bad (page_outcome)
             planted = [o for o in rows if o["expected"] == 1]
             honest = [o for o in rows if o["expected"] == 0]
@@ -173,8 +195,9 @@ def score(outcomes: list[dict], mode: str) -> dict:
     false_alarms = {**rate(sum(bool(o["deal_flags"]) for o in scored_clean), len(scored_clean)),
                     "clean_pages": len(clean), "planned": PLANNED[CLEAN],
                     "left_out": [o["page"] for o in clean if o["trick"] in na]}
-    exact_match = per_type[LOOKALIKE] if per_type[LOOKALIKE]["status"] == "n/a" else \
-        _na(LOOKALIKE, "no scorer for look-alikes yet", outcomes)
+    shown = [o for o in scored_clean if ((o["card"] or {}).get("tricks") or 0) >= 1]
+    false_alarms_visible = {**rate(len(shown), len(scored_clean)), "pages": [o["page"] for o in shown]}
+    exact_match = per_type[LOOKALIKE]
     trust_na = per_type[SCAM]["status"] == "n/a"
     scam = per_type[SCAM] if trust_na else {**per_type[SCAM]["detection"], "status": "scored"}
     trust_fa = per_type[SCAM] if trust_na else {**per_type[SCAM]["false_alarms"], "status": "scored"}
@@ -187,7 +210,8 @@ def score(outcomes: list[dict], mode: str) -> dict:
               "median_check_s": median(o["check_s"] for o in outcomes),
               "pages_timed": sum(o["load_to_card_s"] is not None for o in outcomes)}
     na_types = [{"type": t, **{k: v[k] for k in ("reason", "pages", "planned")}} for t, v in per_type.items() if v["status"] == "n/a"]
-    return {"per_type": per_type, "false_alarms": false_alarms, "exact_match": exact_match, "scam_detection": scam,
+    return {"per_type": per_type, "false_alarms": false_alarms, "false_alarms_visible": false_alarms_visible,
+            "exact_match": exact_match, "scam_detection": scam,
             "trust_false_alarms": trust_fa, "trust_mismatches": mismatches, "timing": timing, "na_types": na_types}
 
 
@@ -217,7 +241,8 @@ def build_results(mode: str, outcomes: list[dict], settings: Optional[dict] = No
                                for p in pages if not p["scored_in"]]}
     return {"mode": mode, "mode_detail": MODES[mode],
             "date": date or datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            "notes": [CONFIRMED_NOTE, TRICK_NOTE, FALSE_ALARM_NOTE, TRUST_NOTE, TIMER_NOTE], "settings": settings or {},
+            "notes": [CONFIRMED_NOTE, TRICK_NOTE, FALSE_ALARM_NOTE, VISIBLE_NOTE, TRUST_NOTE, EXACT_NOTE, CARD_NOTE, TIMER_NOTE],
+            "settings": settings or {},
             "pages_labelled": len(outcomes), "pages_planned": PLANNED_TOTAL, "accounting": accounting, **scored,
             "targets_reference_only": TARGETS, "pages": pages}
 
@@ -256,6 +281,8 @@ def render(res: dict) -> str:
         rows.append((f"Trick detection: {t}" if t != SCAM else f"Scam detection: {t}", pages,
                      result, TARGETS["scam_detection" if t == SCAM else "trick_detection"]))
     rows.append(("False alarms (clean pages)", f"{fa['clean_pages']} ({fa['planned']})", fmt_rate(fa), TARGETS["false_alarms"]))
+    fv = res["false_alarms_visible"]
+    rows.append(("False alarms, shopper-visible", f"{fa['clean_pages']} ({fa['planned']})", fmt_rate(fv), TARGETS["false_alarms"]))
     tfa = res["trust_false_alarms"]
     rows.append(("Trust false alarms (legit stores)", f"{tfa['n']} (-)" if tfa["status"] == "scored" else f"{tfa['pages']} (-)",
                  fmt_rate(tfa) if tfa["status"] == "scored" else f"n/a ({tfa['reason']})", TARGETS["trust_false_alarms"]))
@@ -266,16 +293,19 @@ def render(res: dict) -> str:
                  f"{_secs(tm['median_load_to_card_s'])} s (read {_secs(tm['median_read_s'])}, check {_secs(tm['median_check_s'])})",
                  TARGETS["median_s"]))
     mm = res["trust_mismatches"]
-    out += ["", *_table(rows), "", "Trust mismatches (label vs verdict, for Raj to decide): " + ("none" if not mm else "")]
+    out += ["", *_table(rows), "",
+            "Shopper-visible false alarms (clean pages whose card shows >= 1 trick): " + (", ".join(fv["pages"]) or "none"),
+            "Trust mismatches (label vs verdict, for Raj to decide): " + ("none" if not mm else "")]
     out += [f"  {m['page']}: label expected={m['expected']}, verdict {m['trust_verdict']} (card.safe {m['safe']}); "
             f"reasons: {' | '.join(m['reasons']) or '-'}" for m in mm]
     out += ["", "Per page"]
-    page_rows = [("Page", "Trick", "Exp", "Scored in", "Caught", "Deal flags", "Card", "Load->card s", "Reason")]
+    page_rows = [("Page", "Trick", "Exp", "Scored in", "Caught", "Deal flags", "Tone/tricks", "Safe", "Load->card s", "Reason")]
     for p in res["pages"]:
-        card = f"{p['card']['tone']}/{p['card']['tricks']}" if p["card"] else "-"
+        tone = f"{p['card']['tone']}/{p['card']['tricks']}" if p["card"] else "-"
+        safe = p["card"]["safe"] if p["card"] else "-"
         reason = p["reason"] if p["scored_in"] else p["excluded_reason"]
         page_rows.append((p["page"], p["trick"], str(p["expected"]), p["scored_in"] or "EXCLUDED", "yes" if p["caught"] else "no",
-                          ",".join(p["deal_flags"]) or "-", card, _secs(p["load_to_card_s"]), reason or "-"))
+                          ",".join(p["deal_flags"]) or "-", tone, safe, _secs(p["load_to_card_s"]), reason or "-"))
     return "\n".join(out + _table(page_rows))
 
 
@@ -291,7 +321,7 @@ async def check_page(base: str, row: dict) -> dict:
     """Read one bench page with the real content script, then run it through the orchestrator. Never raises."""
     from backend import orchestrator, orchestrator_stub, stub_server
     from backend.contracts import PageFacts
-    from backend.tests.content_reader import CONTENT_JS, FAKE_CHROME
+    from backend.tests.content_reader import CONTENT_JS
     from backend.tools.browser import chromium
 
     url = f"{base}/bench/{row['page']}"
@@ -299,7 +329,7 @@ async def check_page(base: str, row: dict) -> dict:
         async with chromium() as browser:  # the shared browser warm() started
             tab = await browser.new_page(viewport={"width": 1400, "height": 1000})
             try:
-                await tab.add_init_script(FAKE_CHROME)
+                await tab.add_init_script(BENCH_CHROME)
                 t0 = time.perf_counter()
                 await tab.goto(url, wait_until="load")
                 await tab.add_script_tag(content=CONTENT_JS.read_text(encoding="utf-8"))
@@ -313,7 +343,7 @@ async def check_page(base: str, row: dict) -> dict:
         done: set[str] = set()
         await orchestrator.clean_page(chk)
         seen, card, t_card = [], None, None
-        async for ev in orchestrator.run_check(chk, orchestrator_stub.stub_agents(chk, done), None,
+        async for ev in orchestrator.run_check(chk, orchestrator_stub.stub_agents(chk, done), orchestrator_stub.rechecker_for(chk),
                                                build_card=orchestrator_stub.card_builder(chk, done),
                                                agent_timeout_s=orchestrator_stub._deal_timeout_s(), traces_dir=TRACES):
             if ev["kind"] == "finding":
@@ -386,6 +416,7 @@ async def run(mode: str, out: Path) -> int:
         server.shutdown()
         await browser.shutdown()
     settings = {"TIMER_GAP_S": os.environ["TIMER_GAP_S"], "AGENT_TRUST": os.environ["AGENT_TRUST"],
+                "AGENT_PRICE": stub_server._price_mode(),
                 "sidecar": _sidecar_state(world_model), "pages": "one at a time"}
     results = build_results(mode, outcomes, settings)
     print(render(results))
