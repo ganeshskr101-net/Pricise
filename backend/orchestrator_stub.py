@@ -117,6 +117,7 @@ def card_builder(chk: dict, done: set[str] | None = None) -> orchestrator.CardBu
             from backend.agents import trust
 
             card.safe = trust.safe_verdict(chk["trust_verdict"])
+        card = s._safe_headline(card)  # the headline follows the final "Shop safe?" section
         if s._price_mode() == "real":
             from backend.rechecker import best_price_on_card
 

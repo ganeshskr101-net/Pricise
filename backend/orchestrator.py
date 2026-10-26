@@ -8,7 +8,7 @@ agent finishes and after each Skeptic result, so the verdict firms up as proof a
   findings. Rule 1 (evidence) always applies. The matching rule runs only when rechecker(finding) gives its inputs;
   without them the finding keeps its status. A second round runs only when the first result is "unverified".
   A rechecker with a .types attribute is asked only about those types. An "unverified" finding with no evidence
-  ("couldn't compare") makes no claim, so the Skeptic leaves it alone.
+  ("couldn't compare") and a "still checking" placeholder (model "pending") make no claim, so the Skeptic leaves them alone.
 - The work runs ONCE per check_id: a second stream replays the stored events (and follows a run still in progress).
 - traces/{check_id}.json records, for every finding, who proposed and challenged it, its evidence, model, rounds and status.
 - Page text is untrusted: before any agent starts, every text field of chk["page"] goes through the Scout guard
@@ -46,6 +46,7 @@ TIMER_TYPES = {"fake_timer", "resetting_timer"}
 CHALLENGED_TYPES = TIMER_TYPES | {"fake_discount", "best_price"}
 AGENT_NAMES = set(get_args(Finding.model_fields["agent"].annotation))
 MODEL = "orchestrator (no model call)"
+PENDING = "pending"  # backend.agents.deal.PENDING: Finding.model of a "still checking" placeholder row
 _AGENT_DONE = object()
 
 
@@ -301,7 +302,7 @@ def failed_finding(check_id: str, name: str, err: BaseException, timeout: float)
 def challengeable(f: Finding) -> bool:
     """Types the Skeptic challenges, unless the Skeptic already decided them."""
     decided = f.challenged_by == "skeptic" and f.status in ("confirmed", "rejected")
-    no_claim = f.status == "unverified" and not f.evidence
+    no_claim = (f.status == "unverified" and not f.evidence) or f.model == PENDING  # "still checking" rows claim nothing
     return f.type in CHALLENGED_TYPES and not decided and not no_claim
 
 
