@@ -9,6 +9,8 @@ Nothing here calls a model. The real backend replaces these functions with agent
 
 AGENT_DEAL=real streams the real Deal Agent (backend/agents/deal.py) in place of the scripted/heuristic deal findings;
 AGENT_DEAL=stub (default) keeps the scripted demo exactly as it was.
+AGENT_TRUST=real does the same for "Shop safe?": the real Trust Agent (backend/agents/trust.py) replaces the scripted trust
+findings and the card's safe section. POST /internal/trust/vet (for the Price Agent) is always available.
 
 AGENT_PRICE=real runs the Price Agent (backend/agents/price.py) in place of the scripted Store B/D/C findings, so "Best safe
 price" comes from Zetaris (or the catalog fixture) and follows the demo clock (Day 9: Store C $209).
@@ -29,7 +31,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -57,6 +59,7 @@ from backend.data import repo, zetaris  # noqa: E402
 from backend.data.pg import PgError  # noqa: E402
 from backend.data.zetaris import ZetarisError  # noqa: E402
 from backend.agents.chat import ChatRequest, ChatResponse  # noqa: E402  (proposed for backend/contracts.py)
+from backend.agents.trust_api import router as trust_router  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 @asynccontextmanager
@@ -74,6 +77,7 @@ async def lifespan(_app):
 
 app = FastAPI(title="Pricise stub backend", version="0.1", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.include_router(trust_router)  # POST /internal/trust/vet
 app.mount("/storelab", StaticFiles(directory=ROOT / "storelab", html=True), name="storelab")
 (ROOT / "traces").mkdir(exist_ok=True)
 app.mount("/traces", StaticFiles(directory=ROOT / "traces"), name="traces")  # Deal Agent screenshots (timer test, run-ahead)
@@ -112,6 +116,27 @@ def _price_mode() -> str:
 
 def _deal_mode() -> str:
     return "real" if os.environ.get("AGENT_DEAL", "stub").lower() == "real" else "stub"
+
+
+def _trust_mode() -> str:
+    return "real" if os.environ.get("AGENT_TRUST", "stub").lower() == "real" else "stub"
+
+
+async def _real_trust(cid: str, chk: dict, page: PageFacts, findings: list[Finding]):
+    """AGENT_TRUST=real: the Trust Agent's findings take the place of the scripted trust rows (same spot in the stream)."""
+    from backend.agents import trust
+    tv = await trust.assess_store(chk["url"], cid, page)
+    at = next((i for i, f in enumerate(findings) if f.agent == "trust"), len(findings))
+    rest = [f for f in findings if f.agent != "trust"]
+    at = min(at, len(rest))
+    return rest[:at] + tv["findings"] + rest[at:], tv
+
+
+def _with_trust(card: FinalCard, tv) -> FinalCard:
+    if tv is not None:
+        from backend.agents import trust
+        card.safe = trust.safe_verdict(tv)
+    return card
 
 
 # ----------------------------------------------------------------------------- demo script (AudioDealz)
@@ -322,8 +347,9 @@ def real_evidence(page: PageFacts) -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "agent_price": _price_mode(),
-            "data_source": "zetaris" if zetaris.use_zetaris() else "fixture", "checks": len(CHECKS)}
+    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "agent_trust": _trust_mode(),
+            "agent_price": _price_mode(), "data_source": "zetaris" if zetaris.use_zetaris() else "fixture",
+            "checks": len(CHECKS)}
 
 
 @app.get("/")
@@ -355,12 +381,19 @@ async def check_events(cid: str):
     if cid not in CHECKS:
         raise HTTPException(404, "unknown check")
     chk = CHECKS[cid]
+    if os.environ.get("AGENT_ORCH", "off").lower() == "on":  # opt-in: backend/orchestrator.py runs the check
+        from backend.orchestrator_stub import sse_stream
+        return StreamingResponse(sse_stream(chk), media_type="text/event-stream",
+                                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
     async def stream():
         page = PageFacts(**chk["page"])
         findings = demo_findings(cid) if chk["demo"] else real_findings(cid, page)
         delay = DEMO_DELAY if chk["demo"] else 0.18
         chk["findings"] = []
+        tv = None
+        if _trust_mode() == "real":
+            findings, tv = await _real_trust(cid, chk, page, findings)
         if _deal_mode() == "real":
             async for kind, item in _with_real_deal(cid, chk, page, findings, delay):
                 if kind == "finding":
@@ -368,6 +401,7 @@ async def check_events(cid: str):
                     chk["findings"].append(item.model_dump())
                     yield f"data: {json.dumps({'kind': 'finding', 'finding': item.model_dump()})}\n\n"
                 else:
+                    item = _with_trust(item, tv)
                     chk["final_card"] = item.model_dump()
                     yield f"data: {json.dumps({'kind': 'final_card', 'card': item.model_dump()})}\n\n"
             await _store_findings(chk)
@@ -381,7 +415,8 @@ async def check_events(cid: str):
         findings = streamed
         await asyncio.sleep(delay)
         elapsed = time.time() - chk["started"]
-        card = _apply_price(cid, demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed))
+        card = demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed)
+        card = _apply_price(cid, _with_trust(card, tv))
         chk["final_card"] = card.model_dump()
         yield f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
         await _store_findings(chk)
@@ -417,13 +452,15 @@ def _scripted_price(f: Finding) -> bool:
 
 
 async def _with_price(cid: str, chk: dict, page: PageFacts, findings: list[Finding], delay: float):
-    """The scripted findings, paced. With AGENT_PRICE=real the Price Agent runs alongside them (one Zetaris query, in a thread)
-    and its findings follow; the result also fills the evidence page's store comparison."""
+    """The scripted findings, paced. With AGENT_PRICE=real the Price Agent runs alongside them (one Zetaris query, plus a
+    Trust Agent vet of each candidate store when AGENT_TRUST=real) and its findings follow; the result also fills the evidence
+    page's store comparison."""
     if _price_mode() != "real":
         async for f in _paced(findings, delay):
             yield f
         return
-    task = asyncio.create_task(asyncio.to_thread(price_agent.assess, cid, chk["url"], page, CLOCK["day"]))
+    task = asyncio.create_task(price_agent.assess_async(cid, chk["url"], page, CLOCK["day"],
+                                                        use_trust=_trust_mode() == "real"))
     async for f in _paced([f for f in findings if not _scripted_price(f)], delay):
         yield f
     res = await task
@@ -621,21 +658,21 @@ class ClockReq(BaseModel):
 
 
 @app.post("/demo/clock")
-def demo_clock(req: ClockReq) -> dict:
+def demo_clock(req: ClockReq, request: Request) -> dict:
     CLOCK["day"] = req.day
     alerts = []
     sony = next((i for i in WISHLIST if i.id == "sony"), None)
     if sony:
-        _clock_sony(sony, req.day, alerts)
+        _clock_sony(sony, req.day, alerts, str(request.base_url))
     return {"day": req.day, "alerts": alerts, "stats": _stats(req.day)}
 
 
-def _clock_sony(sony: WishlistItem, day: int, alerts: list) -> None:
+def _clock_sony(sony: WishlistItem, day: int, alerts: list, origin: str) -> None:
     """The wishlist week: on Day 9 Store C drops to $209 (below the $215 target) and an alert goes out once.
     With AGENT_PRICE=real the price comes from the Price Agent for that demo day; otherwise it is scripted."""
     store, total = ("Store C", 209) if day >= 9 else ("Store C", 229)
     if _price_mode() == "real":
-        best = price_agent.best_for("WH-1000XM5", "new", day)
+        best = price_agent.best_for("WH-1000XM5", "new", day, origin, use_trust=_trust_mode() == "real")
         if best:
             store, total = best["store"], best["true_total"]
     sony.best_store = store

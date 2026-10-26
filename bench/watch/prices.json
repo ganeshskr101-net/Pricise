@@ -1,0 +1,25 @@
+{
+  "note": "Made-up Store Lab prices for the wishlist watch (backend/watch.py). Not real stores, not real prices. One entry per run of days; days are 1-based demo-clock days.",
+  "days": 30,
+  "items": {
+    "sony": [
+      {"from": 1, "to": 4, "price": 229, "store": "store-c", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 5, "to": 6, "price": 199, "store": "store-x", "condition": "refurbished", "store_trust": "unknown", "held": false},
+      {"from": 7, "to": 7, "price": 229, "store": "store-c", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 8, "to": 30, "price": 209, "store": "store-c", "condition": "new", "store_trust": "safe", "held": false}
+    ],
+    "kindle": [
+      {"from": 1, "to": 14, "price": 139, "store": "store-a", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 15, "to": 15, "price": 115, "store": "store-a", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 16, "to": 21, "price": 139, "store": "store-a", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 22, "to": 30, "price": 119, "store": "store-a", "condition": "new", "store_trust": "safe", "held": false}
+    ],
+    "shoes": [
+      {"from": 1, "to": 30, "price": 84, "store": "store-f", "condition": "new", "store_trust": "caution", "held": true}
+    ],
+    "fryer": [
+      {"from": 1, "to": 17, "price": 92, "store": "store-b", "condition": "new", "store_trust": "safe", "held": false},
+      {"from": 18, "to": 30, "price": 79, "store": "store-b", "condition": "refurbished", "store_trust": "safe", "held": false}
+    ]
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Store G",
+  "domain": "store-g.example",
+  "domain_created": "2021-01-23",
+  "as_of": "2026-10-24",
+  "address": "77 Kestrel Way, Herndon, VA 20170",
+  "company_number": "VA-0255118",
+  "_note": "Made-up store for Pricise (Store Lab). as_of = date of the made-up WHOIS snapshot."
+}

@@ -205,3 +205,90 @@ def test_live_zetaris_history_and_writes_land_where_zetaris_reads(monkeypatch):
         from backend.data import pg
         with pg.connect() as conn, conn.cursor() as cur:
             cur.execute("DELETE FROM findings WHERE check_id = %s", [cid])
+
+
+# ----------------------------------------------------------------------------- Trust Agent verdicts (AGENT_TRUST=real)
+
+from backend.agents import trust as trust_agent  # noqa: E402
+from backend.tests.content_reader import serve_repo  # noqa: E402
+
+
+@pytest.fixture(scope="module")
+def site():
+    server, url = serve_repo()  # the Trust Agent fetches each store's about.json, photos, reviews over HTTP
+    yield url
+    server.shutdown()
+
+
+@pytest.fixture(autouse=True)
+def _fresh_trust():
+    trust_agent.clear_cache()
+
+
+def _assess_at(base, store="audiodealz", sku="WH1000XM5/B", day=1, use_trust=True):
+    url = f"{base}/storelab/{store}/"
+    return price.assess("c1", url, PageFacts(url=url, host=base.split("/")[2], product={"sku": sku, "model": "WH-1000XM5"}),
+                        day, use_trust=use_trust)
+
+
+def test_trust_agent_blocks_store_d_and_store_c_wins(site):
+    res = _assess_at(site)
+    assert res.trust == "trust agent" and (res.best_price.store, res.best_price.total) == ("Store C", 229)
+    d = next(f for f in res.findings if f.summary.startswith("Store D"))
+    assert d.status == "rejected" and d.challenged_by == "trust" and "blocked by the Trust Agent" in d.summary
+    assert "Domain registered 6 days ago" in d.summary
+    e = next(f for f in res.findings if f.summary.startswith("Store E"))
+    assert e.status == "unverified" and "couldn't check" in e.summary
+    assert res.best_price.url == f"{site}/storelab/store-c/"  # links follow the running server, not a hard-coded port
+    assert "Store D (unsafe store)" in res.best_price.reasons[2].text
+    assert _assess_at(site, day=9).best_price.total == 209
+
+
+def test_trust_agent_blocks_the_risky_hero_store_on_other_pages(site):
+    res = _assess_at(site, "store-g", "KW-XM5-BK")
+    a = next(f for f in res.findings if f.summary.startswith("AudioDealz"))
+    assert a.challenged_by == "trust" and res.best_price.store == "Store C"
+
+
+def _fake_trust(monkeypatch, verdicts: dict):
+    """Replace the Trust Agent's answers: {store_id: verdict}; stores not listed are "safe"."""
+    async def vet(check_id, urls):
+        return {s: {"verdict": verdicts.get(s, "safe"), "reasons": ["Reviews came in a burst."], "checked": True} for s in urls}
+
+    monkeypatch.setattr(price, "vet_stores", vet)
+
+
+def _demo_page(use_trust):
+    return price.assess("c1", LAB.format("audiodealz"), PageFacts(url=LAB.format("audiodealz"), product={"sku": "WH1000XM5/B"}),
+                        use_trust=use_trust)
+
+
+def test_trust_verdict_replaces_the_seeded_flag(monkeypatch):
+    """With the Trust Agent on, the seeded "scam" flag is not used: if Trust says Store D is safe, D's $189 wins.
+    With it off (AGENT_TRUST=stub), the seeded flag is the fallback and still blocks D."""
+    _fake_trust(monkeypatch, {"audiodealz": "unsafe"})
+    assert (_demo_page(True).best_price.store, _demo_page(True).best_price.total) == ("Store D", 189)
+    assert _demo_page(False).best_price.store == "Store C"
+
+
+def test_trust_caution_is_not_a_safe_price(monkeypatch):
+    _fake_trust(monkeypatch, {"audiodealz": "unsafe", "store-c": "caution", "store-d": "unsafe"})
+    res = _demo_page(True)
+    assert (res.best_price.store, res.best_price.total) == ("Store G", 248)  # next cheapest safe true total ($219 + $29 fees)
+    c = next(f for f in res.findings if f.summary.startswith("Store C"))
+    assert c.status == "rejected" and "be careful" in c.summary and c.challenged_by == "trust"
+
+
+def test_backend_price_and_trust_together(site, monkeypatch):
+    monkeypatch.setenv("AGENT_PRICE", "real")
+    monkeypatch.setenv("AGENT_TRUST", "real")
+    url = f"{site}/storelab/audiodealz/"
+    page = {"url": url, "host": site.split("/")[2], "product": {"name": "Sony WH-1000XM5", "price": 149.0, "sku": "WH1000XM5/B",
+                                                                "model": "WH-1000XM5"}, "signals": []}
+    cid, events = _check(url, page)
+    card = events[-1]["card"]
+    assert card["safe"]["headline"] == "Risky" and card["best_price"]["total"] == 229 and card["alt"]["store"] == "Store C"
+    findings = [e["finding"] for e in events if e["kind"] == "finding"]
+    own_trust = [f for f in findings if f["agent"] == "trust"]
+    assert own_trust and all(f["check_id"] == cid for f in own_trust)  # candidate vets never leak into the page's rows
+    assert any(f["agent"] == "price" and f["summary"].startswith("Store D") and f["challenged_by"] == "trust" for f in findings)
