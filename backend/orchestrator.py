@@ -7,6 +7,8 @@ agent finishes and after each Skeptic result, so the verdict firms up as proof a
 - Skeptic (rules only, backend/agents/skeptic.py): challenges fake_timer / resetting_timer, fake_discount and best_price
   findings. Rule 1 (evidence) always applies. The matching rule runs only when rechecker(finding) gives its inputs;
   without them the finding keeps its status. A second round runs only when the first result is "unverified".
+  A rechecker with a .types attribute is asked only about those types. An "unverified" finding with no evidence
+  ("couldn't compare") makes no claim, so the Skeptic leaves it alone.
 - The work runs ONCE per check_id: a second stream replays the stored events (and follows a run still in progress).
 - traces/{check_id}.json records, for every finding, who proposed and challenged it, its evidence, model, rounds and status.
 - Page text is untrusted: before any agent starts, every text field of chk["page"] goes through the Scout guard
@@ -299,7 +301,8 @@ def failed_finding(check_id: str, name: str, err: BaseException, timeout: float)
 def challengeable(f: Finding) -> bool:
     """Types the Skeptic challenges, unless the Skeptic already decided them."""
     decided = f.challenged_by == "skeptic" and f.status in ("confirmed", "rejected")
-    return f.type in CHALLENGED_TYPES and not decided
+    no_claim = f.status == "unverified" and not f.evidence
+    return f.type in CHALLENGED_TYPES and not decided and not no_claim
 
 
 def apply_rule(f: Finding, inputs: Optional[dict]) -> Optional[RuleResult]:
@@ -334,7 +337,7 @@ async def challenge(f: Finding, rechecker: Optional[Rechecker]) -> AsyncIterator
         yield _challenged(f)
         yield skeptic.next_status(f, evidence)
         return
-    if rechecker is None:
+    if rechecker is None or f.type not in getattr(rechecker, "types", CHALLENGED_TYPES):
         return  # no fresh inputs: the matching rule is skipped, the finding keeps its status
     while True:
         before = f

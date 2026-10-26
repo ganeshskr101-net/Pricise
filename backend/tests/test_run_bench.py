@@ -101,10 +101,26 @@ def test_trust_label_and_verdict_disagreements_are_reported_not_tuned(outcomes):
     assert not err["caught"] and err["reason"] == "page not checked: TimeoutError"  # an error is a miss, not a mismatch
 
 
+def test_shopper_visible_false_alarms_read_card_tricks_and_list_pages(outcomes):
+    outcomes[5]["card"] = {**outcomes[5]["card"], "tricks": 0}  # ad-05: the card shows no trick
+    res = rb.build_results("full", outcomes)
+    fv = res["false_alarms_visible"]
+    # clean: fd-06, tm-05, c-01 show 1 trick (fixture card), ad-05 shows 0; confirmed-only line stays 2/4
+    assert (fv["k"], fv["n"], fv["pages"]) == (3, 4, ["deal/fd-06.html", "deal/tm-05.html", "clean/c-01.html"])
+    assert (res["false_alarms"]["k"], res["false_alarms"]["n"]) == (2, 4)
+    text = rb.render(res)
+    assert "False alarms, shopper-visible" in text and "3/4 = 75.0%" in text
+    assert "Shopper-visible false alarms (clean pages whose card shows >= 1 trick): deal/fd-06.html, deal/tm-05.html, " \
+           "clean/c-01.html" in text
+    assert "Tone/tricks  Safe" in text and rb.CARD_NOTE in res["notes"]
+
+
 def test_not_connected_types_are_na_with_page_count_never_zero(outcomes, monkeypatch):
     res = rb.score(outcomes, "full")
-    assert res["exact_match"] == {"status": "n/a", "reason": "agent not connected", "pages": 0, "planned": 7}
+    assert res["exact_match"] == {"status": "n/a", "reason": "0 labelled pages", "pages": 0, "planned": 7}
     assert {n["type"] for n in res["na_types"]} == {"lookalike_listing"}
+    assert "Exact-match accuracy (look-alikes)" in rb.render(rb.build_results("full", outcomes))
+    assert "n/a (0 labelled pages)" in rb.render(rb.build_results("full", outcomes))
     monkeypatch.setattr(rb, "NOT_CONNECTED", {rb.LOOKALIKE: "agent not connected", rb.SCAM: "agent not connected"})
     res = rb.score(outcomes, "full")
     assert res["per_type"]["risky_store"] == {"status": "n/a", "reason": "agent not connected", "pages": 4, "planned": 7}
