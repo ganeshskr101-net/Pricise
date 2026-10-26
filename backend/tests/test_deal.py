@@ -292,3 +292,56 @@ def test_timer_result_is_reused_for_ten_minutes_unless_fresh(monkeypatch):
     real = "https://shop.example/item"
     asyncio.run(deal._timer("c5", real, page, fresh=False))
     assert real not in deal.TIMER_CACHE  # only Store Lab results are cached
+
+
+# ----------------------------------------------------------------------------- Skeptic inputs, evidence, Chromium path
+
+
+def test_timer_frames_carry_at_and_remaining_s_for_the_skeptic(monkeypatch):
+    from backend.agents import skeptic
+    from backend.tools import timer_test
+
+    async def frames(check_id, url, selector, gap, visits=3):
+        return [{"visit": v, "at": 100.0 + 3 * v, "time": "10:00:0%d" % v, "shown": "09:59", "remaining_s": 599,
+                 "screenshot": f"/traces/x/visit{v}.png"} for v in (1, 2, 3)]
+    monkeypatch.setattr(timer_test, "sample_timer", frames)
+    url = "http://localhost:8787/storelab/audiodealz/"
+    page = PageFacts(url=url, signals=[{"type": "countdown", "selector": "#timer", "text": "Deal ends in 09:59"}])
+    res = asyncio.run(timer_test.check_timer("c1", url, page, gap=0))
+    kept = res.evidence_data["timer_frames"]
+    assert all({"at", "remaining_s"} <= set(f) for f in kept)
+    assert skeptic.visits_from_frames(kept) == [{"fresh_session": True, "reset": True}] * 3  # before: [] (unverified)
+
+
+@pytest.mark.parametrize("make", ["resetting_timer", "countdown", "scarcity"])
+def test_signal_without_a_selector_still_gives_evidence(make):
+    from backend.contracts import Finding
+    from backend.tools import timer_test
+
+    page = PageFacts(url="https://shop.example/item", signals=[{"type": make, "text": "Hurry: only 2 left · ends in 04:59"}])
+    if make == "scarcity":
+        found = deal.check_scarcity("c1", page).findings
+    else:
+        found = timer_test.passthrough("c1", page.signals[0]).findings
+    [f] = found
+    assert f.evidence and all(e.kind == "log" for e in f.evidence)
+    assert Finding.model_validate(f.model_dump()) == f  # a valid contracts.Finding
+
+
+def test_cached_chromium_honors_the_env_path_and_searches_windows(monkeypatch, tmp_path):
+    from backend.tools import browser
+
+    monkeypatch.setattr(browser, "CACHE", tmp_path / "none-mac")
+    monkeypatch.setattr(browser, "LINUX_CACHE", tmp_path / "none-linux")
+    exe = tmp_path / "local" / "ms-playwright" / "chromium-1228" / "chrome-win64" / "chrome.exe"
+    exe.parent.mkdir(parents=True)
+    exe.write_bytes(b"")
+    monkeypatch.delenv("PLAYWRIGHT_CHROMIUM_PATH", raising=False)
+    monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))
+    assert browser.cached_chromium() == str(exe)
+    mine = tmp_path / "my-chrome.exe"
+    mine.write_bytes(b"")
+    monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_PATH", str(mine))
+    assert browser.cached_chromium() == str(mine)
+    monkeypatch.setenv("PLAYWRIGHT_CHROMIUM_PATH", str(tmp_path / "missing.exe"))  # a wrong path: keep searching
+    assert browser.cached_chromium() == str(exe)
