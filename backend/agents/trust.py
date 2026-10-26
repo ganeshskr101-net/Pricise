@@ -12,7 +12,6 @@ The verdict comes from explicit rules (decide(), documented in docs/trust_agent.
 from __future__ import annotations
 
 import asyncio
-import inspect
 import logging
 import os
 import time
@@ -31,11 +30,6 @@ from backend.tools.returns import check_returns
 from backend.tools.reviews import check_reviews
 from backend.tools.trust_common import (REVIEWS_PATHS, RETURNS_PATHS, Signal, find_store_base, first_json, first_text,
                                         make_client, sibling_stores)
-
-try:  # Abel's World Model when it lands; the in-memory stub until then
-    from backend.engines.world_model import write_finding  # type: ignore[attr-defined]
-except ImportError:
-    from backend.engines.world_model_stub import write_finding
 
 log = logging.getLogger("pricise.trust")
 TrustLevel = Literal["safe", "caution", "unsafe"]
@@ -93,21 +87,15 @@ async def _reword(reasons: list[str]) -> list[str]:
     from backend.llm import meterless
     if not meterless.configured("fast"):
         return reasons
-    prompt = ("Rewrite each line as one short sentence a shopper understands. Keep the same facts and the same number of "
-              "lines, one per line, no bullets, nothing new.\n" + "\n".join(reasons))
+    prompt = (meterless.trusted_prefix("Rewrite each line as one short sentence a shopper understands. Keep the same facts "
+                                       "and the same number of lines, one per line, no bullets, nothing new.\n")
+              + meterless.untrusted("\n".join(reasons)))  # reasons can quote page text (store name, reviews)
     try:
         text = await asyncio.wait_for(asyncio.to_thread(meterless.complete, prompt, "fast", 160), SUMMARY_TIMEOUT_S)
     except Exception:  # noqa: BLE001 - cosmetic only
         return reasons
     lines = [ln.strip(" -•\t") for ln in (text or "").splitlines() if ln.strip()]
     return lines if len(lines) == len(reasons) else reasons
-
-
-async def _write_all(findings: list[Finding]) -> None:
-    for f in findings:
-        res = write_finding(f)
-        if inspect.isawaitable(res):
-            await res
 
 
 def _real_page(store_url: str, check_id: str, page: Optional[PageFacts]) -> list[Signal]:
@@ -149,7 +137,6 @@ async def assess_store(store_url: str, check_id: str, page: Optional[PageFacts] 
     if hit and time.monotonic() - hit[0] < CACHE_S:
         old = hit[1]
         findings = [f.model_copy(update={"check_id": check_id, "ts": time.time()}) for f in old["findings"]]
-        await _write_all(findings)
         return {**old, "findings": findings, "elapsed_ms": int((time.perf_counter() - t0) * 1000)}
 
     name, base, checked = None, store_url, False
@@ -170,7 +157,6 @@ async def assess_store(store_url: str, check_id: str, page: Optional[PageFacts] 
     # Only warning signs and checks that couldn't run become findings: the panel shows every trust row as a warning,
     # so a passing check ("Business address listed") would look alarming. Passing checks still feed decide() and the card.
     findings = [to_finding(check_id, s) for s in signals if s.flagged or not s.verified]
-    await _write_all(findings)
     result = TrustVerdict(verdict=verdict, reasons=await _reword(reasons_for(signals)), findings=findings, store=name,
                           store_url=base, checked=checked, elapsed_ms=int((time.perf_counter() - t0) * 1000))
     log.info("trust %s -> %s in %d ms", base, verdict, result["elapsed_ms"])
