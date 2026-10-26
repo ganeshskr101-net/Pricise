@@ -14,3 +14,7 @@ h2 { font-size: 15.5px; margin: 0; }
 .panel-head .pill { margin-left: auto; }
 .note { font-size: 12px; color: var(--ink-3); margin-top: 10px; }
 .empty-note { font-size: 13px; color: var(--ink-3); padding: 14px 0 4px; }
+.sql { margin-top: 10px; font-size: 12px; }
+.sql summary { cursor: pointer; color: var(--brand-2); font-weight: 600; }
+.sql pre { white-space: pre-wrap; word-break: break-word; background: var(--line-2); border-radius: var(--radius-sm); padding: 10px 12px;
+  margin: 8px 0 0; color: var(--ink-2); font: 12px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; }

@@ -1,45 +1,84 @@
-"""Price history access. ALL price-history reads go through get_price_history, so Josh can swap the JSON fixture for a
-Zetaris query (same signature) without touching the Deal Agent.
+"""Price history access. ALL price-history reads go through get_price_history, so the Deal Agent never cares where data lives.
 
 host:    the store, e.g. "storelab/audiodealz" for Store Lab pages, or the real host ("shop.example") for real pages.
-product: an identifier from the page (SKU, model or name); matched case- and punctuation-insensitively.
+product: an identifier from the page (SKU, model or name); matched case- and punctuation-insensitively against the store's
+         listing SKU or the product's model.
+
+DATA_SOURCE=fixture (default): the synthetic catalog in backend/data/catalog.py, in memory.
+DATA_SOURCE=zetaris: one Lightning SQL query through Zetaris. If Zetaris fails, falls back to the catalog (logged), so the demo
+never breaks. The result is a History: a plain list of (date, price) plus .source, .sql and .raw (the rows Zetaris returned),
+which the fake-discount finding cites as evidence. Day offsets map to dates ending today (offset 0 = today).
 """
 from __future__ import annotations
 
-import json
+import logging
 import re
 from datetime import date, timedelta
-from functools import lru_cache
-from pathlib import Path
 from typing import Optional
 
-FIXTURE = Path(__file__).resolve().parent / "fixtures" / "price_history.json"
+from backend.data import catalog, zetaris
+
+log = logging.getLogger("pricise.data")
+HOST_RE = re.compile(r"[a-z0-9.:/-]+")
+
+
+class History(list):
+    """[(date, price), ...] oldest first, plus where it came from."""
+
+    def __init__(self, rows, source: str, sql: Optional[str] = None, raw: Optional[list[dict]] = None):
+        super().__init__(rows)
+        self.source, self.sql, self.raw = source, sql, raw or []
 
 
 def _key(s: str) -> str:
-    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+    return catalog.key(s)
 
 
-@lru_cache(maxsize=1)
-def _series() -> list[dict]:
-    return json.loads(FIXTURE.read_text())["series"]
+def _dated(offsets_prices: list[tuple[int, float]]) -> list[tuple[date, float]]:
+    today = date.today()
+    return [(today + timedelta(days=d), p) for d, p in sorted(offsets_prices)]
 
 
-def _expand(runs: list[list[float]], today: date) -> list[tuple[date, float]]:
-    prices = [float(p) for p, days in runs for _ in range(int(days))]
-    start = today - timedelta(days=len(prices) - 1)
-    return [(start + timedelta(days=i), p) for i, p in enumerate(prices)]
+def history_sql(path: str, want: str) -> str:
+    ds, k, p = zetaris.datasource(), zetaris.lit(want), zetaris.lit(path)
+    return (f"SELECT h.day_offset, h.price FROM {ds}.price_history h "
+            f"JOIN {ds}.listings l ON l.store_id = h.store_id AND l.product_id = h.product_id "
+            f"JOIN {ds}.products p ON p.product_id = l.product_id "
+            f"JOIN {ds}.stores s ON s.store_id = l.store_id "
+            f"WHERE s.path = {p} AND (l.sku_key = {k} OR p.model_key = {k}) "
+            f"AND h.day_offset BETWEEN -{catalog.HISTORY_DAYS - 1} AND 0 ORDER BY h.day_offset")
+
+
+def _from_zetaris(path: str, want: str) -> Optional[History]:
+    sql = history_sql(path, want)
+    raw = zetaris.run_sql(sql)
+    if not raw:
+        return None
+    return History(_dated([(int(r["day_offset"]), float(r["price"])) for r in raw]), "zetaris", sql, raw)
+
+
+def _from_catalog(path: str, want: str) -> Optional[History]:
+    data = catalog.rows()
+    store = next((s for s in data["stores"] if s["path"] == path), None)
+    if not store:
+        return None
+    models = {p["product_id"]: p["model_key"] for p in data["products"]}
+    pids = {l["product_id"] for l in data["listings"]
+            if l["store_id"] == store["store_id"] and want in (l["sku_key"], models[l["product_id"]])}
+    rows = [(r["day_offset"], r["price"]) for r in data["price_history"]
+            if r["store_id"] == store["store_id"] and r["product_id"] in pids and r["day_offset"] <= 0]
+    return History(_dated(rows), "fixture") if rows else None
 
 
 def get_price_history(host: str, product: str) -> Optional[list[tuple[date, float]]]:
     """Daily (date, price) rows for this product at this store, oldest first, or None when we have no history."""
     h = (host or "").lower().removeprefix("www.")
     want = _key(product)
-    if not want:
+    if not want or not HOST_RE.fullmatch(h):
         return None
-    for s in _series():
-        if s["host"] != h:
-            continue
-        if want in {_key(k) for k in [s["product"], *s.get("aliases", [])]}:
-            return _expand(s["runs"], date.today())
-    return None
+    if zetaris.use_zetaris():
+        try:
+            return _from_zetaris(h, want)
+        except (zetaris.ZetarisError, ValueError) as e:
+            log.warning("price history from Zetaris failed, using the catalog fixture: %s", e)
+    return _from_catalog(h, want)

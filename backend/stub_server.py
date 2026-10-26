@@ -9,6 +9,12 @@ Nothing here calls a model. The real backend replaces these functions with agent
 
 AGENT_DEAL=real streams the real Deal Agent (backend/agents/deal.py) in place of the scripted/heuristic deal findings;
 AGENT_DEAL=stub (default) keeps the scripted demo exactly as it was.
+
+AGENT_PRICE=real runs the Price Agent (backend/agents/price.py) in place of the scripted Store B/D/C findings, so "Best safe
+price" comes from Zetaris (or the catalog fixture) and follows the demo clock (Day 9: Store C $209).
+
+DATA_SOURCE=zetaris reads the wishlist through Zetaris and stores each finished check's findings in the Pricise Postgres (the
+database Zetaris reads); any failure falls back to the in-memory wishlist, so the demo never breaks. Default: fixture (memory).
 """
 from __future__ import annotations
 
@@ -46,6 +52,10 @@ from backend.env import load_dotenv
 load_dotenv()  # before anything reads settings; shell variables still win, no .env is fine
 
 from backend.agents import chat as chat_agent  # noqa: E402
+from backend.agents import price as price_agent  # noqa: E402
+from backend.data import repo, zetaris  # noqa: E402
+from backend.data.pg import PgError  # noqa: E402
+from backend.data.zetaris import ZetarisError  # noqa: E402
 from backend.agents.chat import ChatRequest, ChatResponse  # noqa: E402  (proposed for backend/contracts.py)
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -94,6 +104,10 @@ def _f(check_id: str, agent: str, type_: str, status: str, summary: str, evidenc
 
 def _is_demo(url: str) -> bool:
     return "/storelab/audiodealz" in url
+
+
+def _price_mode() -> str:
+    return "real" if os.environ.get("AGENT_PRICE", "stub").lower() == "real" else "stub"
 
 
 def _deal_mode() -> str:
@@ -308,7 +322,8 @@ def real_evidence(page: PageFacts) -> dict:
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "checks": len(CHECKS)}
+    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "agent_price": _price_mode(),
+            "data_source": "zetaris" if zetaris.use_zetaris() else "fixture", "checks": len(CHECKS)}
 
 
 @app.get("/")
@@ -355,9 +370,10 @@ async def check_events(cid: str):
                 else:
                     chk["final_card"] = item.model_dump()
                     yield f"data: {json.dumps({'kind': 'final_card', 'card': item.model_dump()})}\n\n"
+            await _store_findings(chk)
             return
         streamed = []
-        async for f in _paced(findings, delay):
+        async for f in _with_price(cid, chk, page, findings, delay):
             f.ts = time.time()
             streamed.append(f)
             chk["findings"].append(f.model_dump())
@@ -365,18 +381,65 @@ async def check_events(cid: str):
         findings = streamed
         await asyncio.sleep(delay)
         elapsed = time.time() - chk["started"]
-        card = demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed)
+        card = _apply_price(cid, demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed))
         chk["final_card"] = card.model_dump()
         yield f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
+        await _store_findings(chk)
 
     return StreamingResponse(stream(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+async def _store_findings(chk: dict) -> None:
+    """DATA_SOURCE=zetaris: keep the finished check's findings in the Pricise Postgres. Best effort: never breaks a check."""
+    if not zetaris.use_zetaris():
+        return
+    try:
+        found = [Finding(**d) for d in chk["findings"]]
+        n = await asyncio.to_thread(repo.save_findings, chk["check_id"], chk["url"], found)
+        chk["stored_findings"] = n
+    except (PgError, ValueError) as err:
+        _log.warning("findings not stored: %s", err)
 
 
 async def _paced(findings: list[Finding], delay: float):
     for f in findings:
         await asyncio.sleep(delay)
         yield f
+
+
+PRICE: dict[str, price_agent.PriceResult] = {}  # check_id -> the Price Agent's result (AGENT_PRICE=real)
+
+
+def _scripted_price(f: Finding) -> bool:
+    """The scripted Store B / Store D / Store C rows (and the stub Skeptic's "$229" verdict) the real Price Agent replaces."""
+    return f.agent == "price" or (f.agent == "skeptic" and f.type == "best_price")
+
+
+async def _with_price(cid: str, chk: dict, page: PageFacts, findings: list[Finding], delay: float):
+    """The scripted findings, paced. With AGENT_PRICE=real the Price Agent runs alongside them (one Zetaris query, in a thread)
+    and its findings follow; the result also fills the evidence page's store comparison."""
+    if _price_mode() != "real":
+        async for f in _paced(findings, delay):
+            yield f
+        return
+    task = asyncio.create_task(asyncio.to_thread(price_agent.assess, cid, chk["url"], page, CLOCK["day"]))
+    async for f in _paced([f for f in findings if not _scripted_price(f)], delay):
+        yield f
+    res = await task
+    PRICE[cid] = res
+    chk["evidence_data"]["stores"] = res.stores
+    chk["evidence_data"]["stores_sql"] = res.sql
+    async for f in _paced(res.findings, delay):
+        yield f
+
+
+def _apply_price(cid: str, card: FinalCard) -> FinalCard:
+    """Put the Price Agent's "Best safe price" verdict and safer choice on the card, once it has answered."""
+    res = PRICE.get(cid)
+    if res:
+        card.best_price, card.alt = res.best_price, res.alt
+    return card
 
 
 async def _with_real_deal(cid: str, chk: dict, page: PageFacts, findings: list[Finding], delay: float):
@@ -389,7 +452,7 @@ async def _with_real_deal(cid: str, chk: dict, page: PageFacts, findings: list[F
     done: set[str] = set()
 
     async def scripted():
-        async for f in _paced([f for f in findings if f.agent != "deal"], delay):
+        async for f in _with_price(cid, chk, page, [f for f in findings if f.agent != "deal"], delay):
             await queue.put(("finding", f))
 
     async def agent():
@@ -432,12 +495,12 @@ def _live_card(cid: str, chk: dict, page: PageFacts, seen: list[Finding], done: 
                        if not (d.get("model") == deal.PENDING and deal.TYPE_TOOL.get(d.get("type")) in done)]
     elapsed = time.time() - chk["started"]
     if chk["demo"]:
-        return _demo_card_live(cid, elapsed, shown, pending, chk["evidence_data"])
+        return _apply_price(cid, _demo_card_live(cid, elapsed, shown, pending, chk["evidence_data"]))
     card = real_card(cid, page, shown, elapsed)
     if pending:
         kept = [r for r in card.honest.reasons if not r.text.startswith("No timers")]
         card.honest.reasons = (kept + [Reason(text=f.summary, tone="unknown") for f in pending])[:5]
-    return card
+    return _apply_price(cid, card)
 
 
 def _money_short(v: float) -> str:
@@ -520,17 +583,35 @@ def _stats(day: int) -> dict:
             "tricks": round(11 * s), "stores": 10}
 
 
+def _wishlist_items() -> tuple[list[WishlistItem], str]:
+    """(items, source): Zetaris when DATA_SOURCE=zetaris and it answers, else the in-memory list."""
+    if zetaris.use_zetaris():
+        try:
+            return repo.get_wishlist(), "zetaris"
+        except (ZetarisError, ValueError) as err:
+            _log.warning("wishlist from Zetaris failed, using memory: %s", err)
+    return WISHLIST, "memory"
+
+
 @app.get("/wishlist")
 def get_wishlist() -> dict:
-    return {"day": CLOCK["day"], "items": [i.model_dump() for i in WISHLIST], "stats": _stats(CLOCK["day"])}
+    items, source = _wishlist_items()
+    return {"day": CLOCK["day"], "items": [i.model_dump() for i in items], "stats": _stats(CLOCK["day"]), "source": source}
 
 
 @app.post("/wishlist")
 def add_wishlist(item: WishlistItem) -> dict:
-    for existing in WISHLIST:
+    items, source = _wishlist_items()
+    for existing in items:
         if existing.name.lower() == item.name.lower():
             return {"ok": True, "item": existing.model_dump(), "duplicate": True}
     item.id = item.id or uuid.uuid4().hex[:8]
+    if source == "zetaris":
+        try:
+            repo.add_wishlist(item)
+            return {"ok": True, "item": item.model_dump()}
+        except PgError as err:
+            _log.warning("wishlist write failed, keeping it in memory: %s", err)
     WISHLIST.append(item)
     return {"ok": True, "item": item.model_dump()}
 
@@ -545,13 +626,31 @@ def demo_clock(req: ClockReq) -> dict:
     alerts = []
     sony = next((i for i in WISHLIST if i.id == "sony"), None)
     if sony:
-        if req.day >= 9:
-            sony.best_price, sony.status, sony.tone = 209, "Alert sent", "good"
-            if "sony" not in CLOCK["alerted"]:
-                CLOCK["alerted"].add("sony")
-                alerts.append({"id": "sony", "title": "Sony WH-1000XM5 · $209 at Store C",
-                               "message": "Lowest true price in 90 days · same model, new · trusted store · Skeptic approved"})
-        else:
-            sony.best_price, sony.status, sony.tone = 229, "Watching", "unknown"
-            CLOCK["alerted"].discard("sony")
+        _clock_sony(sony, req.day, alerts)
     return {"day": req.day, "alerts": alerts, "stats": _stats(req.day)}
+
+
+def _clock_sony(sony: WishlistItem, day: int, alerts: list) -> None:
+    """The wishlist week: on Day 9 Store C drops to $209 (below the $215 target) and an alert goes out once.
+    With AGENT_PRICE=real the price comes from the Price Agent for that demo day; otherwise it is scripted."""
+    store, total = ("Store C", 209) if day >= 9 else ("Store C", 229)
+    if _price_mode() == "real":
+        best = price_agent.best_for("WH-1000XM5", "new", day)
+        if best:
+            store, total = best["store"], best["true_total"]
+    sony.best_store = store
+    if total <= (sony.target or 0):
+        sony.best_price, sony.status, sony.tone = total, "Alert sent", "good"
+        if "sony" not in CLOCK["alerted"]:
+            CLOCK["alerted"].add("sony")
+            alerts.append({"id": "sony", "title": f"Sony WH-1000XM5 · {_money_short(total)} at {store}",
+                           "message": "Lowest true price in 90 days · same model, new · trusted store · Skeptic approved"})
+    else:
+        sony.best_price, sony.status, sony.tone = total, "Watching", "unknown"
+        CLOCK["alerted"].discard("sony")
+    if zetaris.use_zetaris():
+        try:
+            repo.update_wishlist("sony", best_price=sony.best_price, best_store=sony.best_store, status=sony.status,
+                                 tone=sony.tone)
+        except PgError as err:
+            _log.warning("wishlist update not stored: %s", err)

@@ -22,7 +22,7 @@ async function load() {
     chartPanel(ev.price_history, p),
     feesPanel(ev),
     replayPanel(ev.timer_frames, chk.findings),
-    storesPanel(ev.stores),
+    storesPanel(ev.stores, ev.stores_sql),
     trustPanel(chk.findings),
     tracePanel(chk.findings),
   ].join('');
@@ -45,7 +45,13 @@ function chartPanel(h, p) {
       <path d="${line}" fill="none" style="stroke: var(--ink)" stroke-width="2.5" stroke-linejoin="round"/>
       <text x="${pad}" y="${y(h.points[0]) + 18}" font-size="12" style="fill: var(--ink-2)">${money(h.points[0])} for ${h.days_at_price} of 90 days</text>
       <text x="${pad}" y="${H - 8}" font-size="12" style="fill: var(--ink-3)">90 days ago</text><text x="${W - pad}" y="${H - 8}" font-size="12" style="fill: var(--ink-3)" text-anchor="end">Today</text>
-    </svg><div class="note">${esc(h.label)}</div></section>`;
+    </svg><div class="note">${esc(h.label)}</div>${sqlBlock(h.sql, 'Zetaris query behind this chart')}</section>`;
+}
+
+// The Lightning SQL a finding ran through Zetaris, shown as proof (collapsed by default).
+function sqlBlock(sql, title) {
+  if (!sql) return '';
+  return `<details class="sql"><summary>${esc(title)}</summary><pre>${esc(sql)}</pre></details>`;
 }
 
 function feesPanel(ev) {
@@ -70,14 +76,15 @@ function replayPanel(frames, findings) {
     <div class="frames">${cells}</div><div class="note">Same "deadline" on every visit, so it isn't a real deadline.</div></section>`;
 }
 
-function storesPanel(stores) {
+function storesPanel(stores, sql) {
   if (!stores?.length) return `<section class="panel" id="stores"><div class="panel-head"><h2>Other stores</h2><span class="pill unknown">Not connected</span></div>
     <div class="empty-note">The Price Agent searches trusted stores for the exact same item. It isn't connected yet.</div></section>`;
   const tone = { chosen: 'good', ok: 'unknown', rejected: 'bad', skipped: 'unknown' };
   const rows = stores.map((s) => `<tr><td><b>${esc(s.store)}</b></td><td>${esc(s.note)}</td><td class="num">${money(s.total)}</td>
     <td class="num"><span class="pill ${tone[s.status]}">${s.status === 'chosen' ? 'Best safe price' : s.status === 'rejected' ? 'Rejected' : s.status === 'skipped' ? 'Skipped' : 'OK'}</span></td></tr>`).join('');
   return `<section class="panel" id="stores"><div class="panel-head"><h2>Store comparison</h2></div>
-    <table><thead><tr><th>Store</th><th>Why</th><th class="num">True total</th><th class="num"></th></tr></thead><tbody>${rows}</tbody></table></section>`;
+    <table><thead><tr><th>Store</th><th>Why</th><th class="num">True total</th><th class="num"></th></tr></thead><tbody>${rows}</tbody></table>
+    ${sqlBlock(sql, 'Zetaris query behind this comparison')}</section>`;
 }
 
 function trustPanel(findings) {
