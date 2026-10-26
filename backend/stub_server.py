@@ -76,7 +76,9 @@ async def lifespan(_app):
 
 
 app = FastAPI(title="Pricise stub backend", version="0.1", lifespan=lifespan)
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+app.add_middleware(CORSMiddleware,  # the extension (any unpacked id) and this laptop only; web pages can't read replies
+                   allow_origin_regex=r"^(chrome-extension://[a-p]{32}|http://(localhost|127\.0\.0\.1)(:\d+)?)$",
+                   allow_methods=["*"], allow_headers=["*"])
 app.include_router(trust_router)  # POST /internal/trust/vet
 app.mount("/storelab", StaticFiles(directory=ROOT / "storelab", html=True), name="storelab")
 (ROOT / "traces").mkdir(exist_ok=True)
@@ -136,6 +138,16 @@ def _with_trust(card: FinalCard, tv) -> FinalCard:
     if tv is not None:
         from backend.agents import trust
         card.safe = trust.safe_verdict(tv)
+    return _safe_headline(card)
+
+
+def _safe_headline(card: FinalCard) -> FinalCard:
+    """A risky or doubtful store raises the card's tone and title ("Shop safe?" bad or caution); never lowers them.
+    Call it once card.safe is final (after the Trust verdict replaced real_card's provisional section)."""
+    if card.safe.status == "bad" and card.tone != "bad":
+        card.tone, card.title = "bad", "Don't buy here"
+    elif card.safe.status == "caution" and card.tone in ("good", "unknown"):
+        card.tone, card.title = "caution", "Be careful here"
     return card
 
 
@@ -227,7 +239,7 @@ def demo_evidence() -> dict:
 
 # ----------------------------------------------------------------------------- real pages (heuristics only)
 
-TRICK_TYPES = {"prechecked_addon", "resetting_timer", "drip_fees"}
+TRICK_TYPES = {"fake_discount", "prechecked_addon", "resetting_timer", "drip_fees"}
 
 
 def real_findings(cid: str, page: PageFacts) -> list[Finding]:
@@ -293,13 +305,15 @@ def _label(s) -> str:
 
 
 def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float) -> FinalCard:
-    tricks = [f for f in findings if f.type in TRICK_TYPES and f.status != "unverified"]  # "couldn't check" is not a trick
+    tricks = [f for f in findings if f.type in TRICK_TYPES and f.status == "confirmed"]  # proposed: "check these" below
     soft, seen_types = [], set()
     for f in findings:  # one line per kind of claim, so the card stays short
-        if f.type in {"claimed_discount", "countdown", "scarcity"} and f.type not in seen_types:
+        if f.type in TRICK_TYPES and f.status == "proposed":
+            soft.append(f)
+        elif f.type in {"claimed_discount", "countdown", "scarcity"} and f.type not in seen_types:
             seen_types.add(f.type)
             soft.append(f)
-    honest_reasons = [Reason(text=f.summary, tone="bad" if f.type in TRICK_TYPES else "caution",
+    honest_reasons = [Reason(text=f.summary, tone="bad" if f in tricks else "caution",
                              proof="fees" if f.type == "drip_fees" else None) for f in tricks + soft][:4]
     if not honest_reasons:
         honest_reasons = [Reason(text="No timers, pre-ticked add-ons or extra fees found on this page", tone="good")]
@@ -330,6 +344,7 @@ def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float
     extras = sum(s.amount or 0 for s in page.signals if s.type in {"drip_fees", "prechecked_addon"})
     if p.price is not None and extras:
         sub = f"{n} trick{'s' if n != 1 else ''} · real total ${p.price + extras:,.2f}, not ${p.price:,.2f}"
+    # The headline follows "Shop safe?" in _with_trust / the orchestrator's card builder, once the final section is known.
     return FinalCard(check_id=cid, title=title, subtitle=sub, tone=tone, safe=safe, honest=honest, best_price=best,
                      tricks=n, elapsed_s=round(elapsed, 1))
 

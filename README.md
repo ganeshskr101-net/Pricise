@@ -115,6 +115,17 @@ finding again shows nothing new, a changed one (e.g. its status) becomes a new v
 The sidecar is optional. If it isn't running, the backend logs one warning and deduplicates in memory instead; checks never
 fail. With `AGENT_ORCH` unset nothing changes.
 
+With `AGENT_ORCH=on` and `AGENT_PRICE=real`, the Price Agent runs as one more orchestrator agent and the Skeptic re-checks
+every best price (`backend/rechecker.py`): model and condition from the data, store safety from the Trust Agent (or the
+seeded flags with `AGENT_TRUST=stub`). Variant and warranty are not in the data and are assumed equal; only safe stores can
+win. The card shows only a Skeptic-confirmed best price. Details: [docs/price_agent_contract.md](docs/price_agent_contract.md).
+World Model conformance (8/8): [docs/conformance_world_model.md](docs/conformance_world_model.md).
+
+The bench (`python bench/run_bench.py`, runs every check through this orchestrator path) measures Deal Agent findings and
+Trust verdicts, not the card headline: trick detection and the main false-alarm line count confirmed findings, and scam
+detection reads the card's "Shop safe?" status. A second line, "shopper-visible" false alarms, counts clean pages whose
+card shows at least one trick, and lists them. Per page it prints both `card.tone/card.tricks` and `card.safe`.
+
 ```bash
 cd backend/engines/world_model_ts
 npm install --ignore-scripts     # once; installs tsx only (Node 20+)

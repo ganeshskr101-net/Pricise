@@ -53,7 +53,8 @@ async def official_hashes(client: httpx.AsyncClient) -> list[imagehash.ImageHash
         blob = await get_bytes(client, ref) if ref.startswith("http") else (path.read_bytes() if path.is_file() else None)
         if blob:
             blobs.append(blob)
-    _official = [h for h in map(phash_bytes, blobs) if h is not None]
+    hashes = await asyncio.gather(*(asyncio.to_thread(phash_bytes, b) for b in blobs))  # CPU work: off the event loop
+    _official = [h for h in hashes if h is not None]
     return _official
 
 
@@ -71,7 +72,8 @@ async def _image_hashes(client: httpx.AsyncClient, base: str) -> Hashes:
     urls = list(dict.fromkeys(resolve(base, x["image_url"]) for x in listings
                               if isinstance(x, dict) and x.get("image_url")))[:MAX_IMAGES_PER_STORE]
     blobs = await asyncio.gather(*(get_bytes(client, u) for u in urls))
-    return [(u, h) for u, b in zip(urls, blobs) if b and (h := phash_bytes(b)) is not None]
+    hashes = await asyncio.gather(*(asyncio.to_thread(phash_bytes, b) if b else asyncio.sleep(0) for b in blobs))
+    return [(u, h) for u, h in zip(urls, hashes) if h is not None]  # phash is CPU work: off the event loop
 
 
 async def store_photos(client: httpx.AsyncClient, base: str, use_cache: bool = True) -> tuple[Optional[date], Hashes]:

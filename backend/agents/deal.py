@@ -53,7 +53,8 @@ def check_scarcity(check_id: str, page: PageFacts) -> ToolResult:
         if s.type != "scarcity" or (s.selector or s.text) in seen:
             continue
         seen.add(s.selector or s.text)
-        ev = [{"kind": "selector", "ref": s.selector, "label": "Pressure message"}] if s.selector else []
+        ev = [{"kind": "selector", "ref": s.selector, "label": "Pressure message"}] if s.selector else \
+            [{"kind": "log", "ref": "page-signal:scarcity", "label": " ".join(s.text.split())[:70]}]
         out.findings.append(finding(check_id, "scarcity", "proposed",
                                     f"Pressure message: \"{' '.join(s.text.split())[:70]}\". Stock claims can't be verified from the page.",
                                     ev, confidence=0.5))

@@ -183,6 +183,13 @@ def test_missing_evidence_rejected_even_without_rechecker():
     assert statuses(events, "fake_discount") == ["proposed", "challenged", "rejected"]
 
 
+def test_still_checking_placeholder_is_not_challenged():
+    """deal.placeholders() rows (model "pending", no evidence) say a slow check is running; they claim nothing."""
+    pending = make("resetting_timer", "proposed", agent="deal", evidence=[], model="pending")
+    events = run(chk(), [agent((0, pending))])
+    assert statuses(events, "resetting_timer") == ["proposed"]  # before: proposed, challenged, rejected
+
+
 def test_already_decided_by_skeptic_and_other_types_skipped():
     rc = recheck(RESETS)
     done = make("best_price", "confirmed", agent="skeptic", challenged_by="skeptic", rounds=2)
@@ -292,6 +299,7 @@ def test_trust_real_replaces_not_connected_row_and_sets_card_safe(monkeypatch, t
     assert ("not_connected", "unverified") in _rows(events, "price")  # other scripted rows stay
     safe = events[-1]["card"]["safe"]
     assert events[-1]["kind"] == "final_card" and (safe["status"], safe["headline"]) == ("bad", "Risky")
+    assert (events[-1]["card"]["tone"], events[-1]["card"]["title"]) == ("bad", "Don't buy here")  # headline follows Trust
     assert safe["reasons"][0]["text"] == "Domain registered 6 days ago"
     rows = {r["type"]: r for r in json.loads((tmp_path / f"{cid}.json").read_text(encoding="utf-8"))["findings"]}
     assert (rows["domain_age"]["proposed_by"], rows["domain_age"]["final_status"]) == ("trust", "proposed")

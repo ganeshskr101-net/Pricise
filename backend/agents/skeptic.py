@@ -65,7 +65,7 @@ def visits_from_frames(frames: Sequence[Mapping[str, Any]], tolerance_s: float =
     ("remaining_s" or "at" missing or None) are left out, so they can never count as a reset. The first readable frame
     is the baseline and counts as a reset only if every later frame reset; each later frame resets when it shows more
     time left than a real countdown could (the previous value minus the time between visits, plus the tolerance).
-    The trimmed EVIDENCE["timer_frames"] from deal.py has no "at"/"remaining_s", so it converts to [] (unverified).
+    deal.EVIDENCE["timer_frames"] (from timer_test.check_timer) carries "at" and "remaining_s", so it converts directly.
     """
     readable = [f for f in frames if f.get("remaining_s") is not None and f.get("at") is not None]
     later = [b["remaining_s"] > a["remaining_s"] - (b["at"] - a["at"]) + tolerance_s for a, b in zip(readable, readable[1:])]

@@ -65,6 +65,18 @@ def test_page_instructions_are_not_obeyed(no_model):
     assert "best deal" not in res["answer"].lower() and "page_text" in res["sources"]
 
 
+def test_page_cleaned_by_the_orchestrator_still_says_ignored(no_model, monkeypatch):
+    """AGENT_ORCH=on: the Scout guard removes the injected text from the page before chat reads it; its
+    hidden_instructions finding must still make chat say it ignored the page's instructions."""
+    monkeypatch.setenv("AGENT_ORCH", "on")
+    cid = _checked(INJECTED_PAGE["url"], INJECTED_PAGE)
+    check = client.get(f"/check/{cid}").json()
+    assert "Ignore previous instructions" not in json.dumps(check["page"])  # the guard cleaned it
+    assert any(f["type"] == "hidden_instructions" for f in check["findings"])
+    res = _ask(cid, "Is this discount real?")
+    assert res["answer"].startswith(chat.IGNORED) and "page_text" in res["sources"]
+
+
 def test_model_that_obeys_the_page_is_overruled(monkeypatch):
     seen = {}
 

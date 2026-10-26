@@ -7,6 +7,8 @@ import pytest
 def _stub_mode(monkeypatch):
     monkeypatch.setenv("AGENT_DEAL", "stub")
     monkeypatch.setenv("AGENT_TRUST", "stub")
+    monkeypatch.delenv("AGENT_ORCH", raising=False)  # tests that need the orchestrator set AGENT_ORCH=on themselves
+    monkeypatch.setenv("WORLD_MODEL_URL", "http://127.0.0.1:1")  # never a running sidecar; sidecar tests set their own
 
 
 @pytest.fixture(autouse=True)

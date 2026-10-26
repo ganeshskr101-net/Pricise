@@ -79,6 +79,9 @@ def untrusted_texts(check: dict) -> list[str]:
 
 
 def has_injection(check: dict) -> bool:
+    """Page text that tries to instruct us, or the orchestrator's finding that it removed such text (AGENT_ORCH=on)."""
+    if any(f.get("type") == "hidden_instructions" for f in check.get("findings") or []):
+        return True
     return any(INJECTION_RE.search(t) for t in untrusted_texts(check))
 
 

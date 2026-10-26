@@ -11,13 +11,15 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 CONTENT_JS = ROOT / "extension" / "content" / "content.js"
 
-# Just enough of the chrome.* API for content.js to answer a "pricise:read" message.
+# Just enough of the chrome.* API for content.js to answer a "pricise:read" message. Chromium defines window.chrome as
+# non-configurable, so redefining it throws: the fake APIs then go onto the existing object.
 FAKE_CHROME = """
 (() => {
   let listener = null;
   const fake = { storage: { local: { get: async () => ({}), set: async () => {} } },
                  runtime: { onMessage: { addListener: (fn) => { listener = fn; } } } };
-  Object.defineProperty(window, 'chrome', { value: fake, configurable: true, writable: true });
+  try { Object.defineProperty(window, 'chrome', { value: fake, configurable: true, writable: true }); }
+  catch { Object.assign(window.chrome, fake); }
   window.__priciseRead = () => new Promise((resolve) => listener({ type: 'pricise:read' }, {}, resolve));
 })();
 """
