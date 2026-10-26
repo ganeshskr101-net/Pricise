@@ -43,7 +43,7 @@ The Pricise registry (`scout/pricise-intents.json`) and the `pricise` pack are t
 
 ```bash
 cd ../Meterless/engines/scout-intent          # the Meterless clone, after: npm ci --ignore-scripts
-SCOUT_IMPL="C:/Users/Abel Tolla/Documents/Personal/Projects/Pricise/backend/engines/world_model_ts/scout/index.ts" npm run evals
+SCOUT_IMPL="<repo>/backend/engines/world_model_ts/scout/index.ts" npm run evals
 # PowerShell: $env:SCOUT_IMPL="C:\...\scout\index.ts"; npm run evals
 ```
 

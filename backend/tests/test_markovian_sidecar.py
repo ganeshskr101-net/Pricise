@@ -173,11 +173,8 @@ def test_markovian_routes_have_the_sidecar_safeguards(sidecar):
     assert sidecar.call("POST", "/markovian/chains", body, headers={**JSON, "Host": "evil.example"})[0] == 403
     assert sidecar.call("GET", "/markovian/chains/c-0000000000000000", headers={"Origin": "null"})[0] == 403
     assert sidecar.call("POST", "/markovian/chains/not-an-id/chunks", {"text": "x"})[0] == 404
-    try:
-        big = sidecar.call("POST", "/markovian/chains", json.dumps({"goal": "a" * 70_000}).encode())[0]
-    except OSError:
-        big = 0  # the server drops the connection for bodies over 64 KB
-    assert big in (0, 400)
+    big = sidecar.call("POST", "/markovian/chains", json.dumps({"goal": "a" * 70_000}).encode())[0]
+    assert big == 400  # over 64 KB: the server drains the body, then refuses it (no dropped connection)
     assert sidecar.open()[0] == 200  # still serving
 
 
