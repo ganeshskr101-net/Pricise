@@ -63,6 +63,15 @@ export function followCheck({ tabId, url, page, force }, onUpdate) {
 // One reading of a check, shared by the side panel (verdict block) and the quick card on the page, so they always agree.
 export const TRICK_TYPES = new Set(['fake_discount', 'resetting_timer', 'prechecked_addon', 'drip_fees']);
 export const PENDING = 'pending'; // Finding.model of a "still checking" placeholder row (see backend/agents/deal.py)
+
+// A finding is identified by check, agent, type and evidence (not its wording or status), as world_model.finding_key does:
+// a new version (e.g. the Skeptic's "challenged", then "rejected") replaces its row instead of adding one.
+const findingId = (f) => JSON.stringify([f.check_id, f.agent, f.type, (f.evidence || []).map((e) => `${e.kind}:${e.ref}`).sort()]);
+export function upsertFinding(findings, f) {
+  const id = findingId(f);
+  const at = findings.findIndex((x) => findingId(x) === id);
+  return at < 0 ? [...findings, f] : findings.map((x, i) => (i === at ? f : x));
+}
 const SOFT_TYPES = new Set(['claimed_discount', 'countdown', 'scarcity', 'fake_discount']);
 const AMOUNT = String.raw`(\d{1,3}(?:,\d{3})*(?:\.\d+)?)`;
 const toNum = (s) => (s == null ? null : Number(String(s).replace(/,/g, '')));

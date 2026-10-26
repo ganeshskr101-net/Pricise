@@ -19,5 +19,20 @@ for arg in "$@"; do
 done
 [ -x .venv/bin/python ] || { echo "Run scripts/setup.sh first."; exit 1; }
 
+# The engine sidecar on 127.0.0.1:8788 (same as: cd backend/engines/world_model_ts && npx tsx server.ts), started here
+# and stopped when the backend stops. Optional: without Node 20+ the backend works on its own.
+SIDECAR_PID=""
+TSX=backend/engines/world_model_ts/node_modules/tsx/dist/cli.mjs
+if curl -s -m 1 http://127.0.0.1:8788/health >/dev/null 2>&1; then
+  echo "Engine sidecar already running on http://127.0.0.1:8788"
+elif command -v node >/dev/null 2>&1 && [ -f "$TSX" ] && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ]; then
+  (cd backend/engines/world_model_ts && exec node node_modules/tsx/dist/cli.mjs server.ts) &
+  SIDECAR_PID=$!
+  trap 'kill "$SIDECAR_PID" 2>/dev/null' EXIT
+  echo "Engine sidecar on http://127.0.0.1:8788 (stops with the backend)"
+else
+  echo "Engine sidecar not started (needs Node 20+ and scripts/setup.sh); the backend works without it."
+fi
+
 echo "Pricise backend on http://localhost:8787  (AGENT_DEAL=${AGENT_DEAL:-from .env, default stub})"
-exec .venv/bin/python -m uvicorn backend.stub_server:app --port 8787 ${EXTRA[@]+"${EXTRA[@]}"}
+.venv/bin/python -m uvicorn backend.stub_server:app --port 8787 ${EXTRA[@]+"${EXTRA[@]}"}

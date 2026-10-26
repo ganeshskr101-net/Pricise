@@ -19,6 +19,13 @@ if ! .venv/bin/python -m playwright install chromium; then
   echo "WARNING: couldn't download Playwright's Chromium. Stub mode works without it; for the real Deal Agent run:"
   echo "         .venv/bin/python -m playwright install chromium"
 fi
+# The engine sidecar (World Model, Scout, H-MEM, Markovian). Optional: needs Node 20+; the backend works without it.
+if command -v node >/dev/null 2>&1 && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ]; then
+  (cd backend/engines/world_model_ts && npm install --ignore-scripts --no-audit --no-fund) \
+    || echo "WARNING: npm install failed in backend/engines/world_model_ts; the engine sidecar won't start."
+else
+  echo "NOTE: Node 20+ not found, so the optional engine sidecar is not installed (https://nodejs.org)."
+fi
 if [ ! -f .env ]; then
   cp .env.example .env
   echo "Created .env from .env.example (stub mode, no keys needed)."

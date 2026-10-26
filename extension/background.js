@@ -1,6 +1,6 @@
 // Pricise service worker: runs every page check (one per tab + URL, shared by the side panel and the quick verdict card),
 // keeps the toolbar badge, opens the side panel, shows desktop notifications.
-import { getSettings, PENDING, quickVerdict, runCheck } from './shared/check.js';
+import { getSettings, PENDING, quickVerdict, runCheck, upsertFinding } from './shared/check.js';
 import { ICONS } from './shared/icons.js';
 
 const checks = new Map(); // tabId -> { url, page, checkId, findings, card, error, done, wantCard }
@@ -81,7 +81,7 @@ function start(tabId, url, page, wantCard, fresh = false) {
   runCheck(url, page, {
     fresh,
     onStart: (id) => { c.checkId = id; },
-    onFinding: (f) => { if (checks.get(tabId) !== c) return; c.findings = [...c.findings, f]; c.seq += 1; broadcast(tabId, c); },
+    onFinding: (f) => { if (checks.get(tabId) !== c) return; c.findings = upsertFinding(c.findings, f); c.seq += 1; broadcast(tabId, c); },
     onCard: (card) => {
       // Each verdict firms up the last one. "Still checking" rows stay only while the verdict still lists them as pending.
       if (checks.get(tabId) !== c) return;
