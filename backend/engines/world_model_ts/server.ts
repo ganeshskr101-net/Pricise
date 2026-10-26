@@ -47,6 +47,7 @@ import { CHAIN_ID_RE, ChainRegistry, MAX_GOAL, MAX_TEXT, badText } from "./marko
 
 const HOST = "127.0.0.1";
 const MAX_BODY = 64 * 1024;
+const MAX_DRAIN = 1024 * 1024; // a refused body is read and dropped up to this size; past it the socket is destroyed
 const KEY_RE = /^[0-9a-f]{64}$/;
 const BODY_FIELDS = new Set(["key", "check_id", "finding"]);
 const GUARD_FIELDS = new Set(["texts", "surface"]);
@@ -152,22 +153,53 @@ function findingsOf(world: WorldModel, checkId: string) {
   return rows;
 }
 
-function send(res: http.ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { "Content-Type": "application/json" }); // no CORS headers: web pages cannot read this
-  res.end(JSON.stringify(body));
+/** Reads the rest of the request body and drops it. Rejects past MAX_DRAIN or if the client goes away first. */
+function drain(req: http.IncomingMessage): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (req.readableEnded) return resolve();
+    let size = 0;
+    req.on("data", (c: Buffer) => {
+      size += c.length;
+      if (size > MAX_DRAIN) reject(new Error("too large"));
+    });
+    req.on("end", () => resolve());
+    req.on("error", reject);
+    req.on("close", () => reject(new Error("closed")));
+    req.resume();
+  });
 }
 
+/** close: send "Connection: close" (every refusal). A reply never goes out while the client still writes its body: the
+ *  body is drained first, else closing the socket with unread bytes makes Windows reset it (the client sees 10053). */
+function send(res: http.ServerResponse, status: number, body: unknown, close = false): void {
+  const req = res.req;
+  const unread = !req.complete;
+  res.statusCode = status; // the access log reads it before a drained reply is written
+  const write = () => {
+    if (res.destroyed) return;
+    const headers: http.OutgoingHttpHeaders = { "Content-Type": "application/json" }; // no CORS headers: web pages cannot read this
+    if (close || unread) headers.Connection = "close";
+    res.writeHead(status, headers);
+    res.end(JSON.stringify(body));
+  };
+  if (!unread) return write();
+  drain(req).then(write, () => req.socket.destroy());
+}
+
+/** Rejects "too large" past MAX_BODY without reading further; send() then drains the rest before it replies. */
 function readBody(req: http.IncomingMessage): Promise<string> {
   return new Promise((resolve, reject) => {
     let size = 0;
     const chunks: Buffer[] = [];
-    req.on("data", (c: Buffer) => {
+    const onData = (c: Buffer) => {
       size += c.length;
       if (size > MAX_BODY) {
+        req.off("data", onData);
+        req.pause();
         reject(new Error("too large"));
-        req.destroy();
       } else chunks.push(c);
-    });
+    };
+    req.on("data", onData);
     req.on("end", () => resolve(Buffer.concat(chunks).toString("utf-8")));
     req.on("error", reject);
   });
@@ -224,12 +256,12 @@ function createServer(world: WorldModel, memory: PriciseMemory, chains: ChainReg
   const guard = (text: string) => scout.checkTexts([text])[0].level;
   return http.createServer(async (req, res) => {
     const host = (req.headers.host ?? "").split(":")[0];
-    if (host !== "127.0.0.1" && host !== "localhost") return send(res, 403, { error: "local requests only" });
+    if (host !== "127.0.0.1" && host !== "localhost") return send(res, 403, { error: "local requests only" }, true);
     const url = new URL(req.url ?? "/", `http://${HOST}`);
     const transport = badTransport(req);
     if (transport) {
       console.log(`world-model: ${req.method} ${url.pathname} ${transport[0]}`);
-      return send(res, transport[0], { error: transport[1] });
+      return send(res, transport[0], { error: transport[1] }, true);
     }
     try {
       if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true });
