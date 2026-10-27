@@ -297,11 +297,11 @@ def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], sourc
                               "note": f"This store · {_math(best)} · {best['condition']}"})
     price_row = {"kind": "price_row", "ref": f"listing:{best['store_id']}:{best['product_id']}:day{day}",
                  "label": f"{_math(best)} = {money(best['true_total'])}"}
-    trusted = "checked by the Trust Agent" if trust is not None else "trusted"
+    stores_ok = "stores the Trust Agent checked" if trust is not None else "trusted stores"
     where = "This store already has the best safe price" if here_best else f"{best['store']}, {money(best['true_total'])}"
     res.findings.append(_f(check_id, "best_price", "confirmed",
                            f"{where}: exact match ({item['condition']}, same model), {_math(best)}."
-                           + (f" Cheapest true total of {len(ok) + (1 if here_best else 0)} {trusted} stores." if ok else ""),
+                           + (f" Cheapest true total among {len(ok) + (1 if here_best else 0)} {stores_ok}." if ok else ""),
                            [{"kind": "url", "ref": best["url"]}, price_row] + _sql_ev(res, len(rows)), confidence=0.94))
     reasons = [Reason(text=f"Exact match: same model, {item['condition']}", tone="good", proof="stores"),
                Reason(text=_math(best), tone="good", proof="stores")]

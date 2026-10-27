@@ -26,9 +26,13 @@ TSX=backend/engines/world_model_ts/node_modules/tsx/dist/cli.mjs
 if curl -s -m 1 http://127.0.0.1:8788/health >/dev/null 2>&1; then
   echo "Engine sidecar already running on http://127.0.0.1:8788"
 elif command -v node >/dev/null 2>&1 && [ -f "$TSX" ] && [ "$(node -p 'process.versions.node.split(".")[0]')" -ge 20 ]; then
+  # Its own process group (job control on for this one launch): tsx runs server.ts in a CHILD node process, so killing
+  # only the tsx process left the server running. The trap stops the whole group.
+  set -m
   (cd backend/engines/world_model_ts && exec node node_modules/tsx/dist/cli.mjs server.ts) &
   SIDECAR_PID=$!
-  trap 'kill "$SIDECAR_PID" 2>/dev/null' EXIT
+  set +m
+  trap 'kill -TERM -- "-$SIDECAR_PID" 2>/dev/null' EXIT
   echo "Engine sidecar on http://127.0.0.1:8788 (stops with the backend)"
 else
   echo "Engine sidecar not started (needs Node 20+ and scripts/setup.sh); the backend works without it."

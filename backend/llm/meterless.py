@@ -416,10 +416,10 @@ def model_name(lane: str = "fast") -> str:
     return _env_value(_LANE_ENV.get(lane, "")) or f"nemotron {lane} lane (not configured)"
 
 
-def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
+def complete(prompt: str, lane: str = "fast", max_tokens: int = 64, timeout: float | None = None) -> str:
     """One chat completion on the given lane. Blocking; use asyncio.to_thread from async code.
 
-    Timeout: 8 s per attempt plus one retry, so the worst case is about 16 s.
+    Timeout: 8 s per attempt (or `timeout`) plus one retry, so the default worst case is about 16 s.
     Returns "" if Nightshift is not configured or the call fails. Strips any
     <think>...</think> reasoning block the model puts in front of its answer.
     """
@@ -429,7 +429,7 @@ def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
     try:
         text, _ = call(
             [{"role": "user", "content": prompt}],
-            timeout=_COMPLETE_TIMEOUT_S,
+            timeout=_COMPLETE_TIMEOUT_S if timeout is None else timeout,
             temperature=0,
             max_tokens=max_tokens,
         )

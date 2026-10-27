@@ -36,6 +36,7 @@ class ChatResponse(BaseModel):
 
 
 IGNORED = "This page contains text trying to instruct me; I ignored it."
+CHAT_TIMEOUT_S = 15.0  # per attempt, one retry: the first answer of a session took ~8.8 s and fell back to rule text at 8 s
 CANT = "I can't verify that yet"
 INJECTION_RE = re.compile(
     r"ignore (all |any |the )?(previous|prior|above|earlier|other) (instructions|prompts|rules)|disregard (all |any |the )?"
@@ -211,22 +212,33 @@ def build_prompt(check: dict, question: str, history: list[ChatTurn]) -> str:
     )
 
 
+# "SOURCES: a, b" wherever the model puts it: its own line, the end of a sentence, or in markdown ("**Sources:** a").
+SOURCES_RE = re.compile(r"[\s*_`]*\bSOURCES?\b[\s*_`]*:[\s*_`]*([^\n]*)", re.I)
+
+
+def split_sources(reply: str) -> tuple[str, list[str]]:
+    """(the answer with every SOURCES part removed, the source tags named in them). The shopper never sees the tags."""
+    tags = [t.strip(" `*_.'\"[]") for m in SOURCES_RE.finditer(reply) for t in m.group(1).split(",")]
+    return SOURCES_RE.sub(" ", reply).strip(), [t for t in tags if t]
+
+
 def _parse_model(reply: str, check: dict) -> Optional[ChatResponse]:
     """Accept the model's answer only if it keeps the rules; otherwise None (use the rule-based answer)."""
-    m = re.search(r"^\s*SOURCES?:\s*(.*)$", reply, re.I | re.M)
-    body = (reply[:m.start()] if m else reply).strip()
+    body, tags = split_sources(reply)
+    body = " ".join(body.split())
     known = {f.get("type") for f in check.get("findings") or []}
-    sources = [s.strip() for s in (m.group(1).split(",") if m else []) if s.strip() in known]
+    sources = [t for t in tags if t in known]
     if not body or "scam" in body.lower() or INJECTION_RE.search(body):
         return None
     return ChatResponse(answer=_sentences(body, 3)[:400], sources=list(dict.fromkeys(sources)))
 
 
 def answer(check: dict, question: str, history: Optional[list[ChatTurn]] = None) -> ChatResponse:
-    """Blocking (the model call can take up to 8 s); call it with asyncio.to_thread from async code."""
+    """Blocking (up to CHAT_TIMEOUT_S per attempt, one retry); call it with asyncio.to_thread from async code."""
     question = " ".join(question.split())[:300]
     rules = rule_answer(check, question)
-    reply = meterless.complete(build_prompt(check, question, history or []), "fast", max_tokens=160)
+    reply = meterless.complete(build_prompt(check, question, history or []), "fast", max_tokens=160,
+                               timeout=CHAT_TIMEOUT_S)
     res = _parse_model(reply, check) if reply else None
     if res is None:
         res = rules
