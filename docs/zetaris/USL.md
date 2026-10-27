@@ -415,7 +415,7 @@ REGISTER DQ new_full_price TABLE lightning.metastore.pricise.pricise_usl.safe_pr
 AS price > 0 AND item_condition = 'new' AND full_price = 1
 ```
 
-`RUN DQ`: **369 rows, 309 valid, 60 invalid** (all products in the USL). The JBL Flip 6 rows that fail are the real
+`RUN DQ`: **369 rows, 309 valid, 60 invalid** (all products in the USL; this saved run is in `results/dq.json`. A later run, after more searches were cached, flagged 79: see `docs/images/11-zetaris-dq-invalid.png`). The JBL Flip 6 rows that fail are the real
 pre-owned and refurbished offers in the live search: eBay sellers (da-kar $74.99, bayoumy $69.99, littlefoote $34.99 "Not
 Working. Parts", focuscamera $188.99 refurbished, …), Mercari, Poshmark and PayMore. Zetaris also generated a primary-key rule
 for each table (`LIST DQ`).

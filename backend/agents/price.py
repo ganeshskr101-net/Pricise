@@ -247,7 +247,7 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
     from backend import rechecker
     from backend.agents import skeptic
     from backend.data import repo
-    from backend.data.trusted_retailers import display_name, listing_url
+    from backend.data.trusted_retailers import display_name, offer_url
     from backend.tools import rdap, shopping
 
     p = page.product
@@ -289,7 +289,7 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
             continue
         if len(show) < SHOW_MAX:
             show.append({**o, "store": display_name(o["domain"]), "direct": bool(direct),
-                         "url": o["link"] if direct else listing_url(o["domain"], query)})
+                         "url": offer_url(o, query)})
     shown = {s["domain"] for s in show}
     also = also_checked(p, seen_offers, shown, mine, dropped, blocked) if len(show) < 3 else []  # search + sellers list
     res.online = {"query": query, "source": source, "sellers_source": sellers_source,
@@ -388,7 +388,7 @@ def _median(show: list[dict]) -> Optional[float]:
 
 def _blocked_cheaper(blocked: list[dict], price: Optional[float], query: str) -> list[dict]:
     """Open box, refurbished, used or monthly offers at a credible store, cheaper than this page: one per store and kind."""
-    from backend.data.trusted_retailers import display_name, listing_url
+    from backend.data.trusted_retailers import display_name, offer_url
 
     out, seen = [], set()
     for o in sorted(blocked, key=lambda o: o["total"]):
@@ -396,7 +396,7 @@ def _blocked_cheaper(blocked: list[dict], price: Optional[float], query: str) ->
             continue
         seen.add((o["domain"], o["kind"], o.get("other_model")))
         direct = o.get("link") and "google.com" not in o["link"]
-        out.append({**o, "store": display_name(o["domain"]), "url": o["link"] if direct else listing_url(o["domain"], query)})
+        out.append({**o, "store": display_name(o["domain"]), "url": offer_url(o, query)})
     return out
 
 

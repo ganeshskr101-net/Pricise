@@ -336,6 +336,8 @@
         if (elapsed > 45 && now > prev.remaining - elapsed + 20) {
           sig.type = 'resetting_timer';
           sig.detail = { ...sig.detail, previous_s: prev.remaining, seconds_since_last_visit: Math.round(elapsed) };
+        } else if (elapsed > 45) { // kept counting down since the last visit: a fixed end, not a claim to check
+          sig.detail = { ...sig.detail, previous_s: prev.remaining, seconds_since_last_visit: Math.round(elapsed), steady: true };
         }
       }
       if (out.length < 2) out.push(sig);

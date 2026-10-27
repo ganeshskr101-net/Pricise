@@ -163,6 +163,41 @@ def _with_condition(card: FinalCard, page: PageFacts) -> FinalCard:
     return card
 
 
+CHEAPER_PCT, CHEAPER_ABS = 0.10, 10.0  # "same item cheaper elsewhere" turns a green card amber at 10% or $10 off
+
+
+def real_total(page: PageFacts) -> Optional[float]:
+    """This page's price plus the extra fees and pre-ticked add-ons it shows."""
+    p = page.product
+    extras = sum(s.amount or 0 for s in page.signals if s.type in {"drip_fees", "prechecked_addon"})
+    return round(p.price + extras, 2) if p.price is not None else None
+
+
+def _with_cheaper(card: FinalCard, page: PageFacts) -> FinalCard:
+    """The Skeptic approved the same item, new, at least 10% or $10 under this page's real total: "Check before you buy",
+    with "Same item $X cheaper at <store>". Tricks are untouched; a red or amber card keeps its title and gets the reason.
+    card.alt "cheaper" is set only from a Skeptic-approved, same-item, new offer (rechecker.best_price_on_card)."""
+    alt, total = card.alt or {}, real_total(page)
+    if alt.get("kind") != "cheaper" or total is None or alt.get("total") is None:
+        return card
+    save = round(total - float(alt["total"]), 2)
+    if save < CHEAPER_ABS and save < CHEAPER_PCT * total:
+        return card
+    line = f"Same item {_money_short(save)} cheaper at {alt.get('store') or 'another store'}"
+    rest = [r for r in card.best_price.reasons if r.text != line]
+    card.best_price = card.best_price.model_copy(update={"reasons": [Reason(text=line, tone="caution", proof="stores"), *rest][:5]})
+    if card.tone == "good":
+        card.tone, card.title = "caution", "Check before you buy"
+    if line.lower() not in card.subtitle.lower():
+        card.subtitle = f"{card.subtitle} · {line[0].lower()}{line[1:]}"
+    return card
+
+
+def _finish(card: FinalCard, page: PageFacts) -> FinalCard:
+    """The last card steps, after the Price Agent's verdict: the listing's condition, then a cheaper same item."""
+    return _with_cheaper(_with_condition(card, page), page)
+
+
 def _safe_headline(card: FinalCard) -> FinalCard:
     """A risky or doubtful store raises the card's tone and title ("Shop safe?" bad or caution); never lowers them.
     Call it once card.safe is final (after the Trust verdict replaced real_card's provisional section)."""
@@ -294,6 +329,10 @@ def real_findings(cid: str, page: PageFacts) -> list[Finding]:
             out.append(_f(cid, "deal", "claimed_discount", "unverified",
                           f"The page claims a reduced price ({s.text.strip()[:80]}). Price history not checked yet, so this is unverified.",
                           sel, confidence=0.4))
+        elif s.type == "countdown" and (s.detail or {}).get("steady"):  # kept counting down between visits: informational
+            out.append(_f(cid, "deal", "countdown", "confirmed",
+                          f"Countdown on the page ({s.text.strip()[:40]}): it kept counting down between your visits, so the "
+                          "deadline looks real.", sel, confidence=0.8))
         elif s.type == "countdown":
             out.append(_f(cid, "deal", "countdown", "proposed",
                           f"Countdown timer on the page ({s.text.strip()[:40]}). Pricise will check if it resets on your next visit.",
@@ -344,8 +383,8 @@ def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float
     tricks = [f for f in findings if f.type in TRICK_TYPES and f.status == "confirmed"]  # proposed: "check these" below
     soft, good, seen_types = [], [], set()
     for f in findings:  # one line per kind of claim, so the card stays short
-        if f.type == "claimed_discount" and f.status == "confirmed":
-            good.append(f)  # the discount checks out (price history, or the list price is the launch price)
+        if f.type in ("claimed_discount", "countdown") and f.status == "confirmed":
+            good.append(f)  # the discount checks out (history or launch price); a countdown that held: informational
         elif f.type in TRICK_TYPES and f.status == "proposed":
             soft.append(f)
         elif f.type in {"claimed_discount", "inflated_discount", "countdown", "scarcity"} and f.type not in seen_types:
@@ -559,7 +598,7 @@ async def check_events(cid: str):
         await asyncio.sleep(delay)
         elapsed = time.time() - chk["started"]
         card = demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed)
-        card = _with_condition(_apply_price(cid, _with_trust(card, tv)), page)
+        card = _finish(_apply_price(cid, _with_trust(card, tv)), page)
         chk["final_card"] = card.model_dump()
         yield f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
         await _store_findings(chk)
@@ -711,7 +750,7 @@ def _live_card(cid: str, chk: dict, page: PageFacts, seen: list[Finding], done: 
     if pending:
         kept = [r for r in card.honest.reasons if not r.text.startswith("No timers")]
         card.honest.reasons = (kept + [Reason(text=f.summary, tone="unknown") for f in pending])[:5]
-    return _with_condition(_apply_price(cid, card), page)
+    return _finish(_apply_price(cid, card), page)
 
 
 def _money_short(v: float) -> str:

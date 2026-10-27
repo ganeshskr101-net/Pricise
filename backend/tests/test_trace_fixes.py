@@ -35,6 +35,11 @@ def test_no_model_number_line_only_when_nothing_was_compared(jbl, monkeypatch):
     from backend.data import repo
     repo.OFFERS_MEMORY.clear()
     res = price.assess("c2", URL, page())
+    # A search ran and the title names the model ("JBL Flip 6"): the line would be false. The search's own result says it.
+    assert not [f for f in res.findings if f.type == "catalog_only"]
+    assert [f.type for f in res.findings if f.type == "online_offers"] == ["online_offers"]
+    monkeypatch.setenv("SERPAPI_KEY", "")  # no search at all: now the line is true
+    res = price.assess("c3", URL, page())
     [f] = [f for f in res.findings if f.type == "catalog_only"]
     assert f.summary.startswith("This page shows no model number")
 

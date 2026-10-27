@@ -48,21 +48,6 @@ BRAND_STORE_NAMES = {"sony": "sony.com", "samsung": "samsung.com", "google store
                      "hp store": "hp.com", "lenovo": "lenovo.com", "bose": "bose.com", "logitech": "logitech.com",
                      "nike": "nike.com", "lego": "lego.com", "jbl": "jbl.com"}
 
-# each store's own search page: the link shown for an offer opens that store's results for this exact item
-SEARCH_URLS = {
-    "amazon.com": "https://www.amazon.com/s?k=", "bestbuy.com": "https://www.bestbuy.com/site/searchpage.jsp?st=",
-    "walmart.com": "https://www.walmart.com/search?q=", "target.com": "https://www.target.com/s?searchTerm=",
-    "costco.com": "https://www.costco.com/CatalogSearch?keyword=", "samsclub.com": "https://www.samsclub.com/s/",
-    "bhphotovideo.com": "https://www.bhphotovideo.com/c/search?q=", "adorama.com": "https://www.adorama.com/l/?searchinfo=",
-    "newegg.com": "https://www.newegg.com/p/pl?d=", "crutchfield.com": "https://www.crutchfield.com/Search?search=",
-    "staples.com": "https://www.staples.com/", "officedepot.com": "https://www.officedepot.com/catalog/search.do?Ntt=",
-    "homedepot.com": "https://www.homedepot.com/s/", "lowes.com": "https://www.lowes.com/search?searchTerm=",
-    "kohls.com": "https://www.kohls.com/search.jsp?search=", "macys.com": "https://www.macys.com/shop/featured/",
-    "dickssportinggoods.com": "https://www.dickssportinggoods.com/search/SearchDisplay?searchTerm=",
-    "rei.com": "https://www.rei.com/search?q=", "apple.com": "https://www.apple.com/us/search/",
-    "woot.com": "https://www.woot.com/search?query=",
-}
-
 # what each retailer's own terms say about warranty, shown as a caveat next to its offer (we never load the store's page)
 WARRANTY_NOTES = {"woot.com": "90-day Woot warranty, not {brand}'s manufacturer warranty (Woot's usual terms, check the listing)"}
 
@@ -115,10 +100,21 @@ def display_name(domain: str) -> str:
     return RETAILERS.get(domain) or BRAND_NAMES.get(domain) or domain
 
 
-def listing_url(domain: str, query: str) -> Optional[str]:
+GOOGLE_PRODUCT_RE = re.compile(r"^https://www\.google\.[a-z.]+/(?:shopping/product/|search\?(?:[^#]*&)?ibp=oshop\b)")
+
+
+def google_shopping_url(query: str) -> str:
     from urllib.parse import quote
 
-    base = SEARCH_URLS.get(domain)
-    if not base:
-        return f"https://www.{domain}/"
-    return base + quote(query, safe="") if base.endswith(("=", "/")) and not base.endswith(".com/") else base
+    return f"https://www.google.com/search?tbm=shop&q={quote(query or '', safe='')}"
+
+
+def offer_url(offer: dict, query: str) -> str:
+    """Where "Go to <store>" and "Open" lead: the offer's own listing from the search result, else its Google Shopping
+    product page, else a Google Shopping search for the exact product. Never a store's own search URL: those often 404
+    or show other items, and they were built, not found."""
+    from urllib.parse import urlsplit
+
+    links = [x for x in (offer.get("link"), offer.get("product_link")) if isinstance(x, str) and x.startswith("https://")]
+    own = next((x for x in links if not re.search(r"(^|\.)google\.", urlsplit(x).netloc)), None)
+    return own or next((x for x in links if GOOGLE_PRODUCT_RE.match(x)), None) or google_shopping_url(query)

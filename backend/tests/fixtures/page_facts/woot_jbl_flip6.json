@@ -1,0 +1,64 @@
+{
+ "_note": "PageFacts the extension read from the real Woot JBL Flip 6 listing in Chrome (check 124baa0605b9, 27 Oct 2026). Used offline only; Pricise never loads the page from a script.",
+ "url": "https://electronics.woot.com/offers/new-jbl-flip-6-portable-ip67-waterproof-speaker-0",
+ "page": {
+  "url": "https://electronics.woot.com/offers/new-jbl-flip-6-portable-ip67-waterproof-speaker-0",
+  "host": "electronics.woot.com",
+  "title": "(NEW) JBL Flip 6 Portable IP67 Waterproof Speaker",
+  "https": true,
+  "product": {
+   "name": "(NEW) JBL Flip 6 Portable IP67 Waterproof Speaker - $79.95 - Free shipping for Prime members",
+   "price": 79.95,
+   "currency": "USD",
+   "was_price": 129.95,
+   "brand": null,
+   "model": null,
+   "sku": null,
+   "image": null,
+   "source": "meta"
+  },
+  "signals": [
+   {
+    "type": "item_condition",
+    "selector": "#attribute-selector > div:nth-of-type(3) > div:nth-of-type(1)",
+    "text": "Condition New",
+    "amount": null,
+    "detail": {
+     "condition": "new",
+     "source": "page"
+    }
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "#attribute-selector > div:nth-of-type(1) > div",
+    "text": "$129.95 38% off Reference Price",
+    "amount": 129.95,
+    "detail": null
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "#attribute-selector > div:nth-of-type(1) > div",
+    "text": "$129.95 38% off Reference Price",
+    "amount": null,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: yes \u00b7 contact link: yes",
+    "amount": null,
+    "detail": {
+     "returns": true,
+     "contact": true
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "Free shipping for Prime members on Woot!\nElectronics.Woot\nHey, you can only buy 1 of these.Leave some for the rest of us!Update the quantity in your cart. $79.95 $129.95 38% off Reference Price Condition New Color - Select - Blue Black Grey Camo Quantity 1 Limit 1 per customer Hurry only 1 left! Shipping Standard - Estimated delivery Nov 4 - Nov 6 Free Standard shipping for Prime members Add to cart 4 days left - OR - until sold out Want more great deals? Sign up for our Daily Digest emails! (NEW) JBL Flip 6 Portable Waterproof Speaker We will only jud",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ }
+}

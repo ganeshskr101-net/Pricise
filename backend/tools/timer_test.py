@@ -124,8 +124,12 @@ async def check_timer(check_id: str, url: str, page: PageFacts, gap: Optional[fl
     if all(f["remaining_s"] is None for f in frames):
         return out  # no countdown on the page
     resets = restarted(frames)
-    if not resets:
-        return out  # it kept counting down: the deadline looks real
+    if not resets:  # it kept counting down across fresh loads: a fixed end date, informational (not a claim to check)
+        ev = [{"kind": "selector", "ref": sig.selector, "label": "Countdown"}] if sig and sig.selector else []
+        out.findings.append(finding(check_id, "countdown", "confirmed",
+                                    f"The countdown kept counting down across {len(frames)} fresh visits, so the deadline looks real.",
+                                    ev, confidence=0.9, model="hidden browser, 3 fresh visits + rules"))
+        return out
     same = len({f["shown"] for f in frames}) == 1
     name = f"The \"{_lead(sig.text)}\" timer" if sig and _lead(sig.text) else "The countdown"
     summary = (f"{name} restarts at {frames[0]['shown']} on every visit (seen on {len(frames)} visits)." if same
@@ -153,6 +157,11 @@ def passthrough(check_id: str, sig: Optional[PageSignal]) -> ToolResult:
         out.findings.append(finding(check_id, "resetting_timer", "confirmed",
                                     f"This countdown restarted since your last visit{extra}, so the deadline is not real.", ev,
                                     confidence=0.85))
+    elif (sig.detail or {}).get("steady"):  # the extension's revisit: it kept counting down, so the end is fixed
+        mins = round((sig.detail.get("seconds_since_last_visit") or 0) / 60)
+        out.findings.append(finding(check_id, "countdown", "confirmed",
+                                    f"Countdown on the page ({' '.join(sig.text.split())[:40]}): it kept counting down between your "
+                                    f"visits{f' ({mins} min apart)' if mins else ''}, so the deadline looks real.", ev, confidence=0.8))
     else:
         out.findings.append(finding(check_id, "countdown", "proposed",
                                     f"Countdown timer on the page ({' '.join(sig.text.split())[:40]}). "

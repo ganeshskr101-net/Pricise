@@ -24,7 +24,7 @@ This answers part 2 of Zetaris's "Build with Zetaris" criteria. Part 1 (use case
 - **Renaming those columns silently broke the agent's own query.** Zetaris rejected it, and the agent fell back to Python on every check until we noticed. A contract test now checks the agent's query against the USL's declared columns.
 - **Every read recomputes the view**, taking about 5 seconds for one product, so the USL read needed a longer timeout than our other calls.
 
-Overall the USL cut our data-access code by about 58% (218 lines down to 92). The hours were spent learning the DDL rules rather than writing plumbing.
+Overall the USL cut our data-access code by about 58% (218 lines down to 92: 91 lines of SQL plus the one DQ rule). The hours were spent learning the DDL rules rather than writing plumbing.
 
 ## 2b. How the USL would help, or not help, in my work
 

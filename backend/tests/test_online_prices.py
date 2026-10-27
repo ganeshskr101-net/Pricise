@@ -132,7 +132,8 @@ def test_same_price_at_a_trusted_store_says_so(online):
                          "Also checked: Walmart (not found); Target (not found).")  # fewer than 3 stores: say who else
     assert res.best_price.headline == "As good as it gets" and res.alt == {"kind": "this_page"}  # "Best price: this page"
     assert [s["store"] for s in res.stores] == ["Best Buy"]                      # one per store, never an unknown one
-    assert [e.ref for e in f.evidence if e.kind == "url"][0].startswith("https://www.bestbuy.com/site/searchpage.jsp?st=")
+    # the offer's own Google Shopping product page from the search result, never a built store search URL
+    assert [e.ref for e in f.evidence if e.kind == "url"][0] == "https://www.google.com/shopping/product/kindle-1"
 
 
 def test_signature_32gb_never_matches_the_regular_16gb():

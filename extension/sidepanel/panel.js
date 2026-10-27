@@ -223,6 +223,7 @@ function verdictReason(card, s) {
   if (s.risky) return 'Risky store, though no tricks were found on this page.';
   if (tricks) return `${tricks.charAt(0).toUpperCase()}${tricks.slice(1)}.`;
   if (s.soft.length) return "Some claims on this page can't be verified yet.";
+  if (s.notes.length) return `${s.notes.join('. ')}.`; // "Same item $35 cheaper at Woot." (no claim, no trick)
   return card.safe?.status === 'unknown' ? "No tricks found; store checks aren't connected yet." : 'No tricks found on this page.';
 }
 

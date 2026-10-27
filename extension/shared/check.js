@@ -97,9 +97,12 @@ export function summarize(card, findings = [], page = null) {
   }
   const soft = findings.filter((f) => f.agent === 'deal' && f.model !== PENDING && SOFT_TYPES.has(f.type)
     && ['unverified', 'proposed'].includes(f.status));
-  const tone = tricks > 0 ? 'bad' : soft.length ? 'caution' : 'good';
+  // Card-level reasons that make a page amber without a claim to check: "Same item $35 cheaper at Woot" (the Skeptic
+  // approved it) and "This listing is open box, not new" (backend/stub_server.py _finish).
+  const notes = (bp?.reasons || []).map((r) => r.text).filter((t) => /^Same item .+ cheaper at |^This listing is .+, not new$/.test(t));
+  const tone = tricks > 0 ? 'bad' : soft.length || notes.length || card?.tone === 'caution' ? 'caution' : 'good';
   const bestHere = card?.alt?.kind === 'this_page'; // a real store page that is already the best credible price
-  return { tone, tricks, realTotal, listed, storeRisk: risk[0], storeTone: risk[1], risky: card?.safe?.status === 'bad', safer, soft, confirmed, bestHere };
+  return { tone, tricks, realTotal, listed, storeRisk: risk[0], storeTone: risk[1], risky: card?.safe?.status === 'bad', safer, soft, confirmed, bestHere, notes };
 }
 
 // The key that ties a line in the panel to its row on the evidence page: the first words of its text, normalised
@@ -140,7 +143,7 @@ export function quickVerdict(card, findings = [], page = null) {
       countdown: 'countdown timer',
       scarcity: 'pressure message',
     }[f.type])))];
-    const text = parts.join(' · ');
+    const text = [...parts, ...s.notes].join(' · ') || card?.subtitle || '';
     lines.push([[text.charAt(0).toUpperCase() + text.slice(1)]]);
     if (s.safer) lines.push(saferLine(s.safer));
     return { tone: 'caution', title: 'Check before you buy', lines };

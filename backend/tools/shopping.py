@@ -64,7 +64,9 @@ def _words(text: str) -> list[str]:
 # Not a new item, as a page states it: "(Open Box) JBL Flip 7", "Restored Apple iPhone 12", "... (Renewed)". "Used" and
 # "Restored" count only at the start of the title or after a bracket or dash. Mirrors extension/content/content.js.
 TITLE_COND_RE = re.compile(r"\b(open[- ]box|refurbished|renewed|pre-?owned)\b|(?:^|[(\[|\u2013-]\s*)(restored|used)\b", re.I)
-COND_TAG_RE = re.compile(r"^\s*[(\[]\s*(?:open[- ]box|refurbished|renewed|restored|pre-?owned|used)\s*[)\]]\s*"
+# A leading bracketed condition tag ("(Open Box)", Woot's "(NEW)") is not part of the product's name; a bare "New ..." stays
+# (New Balance).
+COND_TAG_RE = re.compile(r"^\s*[(\[]\s*(?:open[- ]box|refurbished|renewed|restored|pre-?owned|used|(?:brand[- ])?new)\s*[)\]]\s*"
                          r"|^\s*(?:restored|renewed|refurbished|pre-?owned|used)\s+", re.I)
 
 
@@ -241,7 +243,7 @@ def parse(results: list[dict]) -> list[dict]:
         offers.append({"title": (r.get("title") or "")[:200], "source": (r.get("source") or "")[:80],
                        "domain": store_domain(r.get("source") or ""), "price": round(float(price), 2),
                        "shipping": shipping, "total": round(float(price) + (shipping or 0.0), 2), "shipping_note": note,
-                       "condition": f"excluded: {why}" if why else "new", "link": r.get("product_link") or r.get("link"),
+                       "condition": f"excluded: {why}" if why else "new", "link": r.get("link") or r.get("product_link"),  # the store's listing first
                        "token": r.get("immersive_product_page_token"),  # for the sellers lookup; not cached
                        "multi": bool(r.get("multiple_sources"))})  # Google lists several stores for this product
     return offers
