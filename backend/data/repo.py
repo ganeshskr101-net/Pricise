@@ -195,3 +195,79 @@ def other_observations(model_key: str, condition: str, host: str) -> tuple[list[
             names = [d.name for d in cur.description]
             rows, source = [dict(zip(names, r)) for r in cur.fetchall()], "postgres"
     return [_obs_row(r) for r in rows if r.get("safe") != "bad"], sql, source
+
+
+# ----------------------------------------------------------------------------- shopping offers (SerpApi cache, 6 h)
+
+OFFER_COLS = ("source", "domain", "title", "price", "shipping", "total", "shipping_note", "condition", "link")
+OFFERS_MEMORY: dict[str, tuple[float, list[dict]]] = {}
+
+
+def save_offers(query_key: str, offers: list[dict], fetched_at: float) -> None:
+    if not zetaris.use_zetaris():
+        OFFERS_MEMORY[query_key] = (fetched_at, offers)
+        return
+    rows = offers or [{"source": "", "price": 0}]  # marker: searched, nothing found
+    try:
+        with pg.connect() as conn, conn.cursor() as cur:
+            cur.executemany(f"INSERT INTO shopping_offers (query_key, fetched_at, {', '.join(OFFER_COLS)}) "
+                            f"VALUES (%s, %s, {', '.join(['%s'] * len(OFFER_COLS))})",
+                            [[query_key, fetched_at, *[o.get(c) for c in OFFER_COLS]] for o in rows])
+    except pg.PgError as e:
+        log.warning("shopping offers not cached: %s", e)
+
+
+def offers_sql(query_key: str, since: float) -> str:
+    return (f"SELECT fetched_at, {', '.join(OFFER_COLS)} FROM {zetaris.datasource()}.shopping_offers "
+            f"WHERE query_key = {zetaris.lit(query_key)} AND fetched_at > {float(since):.0f} ORDER BY fetched_at DESC, total")
+
+
+def cached_offers(query_key: str, since: float) -> Optional[list[dict]]:
+    """The newest cached search for this query since `since` (offers, possibly []), or None when there is none."""
+    if not zetaris.use_zetaris():
+        hit = OFFERS_MEMORY.get(query_key)
+        return list(hit[1]) if hit and hit[0] > since else None
+    try:
+        rows = zetaris.run_sql(offers_sql(query_key, since))
+    except zetaris.ZetarisError as e:  # e.g. shopping_offers not registered in Zetaris yet
+        log.warning("shopping offers from Zetaris failed, reading the Pricise Postgres directly: %s", e)
+        try:
+            with pg.connect() as conn, conn.cursor() as cur:
+                cur.execute(f"SELECT fetched_at, {', '.join(OFFER_COLS)} FROM shopping_offers WHERE query_key = %s "
+                            "AND fetched_at > %s ORDER BY fetched_at DESC, total", [query_key, since])
+                names = [d.name for d in cur.description]
+                rows = [dict(zip(names, r)) for r in cur.fetchall()]
+        except pg.PgError as e2:
+            log.warning("shopping offers cache not read: %s", e2)
+            return None
+    rows = [r for r in rows if r.get("fetched_at") is not None]
+    if not rows:
+        return None
+    newest = max(float(r["fetched_at"]) for r in rows)
+    out = []
+    for r in rows:
+        if float(r["fetched_at"]) != newest or not r.get("source"):
+            continue
+        o = {c: r.get(c) for c in OFFER_COLS}
+        for c in ("price", "shipping", "total"):
+            o[c] = _num(o[c])
+        out.append(o)
+    return out
+
+
+
+def own_observations(host: str, model_key: str, url: str = "") -> list[dict]:
+    """Observations of this item on THIS host (same model, or the same page URL), oldest first. Direct read: the
+    discount check runs in the Deal Agent's fast tools, so no Zetaris round trip here."""
+    clean = clean_url(url) if url else ""
+    if not zetaris.use_zetaris():
+        rows = [o for o in OBS_MEMORY if o["host"] == host and ((model_key and o["model_key"] == model_key) or (clean and o["url"] == clean))]
+        return sorted(rows, key=lambda o: o["seen_at"])
+    try:
+        with pg.connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT price, seen_at FROM price_observations WHERE host = %s AND ((%s <> '' AND model_key = %s) "
+                        "OR (%s <> '' AND url = %s)) ORDER BY seen_at", [host, model_key, model_key, clean, clean])
+            return [{"price": _num(p), "seen_at": float(s)} for p, s in cur.fetchall()]
+    except pg.PgError as e:
+        log.warning("own observations not read: %s", e)
+        return []

@@ -124,6 +124,10 @@ def cheaper_answer(check: dict) -> ChatResponse:
     elif alt.get("store"):
         parts.append(f"{alt['store']} has it for {_money(alt.get('total'))}.")
         sources.append("best_price")
+    lowest = _findings(check, "lowest_price", statuses=("confirmed",))
+    if lowest and not best:
+        parts.append(_sentences(lowest[0]["summary"], 2))
+        sources.append("lowest_price")
     seen = _findings(check, "seen_elsewhere", statuses=("confirmed",))
     if seen:
         parts.append(_sentences(seen[0]["summary"], 2))

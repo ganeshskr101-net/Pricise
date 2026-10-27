@@ -121,6 +121,7 @@ def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
                                f"{why}. Use Compare prices to search other stores.", confidence=0.0))
         reasons.append(Reason(text=f"{why}; use Compare prices to search other stores", tone="unknown"))
         res.best_price = BestPrice(status="unknown", headline="Compare", reasons=reasons)  # the Compare prices links follow
+        _online(check_id, page, host, res)
         return res
     o = rows[0]
     diff = (p.price - o["price"]) if p.price is not None else None
@@ -139,7 +140,91 @@ def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
                                reasons=reasons)
     res.stores = [{"store": r["host"], "total": r["price"], "status": "ok", "note": f"Seen {_ago(r['seen_at'])}"}
                   for r in rows[:5]]
+    _online(check_id, page, host, res)
     return res
+
+
+# ----------------------------------------------------------------------------- online offers (Google Shopping via SerpApi)
+VET_MAX = 5  # seller domains the Trust Agent checks per page (cheapest first)
+
+
+def _vet_domains(check_id: str, domains: list[str]) -> dict[str, dict]:
+    """Trust Agent real-site checks on each seller domain (https, registry age); blocking: runs its own event loop."""
+    from backend.agents import trust as trust_agent
+
+    async def all_():
+        tvs = await asyncio.gather(*(trust_agent.assess_store(f"https://{d}/", f"{check_id}:shop:{d}") for d in domains))
+        return {d: tv for d, tv in zip(domains, tvs)}
+
+    return asyncio.run(all_())
+
+
+def _online(check_id: str, page: PageFacts, host: str, res: PriceResult) -> None:
+    """Search Google Shopping for this exact item (SerpApi, 6 h cache), keep the same item in new condition from OTHER
+    stores, vet the sellers with the Trust Agent, and report the cheapest trusted offer below this page's price, or that
+    this page is the lowest trusted price found. Read only; the stores' own sites are never loaded."""
+    from backend.tools import rdap, shopping
+
+    p = page.product
+    query = shopping.query_for(p)
+    offers, source = shopping.search(query) if query else (None, "off")
+    if offers is None:
+        if source == "off":
+            return  # no SerpApi key: skip cleanly, the observations and Compare links stand on their own
+        why = "Online price search didn't answer"
+        res.findings.append(_f(check_id, "online_offers", "unverified", f"{why}. Use Compare prices to search other stores.",
+                               confidence=0.0))
+        return
+    mine = rdap.registrable(host)
+    matched = [o for o in offers if o["domain"] and o["domain"] != mine and shopping.same_item(p, o)[0]]
+    if not matched and p.model and p.name:  # the model number found nothing the same: try the cleaned title once
+        q2 = shopping.clean_title(p.name, p.brand)
+        if q2 and catalog.key(q2) != catalog.key(query):
+            more, _ = shopping.search(q2)
+            matched = [o for o in more or [] if o["domain"] and o["domain"] != mine and shopping.same_item(p, o)[0]]
+    ev_search = {"kind": "log", "ref": f"google_shopping:{query}", "label": f"{len(offers)} offers ({source}), {len(matched)} the same item"}
+    if not matched:
+        res.findings.append(_f(check_id, "online_offers", "unverified",
+                               f"Google Shopping had no exact match for this item ({len(offers)} offers checked). "
+                               "Use Compare prices to search other stores.", [ev_search], confidence=0.0))
+        return
+    matched.sort(key=lambda o: (o["total"], o["domain"]))
+    domains = list(dict.fromkeys(o["domain"] for o in matched))[:VET_MAX]
+    tvs = _vet_domains(check_id, domains)
+    trusted = [o for o in matched if o["domain"] in tvs and tvs[o["domain"]]["checked"] and tvs[o["domain"]]["verdict"] == "safe"]
+    rows = []
+    for o in matched[:8]:
+        tv = tvs.get(o["domain"])
+        ok = o in trusted
+        rows.append({"store": o["domain"], "total": o["total"], "status": "ok" if ok else ("rejected" if tv else "skipped"),
+                     "note": f"{o['source']} · {o['shipping_note']}" + ("" if ok else " · not checked" if not tv else " · didn't pass store checks")})
+    price = p.price
+    cheaper = [o for o in trusted if price is not None and o["total"] < price - 0.005]
+    if cheaper:
+        o = cheaper[0]
+        text = f"Same item for {money(o['total'])} at {o['domain']}, trusted store ({o['shipping_note']})."
+        res.findings.append(_f(check_id, "best_price", "confirmed", text,
+                               [{"kind": "url", "ref": o["link"] or f"https://{o['domain']}/"},
+                                {"kind": "price_row", "ref": f"offer:{o['domain']}", "label": f"{o['title'][:80]} · {money(o['total'])}"},
+                                ev_search], confidence=0.8))
+        res.best_price = BestPrice(status="good", headline=f"{o['domain']} · {money(o['total'])}", store=o["domain"],
+                                   total=o["total"], url=o["link"], reasons=[
+            Reason(text=f"Same item, new: {o['title'][:70]}", tone="good", proof="stores"),
+            Reason(text=f"{money(o['price'])} + {o['shipping_note']} at {o['source']}; this page: {money(price)}", tone="good", proof="stores"),
+            Reason(text=f"{o['domain']} passed the Trust Agent's checks (secure, long-registered domain)", tone="good")])
+        res.alt = {"store": o["domain"], "total": o["total"], "url": o["link"]}
+        rows[next(i for i, r in enumerate(rows) if r["store"] == o["domain"] and r["total"] == o["total"])]["status"] = "chosen"
+    elif trusted:
+        also = ", ".join(f"{o['domain']} {money(o['total'])}" for o in trusted[:3])
+        res.findings.append(_f(check_id, "lowest_price", "confirmed",
+                               f"This is the lowest trusted price we found. Also checked: {also}.", [ev_search], confidence=0.75))
+        res.best_price = BestPrice(status="good", headline="Lowest trusted price", reasons=[
+            Reason(text=f"This page {money(price)}; trusted stores: {also}", tone="good", proof="stores")])
+    else:
+        res.findings.append(_f(check_id, "online_offers", "unverified",
+                               f"Found the same item at {len(domains)} other store(s), but none passed the Trust Agent's checks.",
+                               [ev_search], confidence=0.0))
+    res.stores = rows + res.stores
 
 
 def _load(day: int) -> tuple[list[dict], Optional[str], str]:

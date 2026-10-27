@@ -16,6 +16,7 @@ from backend.data.history import get_price_history
 from backend.tools.common import ToolResult, finding, is_storelab, money
 
 WINDOW_DAYS = 90
+MIN_SPAN_DAYS = 30  # the page's own history or past observations: fewer days than this can't judge a discount
 MAX_DAYS_AT_WAS = 7
 PCT_RE = re.compile(r"(\d{1,2})\s?%")
 
@@ -69,6 +70,13 @@ def _history(url: str, page: PageFacts):
             rows = get_price_history(host, ident)
             if rows:
                 return host, ident, rows
+    if not is_storelab(url):  # real pages: the page's own "Price history", else prices seen here before
+        from backend.data import catalog
+        from backend.data.history import observation_history, page_history
+
+        rows = page_history(page.signals) or observation_history(host.removeprefix("www."), catalog.key(p.model or ""), url)
+        if rows:
+            return host, p.sku or p.model or "page", rows
     return host, None, None
 
 
@@ -87,6 +95,15 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
     claim_text = " ".join((claims[0].text if claims else f"was {money(was)}").split())[:80]
 
     host, ident, rows = _history(url, page)
+    source = getattr(rows, "source", "")
+    if rows and source in ("page", "observations") and len(rows) < MIN_SPAN_DAYS:
+        what = "the page's own price history" if source == "page" else "the prices seen here before"
+        out.findings.append(finding(check_id, "claimed_discount", "unverified",
+                                    f"The page claims a reduced price ({claim_text}). Only {len(rows)} days of {what}, too "
+                                    f"little to check it, so this is unverified.",
+                                    [{"kind": "selector", "ref": r, "label": "Discount claim" if i == 0 else ""} for i, r in enumerate(sel)],
+                                    confidence=0.4))
+        return out
     if not rows or price is None or was is None:
         why = "no price history found for this item" if not rows else "the page's prices couldn't be read"
         out.findings.append(finding(check_id, "claimed_discount", "unverified",
@@ -103,7 +120,9 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
     pct_shown = pct or round((1 - price / was) * 100)
     out.evidence_data["price_history"] = {
         "store": host.split("/")[-1].replace("audiodealz", "AudioDealz"),
-        "label": "Synthetic history (Store Lab)" if is_storelab(url) else f"Price history for {host}",
+        "label": "Synthetic history (Store Lab)" if is_storelab(url) else
+                 {"page": f"Price history shown on the {host} page", "observations": f"Prices you saw on {host}"}.get(
+                     getattr(rows, "source", ""), f"Price history for {host}"),
         "points": recent, "claimed_was": was, "days_at_claim": days_at_was, "days_at_price": days_at_price,
     }
     rows_ev = {"kind": "price_row", "ref": f"history:{host}:{ident}",

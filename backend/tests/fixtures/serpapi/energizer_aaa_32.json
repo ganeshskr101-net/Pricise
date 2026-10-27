@@ -1,0 +1,153 @@
+{
+ "_note": "Trimmed SerpApi google_shopping response for 'Energizer AAA 32 pack' (26 Oct 2026), fields Pricise reads only; product_link replaced by placeholders. Used by tests; no live search in tests.",
+ "shopping_results": [
+  {
+   "position": 1,
+   "title": "Energizer MAX AAA Batteries",
+   "source": "Lowe's",
+   "price": "$24.98",
+   "extracted_price": 24.98,
+   "extensions": [
+    "Nearby, 6 mi"
+   ],
+   "product_link": "https://www.google.com/shopping/product/test-0"
+  },
+  {
+   "position": 2,
+   "title": "Energizer MAX AAA Batteries",
+   "source": "Walmart",
+   "price": "$113.38",
+   "extracted_price": 113.38,
+   "old_price": "$3.54/ct",
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/test-1"
+  },
+  {
+   "position": 3,
+   "title": "Energizer Alkaline Power AAA Batteries",
+   "source": "eBay",
+   "price": "$12.31",
+   "extracted_price": 12.31,
+   "old_price": "$14",
+   "extensions": [
+    "12% OFF"
+   ],
+   "tag": "12% OFF",
+   "product_link": "https://www.google.com/shopping/product/test-2"
+  },
+  {
+   "position": 4,
+   "title": "Energizer Max Alkaline AAA Batteries - Pack of 32",
+   "source": "mcgrocer.com",
+   "price": "$45.89",
+   "extracted_price": 45.89,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/test-3"
+  },
+  {
+   "position": 5,
+   "title": "Energizer Max Alkaline Aaa Batteries - Pack Of 32",
+   "source": "eBay - ielectrica",
+   "price": "$22.99",
+   "extracted_price": 22.99,
+   "old_price": "$0.72/ct",
+   "delivery": "Free delivery by Sat",
+   "product_link": "https://www.google.com/shopping/product/test-4"
+  },
+  {
+   "position": 6,
+   "title": "Energizer Alkaline Aaa Batteries 32 Pack 1.5v Ap92ldp-32 Exp 12/2038",
+   "source": "eBay",
+   "price": "$20.00",
+   "extracted_price": 20.0,
+   "old_price": "$0.63/ct",
+   "product_link": "https://www.google.com/shopping/product/test-5"
+  },
+  {
+   "position": 7,
+   "title": "AAA Energizer MAX Alkaline Batteries",
+   "source": "ReStockIt",
+   "price": "$7.98",
+   "extracted_price": 7.98,
+   "old_price": "$2.00/ct",
+   "extensions": [
+    "Also nearby"
+   ],
+   "product_link": "https://www.google.com/shopping/product/test-6"
+  },
+  {
+   "position": 8,
+   "title": "Energizer Alkaline Power Aaa Batteries (32 Pack), Long-lasting",
+   "source": "eBay - silver.oakleaf",
+   "price": "$25.16",
+   "extracted_price": 25.16,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/test-7"
+  },
+  {
+   "position": 9,
+   "title": "Energizer Ultimate AAA Lithium Batteries",
+   "source": "Advance Auto Parts",
+   "price": "$7.99",
+   "extracted_price": 7.99,
+   "old_price": "$4.00/ct",
+   "extensions": [
+    "Nearby, 19 mi"
+   ],
+   "product_link": "https://www.google.com/shopping/product/test-8"
+  },
+  {
+   "position": 10,
+   "title": "Energizer AA and AAA Batteries, 32 Count, Combo Pack Contains 16 Max Double A and 16 Max Triple A Batteries",
+   "source": "eBay - talonn",
+   "price": "$28.94",
+   "extracted_price": 28.94,
+   "old_price": "Usually $39",
+   "delivery": "Free delivery",
+   "extensions": [
+    "LOW PRICE"
+   ],
+   "tag": "LOW PRICE",
+   "product_link": "https://www.google.com/shopping/product/test-9"
+  },
+  {
+   "position": 11,
+   "title": "Energizer Max Aaa Alkaline Batteries 8/24/32/48/60/64/96 Count",
+   "source": "eBay",
+   "price": "$22.44",
+   "extracted_price": 22.44,
+   "old_price": "$2.81/ct",
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/test-10"
+  },
+  {
+   "position": 12,
+   "title": "Energizer MAX Battery Bundle with AA and AAA Batteries",
+   "source": "Home Depot",
+   "price": "$41.48",
+   "extracted_price": 41.48,
+   "old_price": "$1.38/ct",
+   "delivery": "Free next-day delivery",
+   "product_link": "https://www.google.com/shopping/product/test-11"
+  },
+  {
+   "position": 13,
+   "title": "Energizer Alkaline Power Aaa Batteries, 32 Count, Long-lasting Triple",
+   "source": "eBay - msbestdeals1",
+   "price": "$29.99",
+   "extracted_price": 29.99,
+   "old_price": "$0.94/ct",
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/test-12"
+  },
+  {
+   "position": 14,
+   "title": "Energizer Max Aaa Batteries Alkaline 32 Count 2 Packs Of 16 Long",
+   "source": "eBay - peaceofmind4sale",
+   "price": "$14.99",
+   "extracted_price": 14.99,
+   "old_price": "$0.47/ct",
+   "product_link": "https://www.google.com/shopping/product/test-13"
+  }
+ ]
+}

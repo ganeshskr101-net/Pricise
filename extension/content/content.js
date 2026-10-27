@@ -192,7 +192,7 @@
       if (buy) { p.price = buy.v; p.currency = currencyOf(buy.t); p.source = 'buy-box'; }
     }
     if (p.was_price == null) {
-      const was = buyBoxPrice('[data-a-strike="true"]', '.basisPrice .a-offscreen');
+      const was = buyBoxPrice('[data-a-strike="true"]', BUY_BOX.map((b) => `${b} .basisPrice .a-offscreen`).join(','));
       if (was && (p.price == null || was.v > p.price)) p.was_price = was.v;
     }
     if (p.price == null) {
@@ -213,16 +213,33 @@
   }
 
   // ---------------------------------------------------------------- signals (what a careful shopper would notice)
+  // Text as a person reads it: screen-reader duplicates (aria-hidden copies of a price) left out, so "$15.99 $15.99" or
+  // "$37 . 99" never reaches a claim.
+  function cleanText(el) {
+    const copy = el.cloneNode(true);
+    copy.querySelectorAll('[aria-hidden="true"], script, style').forEach((n) => n.remove());
+    return (copy.textContent || '').replace(/\s+/g, ' ').replace(/\$\s+(\d)/g, '$$$1').trim();
+  }
+
   function claimedDiscounts() {
     const out = [];
     const els = new Set();
     document.querySelectorAll('s,del,strike,[class*=strike],[class*=was-price],[class*=list-price],[class*=original-price],[class*=compare],[data-a-strike="true"],.basisPrice')
       .forEach((el) => { if (visible(el) && !ignored(el) && PRICE_RE.test(el.innerText || '')) els.add(el); });
-    findText(/\b(was|list price|typical price|reg\.?|regular|rrp|compare at)\b[^\n]{0,20}[$€£₹]\s?\d/i).forEach((el) => els.add(el));
+    findText(/\b(was|list price|list:|typical price|reg\.?|regular|rrp|compare at)\b[^\n]{0,20}[$€£₹]\s?\d/i).forEach((el) => els.add(el));
     findText(/-\s?\d{1,2}\s?%|\b\d{1,2}\s?%\s?off\b|save\s+\d{1,2}\s?%/i).forEach((el) => els.add(el));
-    for (const el of [...els].filter((e) => !PROMO_RE.test(block(e).innerText || '')).slice(0, MAX_PER_TYPE)) {
+    // A shop with a buy box (Amazon): only claims inside it are about this item. Elsewhere on the page they belong to
+    // sponsored or "compare with similar items" products.
+    const boxes = [...document.querySelectorAll(BUY_BOX.join(','))].filter(visible);
+    const price = readProduct().price;
+    let cands = [...els].filter((e) => !PROMO_RE.test(cleanText(block(e))) && (!boxes.length || boxes.some((b) => b.contains(e))));
+    cands = cands.filter((e) => {
+      const amount = parseAmount(cleanText(e));
+      return amount == null || price == null || amount > price + 0.005; // a list price at or below today's price is no discount
+    });
+    for (const el of cands.slice(0, MAX_PER_TYPE)) {
       const b = block(el);
-      out.push({ type: 'claimed_discount', selector: cssPath(b), text: (b.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 100), amount: parseAmount(el.innerText) });
+      out.push({ type: 'claimed_discount', selector: cssPath(b), text: cleanText(b).slice(0, 100), amount: parseAmount(cleanText(el)) });
     }
     return dedupeByContainment(out);
   }
@@ -298,6 +315,31 @@
     return list.filter((s, i) => !els.some((other, j) => j !== i && other && els[i] && other !== els[i] && other.contains(els[i]) && list[j].type === s.type));
   }
 
+  // A "Price history" block the page itself shows (a chart table or list of date + price). Read only; at least 5 points.
+  const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+  function isoDate(s) {
+    let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+    m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (m) return `${m[3].length === 2 ? '20' + m[3] : m[3]}-${m[1].padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    m = s.match(/^([A-Za-z]{3})[a-z]*\.? (\d{1,2}),? (\d{4})$/);
+    if (m && MONTHS[m[1].toLowerCase()]) return `${m[3]}-${String(MONTHS[m[1].toLowerCase()]).padStart(2, '0')}-${m[2].padStart(2, '0')}`;
+    return null;
+  }
+  function pageHistory() {
+    const head = findText(/^\s*price history\b/i, 3)[0];
+    if (!head) return [];
+    const box = head.closest('section, table, [class*=history], [id*=history]') || head.parentElement?.parentElement || head;
+    const RE = /(\d{4}-\d{2}-\d{2}|\d{1,2}\/\d{1,2}\/\d{2,4}|[A-Z][a-z]{2,8}\.? \d{1,2},? \d{4})[^$\d]{0,24}\$\s?(\d{1,5}(?:\.\d{2})?)/g;
+    const points = [];
+    for (const m of cleanText(box).matchAll(RE)) {
+      const d = isoDate(m[1]);
+      if (d) points.push([d, parseFloat(m[2])]);
+    }
+    return points.length >= 5 ? [{ type: 'price_history', selector: cssPath(box), text: `Price history on the page: ${points.length} points`,
+      detail: { points: points.slice(0, 400) } }] : [];
+  }
+
   // Links a careful shopper looks for: a returns/refund policy and a way to contact the store (for the Trust Agent).
   function storeInfo() {
     const links = [...document.querySelectorAll('a[href]')].filter((a) => !ignored(a));
@@ -309,7 +351,7 @@
   }
 
   async function readPage() {
-    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo()];
+    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo(), ...pageHistory()];
     return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
   }
 

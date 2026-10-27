@@ -82,3 +82,50 @@ def get_price_history(host: str, product: str) -> Optional[list[tuple[date, floa
         except (zetaris.ZetarisError, ValueError) as e:
             log.warning("price history from Zetaris failed, using the catalog fixture: %s", e)
     return _from_catalog(h, want)
+
+
+
+# ----------------------------------------------------------------------------- real pages: the page's own history, observations
+
+MIN_SPAN_DAYS = 30  # fewer days than this is too little to judge a discount
+
+
+def daily_from_points(points: list[tuple[date, float]], today: Optional[date] = None) -> list[tuple[date, float]]:
+    """Price-change points -> one row per day (a price holds until the next point), up to today, last 90 days."""
+    pts = sorted(points)
+    if not pts:
+        return []
+    today = today or date.today()
+    out, i = [], 0
+    day = pts[0][0]
+    while day <= today:
+        while i + 1 < len(pts) and pts[i + 1][0] <= day:
+            i += 1
+        out.append((day, pts[i][1]))
+        day += timedelta(days=1)
+    return out[-catalog.HISTORY_DAYS:]
+
+
+def page_history(signals) -> Optional[History]:
+    """The "Price history" a real page shows itself (content.js price_history signal), as daily rows; None if absent."""
+    for s in signals or []:
+        if getattr(s, "type", None) == "price_history":
+            pts = []
+            for d, p in (s.detail or {}).get("points") or []:
+                try:
+                    pts.append((date.fromisoformat(str(d)[:10]), float(p)))
+                except (TypeError, ValueError):
+                    continue
+            rows = daily_from_points(pts)
+            return History(rows, "page") if rows else None
+    return None
+
+
+def observation_history(host: str, model_key: str, url: str = "") -> Optional[History]:
+    """Prices this shopper saw for the same item on the same host (price observations), as daily rows; None if none."""
+    from backend.data import repo
+
+    rows = repo.own_observations(host, model_key, url)
+    pts = [(date.fromtimestamp(float(r["seen_at"])), float(r["price"])) for r in rows]
+    daily = daily_from_points(pts)
+    return History(daily, "observations") if daily else None

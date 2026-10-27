@@ -102,3 +102,20 @@ CREATE TABLE IF NOT EXISTS price_observations (
     url        text NOT NULL,
     seen_at    double precision NOT NULL
 );
+
+-- Google Shopping offers (SerpApi) per search, kept 6 h as a cache. A search with no offers keeps one marker row
+-- (source '', price 0) so it isn't repeated. fetched_at = Unix seconds.
+CREATE TABLE IF NOT EXISTS shopping_offers (
+    id            bigserial PRIMARY KEY,
+    query_key     text NOT NULL,
+    fetched_at    double precision NOT NULL,
+    source        text NOT NULL,
+    domain        text,
+    title         text,
+    price         numeric(10,2) NOT NULL,
+    shipping      numeric(10,2),
+    total         numeric(10,2),
+    shipping_note text,
+    condition     text,
+    link          text
+);
