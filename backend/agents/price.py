@@ -95,19 +95,50 @@ def _at_origin(store_url: str, page_url: str) -> str:
     return urlunsplit((p.scheme, p.netloc, s.path, s.query, ""))
 
 
-def _real_site(check_id: str, page: PageFacts) -> PriceResult:
+def _ago(seen_at: float, now: Optional[float] = None) -> str:
+    days = int(((now or time.time()) - seen_at) // 86400)
+    return "today" if days <= 0 else "yesterday" if days == 1 else f"{days} days ago"
+
+
+def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
+    """Real store pages: no other store is loaded (no scraping). The only comparison is with prices the shopper saw on
+    other real store pages Pricise checked (price observations, read through Zetaris), same model and condition."""
     p = page.product
     res = PriceResult(source="none")
-    res.findings.append(_f(check_id, "catalog_only", "unverified",
-                           "Other-store comparison covers our demo catalog only, so other stores weren't checked for this page.",
-                           confidence=0.0))
-    reasons = []
-    if p.name:
-        reasons.append(Reason(text=f"Product: {p.name[:70]}", tone="unknown"))
-    if p.price is not None:
-        reasons.append(Reason(text=f"Price on this page: ${p.price:,.2f}", tone="unknown"))
-    reasons.append(Reason(text="Other-store comparison covers our demo catalog only", tone="unknown"))
-    res.best_price = BestPrice(status="unknown", headline="Demo catalog only", reasons=reasons)
+    host = (page.host or urlsplit(url).netloc).lower().removeprefix("www.")
+    model_key = catalog.key(p.model or "")
+    reasons = [Reason(text=f"Product: {p.name[:70]}", tone="unknown")] if p.name else []
+    rows = []
+    if model_key:
+        try:
+            rows, res.sql, res.source = repo.other_observations(model_key, repo.condition_of(p.name), host)
+        except Exception as e:  # PgError / ValueError: say we couldn't look, never fail the check
+            log.warning("price observations not read: %s", e)
+    if not rows:
+        why = ("No other store prices seen yet for this model" if model_key
+               else "This page shows no model number, so prices on other stores can't be matched")
+        res.findings.append(_f(check_id, "catalog_only", "unverified",
+                               f"{why}. Use Compare prices to search other stores.", confidence=0.0))
+        reasons.append(Reason(text=f"{why}; use Compare prices to search other stores", tone="unknown"))
+        res.best_price = BestPrice(status="unknown", headline="Compare", reasons=reasons)  # the Compare prices links follow
+        return res
+    o = rows[0]
+    diff = (p.price - o["price"]) if p.price is not None else None
+    vs = (f", {money(diff)} less than here" if diff and diff > 0.005
+          else ", this page is cheaper" if diff is not None and diff < -0.005 else "")
+    text = f"You saw this for {money(o['price'])} at {o['host']} {_ago(o['seen_at'])}{vs}. That price may have changed since."
+    ev = ([{"kind": "sql", "ref": res.sql, "label": f"{len(rows)} price(s) seen on other stores ({res.source})"}] if res.sql
+          else [{"kind": "log", "ref": f"observations:{res.source}", "label": f"{len(rows)} price(s) seen on other stores"}])
+    res.findings.append(_f(check_id, "seen_elsewhere", "confirmed", text, ev + [{"kind": "url", "ref": o["url"]}],
+                           confidence=0.7))
+    reasons.append(Reason(text=text.split(". ")[0], tone="caution" if diff and diff > 0.005 else "good", proof="stores"))
+    reasons.append(Reason(text=f"Seen on a page Pricise checked; {o['host']} was not re-checked now", tone="unknown"))
+    cheaper = diff is not None and diff > 0.005
+    res.best_price = BestPrice(status="caution" if cheaper else "good",
+                               headline=f"Seen for {money(o['price'])} at {o['host']}" if cheaper else "Cheapest you've seen",
+                               reasons=reasons)
+    res.stores = [{"store": r["host"], "total": r["price"], "status": "ok", "note": f"Seen {_ago(r['seen_at'])}"}
+                  for r in rows[:5]]
     return res
 
 
@@ -201,7 +232,7 @@ async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, u
     """The Price Agent's findings and "Best safe price" verdict for one page on demo `day` (1..9). Never raises.
     use_trust=True asks the Trust Agent about every candidate store (AGENT_TRUST=real); False uses the seeded flags."""
     if not is_storelab(url):
-        return _real_site(check_id, page)
+        return await asyncio.to_thread(_real_site, check_id, page, url)
     try:
         rows, sql, source = await asyncio.to_thread(_load, day)
         rows = [{**r, "url": _at_origin(r["url"], url)} for r in rows]

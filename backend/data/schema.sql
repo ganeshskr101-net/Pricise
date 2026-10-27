@@ -84,3 +84,21 @@ CREATE TABLE findings (
     rounds        integer NOT NULL DEFAULT 0,
     ts            double precision
 );
+
+-- Prices the shopper saw on real store pages Pricise checked (no account, cookie or personal data: product fields and a
+-- URL without its query string). The Price Agent compares the same model across hosts. seen_at = Unix seconds.
+CREATE TABLE IF NOT EXISTS price_observations (
+    id         bigserial PRIMARY KEY,
+    host       text NOT NULL,
+    brand      text,
+    model      text,
+    model_key  text,
+    sku        text,
+    name       text,
+    price      numeric(10,2) NOT NULL,
+    currency   text,
+    condition  text NOT NULL DEFAULT 'new',
+    safe       text,                       -- the check's "Shop safe?" status: good | caution | unknown (bad is never saved)
+    url        text NOT NULL,
+    seen_at    double precision NOT NULL
+);

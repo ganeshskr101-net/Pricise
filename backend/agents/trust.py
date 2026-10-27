@@ -15,7 +15,7 @@ import asyncio
 import logging
 import os
 import time
-from typing import Literal, Optional, TypedDict
+from typing import Literal, NotRequired, Optional, TypedDict
 from urllib.parse import urlsplit
 
 import httpx
@@ -43,8 +43,9 @@ class TrustVerdict(TypedDict):
     findings: list[Finding]
     store: Optional[str]      # store name from about.json
     store_url: str            # the store root that was checked
-    checked: bool             # False = real store page or store didn't answer: the store checks did not run
+    checked: bool             # False = the store checks did not run (store didn't answer, or no registry answer for a real site)
     elapsed_ms: int
+    passed: NotRequired[list[str]]  # checks that ran and found nothing wrong (real sites list them; shown green)
 
 
 _cache: dict[str, tuple[float, TrustVerdict]] = {}
@@ -98,17 +99,50 @@ async def _reword(reasons: list[str]) -> list[str]:
     return lines if len(lines) == len(reasons) else reasons
 
 
-def _real_page(store_url: str, check_id: str, page: Optional[PageFacts]) -> list[Signal]:
+async def _real_site(store_url: str, page: Optional[PageFacts], client: httpx.AsyncClient) -> tuple[list[Signal], bool]:
+    """A real store page: READ ONLY, nothing is fetched from the store. HTTPS from the extension; domain age from public
+    registration data (RDAP, backend/tools/rdap.py); returns and contact links from the page facts (the extension's
+    "store_info" signal). Company record and reviews have no data source for real stores, so they stay unverified.
+    checked = the registry answered (otherwise nothing independent was verified)."""
+    from backend.tools import rdap
+
     host = (page.host if page and page.host else urlsplit(store_url).hostname) or "this site"
     signals = []
     https = page.https if page is not None else store_url.startswith("https://")
-    if not https:
-        signals.append(Signal("no_https", "strong", True, True, "This page is not using a secure connection (no HTTPS).",
-                              [{"kind": "url", "ref": store_url}], 0.99))
-    signals.append(Signal("store_checks", "strong", False, False,
-                          f"Domain age, company record, photos and reviews for {host} were not checked "
-                          "(only Store Lab stores are checked for now).", [{"kind": "url", "ref": store_url}], 0.2))
-    return signals
+    signals.append(Signal("no_https", "strong", not https, True,
+                          "Secure connection (HTTPS)." if https else "This page is not using a secure connection (no HTTPS).",
+                          [{"kind": "url", "ref": store_url}], 0.99))
+    domain = rdap.registrable(host)
+    created = await rdap.registered_on(client, domain)
+    if created:
+        signals.append(check_domain_age({"domain_created": created.isoformat()}, rdap.rdap_url(domain)))
+    else:
+        signals.append(Signal("domain_age", "strong", False, False, f"Couldn't look up when {domain} was registered.",
+                              [{"kind": "url", "ref": rdap.rdap_url(domain)}], 0.3))
+    info = next((s for s in (page.signals if page else []) if s.type == "store_info"), None)
+    if info is not None:
+        d = info.detail or {}
+        ev = [{"kind": "text", "ref": f"page links: returns={bool(d.get('returns'))} contact={bool(d.get('contact'))}"}]
+        signals.append(Signal("bad_returns", "weak", not d.get("returns"), True,
+                              "Returns policy link on the page." if d.get("returns")
+                              else "No returns or refund policy link found on this page.", ev, 0.6))
+        signals.append(Signal("no_contact", "weak", not d.get("contact"), True,
+                              "Contact or customer service link on the page." if d.get("contact")
+                              else "No contact or customer service link found on this page.", ev, 0.6))
+    else:
+        signals.append(Signal("store_links", "weak", False, False, "Returns and contact links weren't read from this page.",
+                              [], 0.2))
+    signals.append(Signal("store_records", "weak", False, False,
+                          f"Company record and reviews for {host} aren't checked (no data source for real stores yet).", [], 0.2))
+    return signals, created is not None
+
+
+def real_reasons(signals: list[Signal]) -> list[str]:
+    """Real sites: warning signs first, then what was checked and fine, then what couldn't be checked."""
+    flagged = sorted((s for s in signals if s.flagged), key=lambda s: s.strength != "strong")
+    passed = [s for s in signals if s.verified and not s.flagged]
+    unchecked = [s for s in signals if not s.verified and not s.flagged]
+    return list(dict.fromkeys(s.reason for s in [*flagged, *passed, *unchecked]))
 
 
 async def _storelab(store_url: str, client: httpx.AsyncClient, peer_bases: Optional[list[str]]
@@ -149,7 +183,13 @@ async def assess_store(store_url: str, check_id: str, page: Optional[PageFacts] 
             if own:
                 await client.aclose()
     else:
-        signals = _real_page(store_url, check_id, page)
+        own = client is None
+        client = client or make_client()
+        try:
+            signals, checked = await _real_site(store_url, page, client)
+        finally:
+            if own:
+                await client.aclose()
 
     verdict = decide(signals)
     if not checked and verdict == "safe":
@@ -157,8 +197,12 @@ async def assess_store(store_url: str, check_id: str, page: Optional[PageFacts] 
     # Only warning signs and checks that couldn't run become findings: the panel shows every trust row as a warning,
     # so a passing check ("Business address listed") would look alarming. Passing checks still feed decide() and the card.
     findings = [to_finding(check_id, s) for s in signals if s.flagged or not s.verified]
-    result = TrustVerdict(verdict=verdict, reasons=await _reword(reasons_for(signals)), findings=findings, store=name,
+    real = not is_storelab(store_url)
+    reasons = real_reasons(signals) if real else reasons_for(signals)
+    result = TrustVerdict(verdict=verdict, reasons=await _reword(reasons), findings=findings, store=name,
                           store_url=base, checked=checked, elapsed_ms=int((time.perf_counter() - t0) * 1000))
+    if real:
+        result["passed"] = [s.reason for s in signals if s.verified and not s.flagged]
     log.info("trust %s -> %s in %d ms", base, verdict, result["elapsed_ms"])
     if checked:
         _cache[store_url] = (time.monotonic(), result)
@@ -171,13 +215,16 @@ def safe_verdict(tv: TrustVerdict) -> Verdict:
         bad = [f for f in tv["findings"] if f.status != "unverified"]
         reasons = ([Reason(text=f.summary, tone="bad") for f in bad] +
                    [Reason(text=f.summary, tone="unknown") for f in tv["findings"] if f.status == "unverified"])
-        return Verdict(status="bad" if bad else "unknown", headline="Risky" if bad else "Not fully checked", reasons=reasons)
+        return Verdict(status="bad" if bad else "unknown", headline="Risky" if bad else "Unknown", reasons=reasons)
     strong = {"domain_age", "no_company", "copied_photos", "no_https"}
     by_summary = {f.summary: f for f in tv["findings"]}
     reasons = []
-    for text in tv["reasons"][:4]:
+    passed = set(tv.get("passed") or ())
+    for text in tv["reasons"][:5]:
         f = by_summary.get(text)
-        if tv["verdict"] == "safe" and (f is None or f.status != "unverified"):
+        if text in passed:  # a real-site check that ran and found nothing wrong
+            tone = "good"
+        elif tv["verdict"] == "safe" and (f is None or f.status != "unverified"):
             tone = "good" if text == "No warning signs found." else "caution"
         elif f is not None and f.status == "unverified":
             tone = "unknown"

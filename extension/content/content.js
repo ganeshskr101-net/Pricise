@@ -7,6 +7,17 @@
   const MAX_PER_TYPE = 4;
   const PRICE_RE = /(?:US\s?)?([$€£₹])\s?(\d{1,3}(?:[,.\s]\d{3})*(?:[.,]\d{1,2})?|\d+(?:[.,]\d{1,2})?)/;
 
+  // Parts of a page Pricise never reads: cart sidebars, mini-carts and cart drawers (Amazon's "Subtotal" flyout, Shopify cart
+  // drawers). Their prices and fees belong to the cart, not to the product on the page.
+  const IGNORE_SEL = ['#nav-flyout-ewc', '#ewc-content', '[id^="ewc-"]', '.ewc-sidebar', '#sw-atc-details-single-container',
+    '#attach-desktop-sideSheet', '[id*="mini-cart"]', '[class*="mini-cart"]', '[id*="minicart"]', '[class*="minicart"]',
+    '[id*="cart-drawer"]', '[class*="cart-drawer"]', '[class*="side-cart"]', '[class*="cart-flyout"]'].join(',');
+  // (Not every "subtotal" box: on a checkout page the fee rows Pricise must read often sit inside one.)
+  const ignored = (el) => { try { return !!el?.closest?.(IGNORE_SEL); } catch (_) { return false; } };
+  // Payment-card and membership offers are not discounts on the item ("Prime Visa", reward points, "pay $0.00 at checkout",
+  // Subscribe & Save, cash back): never read them as a discount claim.
+  const PROMO_RE = /prime visa|\bvisa\b|mastercard|credit card|card ?member|rewards?( points?| card| visa)?\b.*\bpoints?\b|\bpoints\b|pay \$?0(\.00)? (at|upon)|\$0\.00 (at checkout|upon approval)|subscribe ?(&|and) ?save|cash ?back|% back\b|gift card|apply now|upon approval/i;
+
   // ---------------------------------------------------------------- helpers
   function parseAmount(text) {
     const m = (text || '').match(PRICE_RE);
@@ -52,7 +63,7 @@
       acceptNode: (n) => {
         const p = n.parentElement;
         if (!p || ['SCRIPT', 'STYLE', 'NOSCRIPT', 'TEMPLATE'].includes(p.tagName)) return NodeFilter.FILTER_REJECT;
-        if (p.closest('.pricise-label')) return NodeFilter.FILTER_REJECT;
+        if (p.closest('.pricise-label') || ignored(p)) return NodeFilter.FILTER_REJECT;
         return regex.test(n.nodeValue) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_SKIP;
       },
     });
@@ -114,19 +125,81 @@
     return document.querySelector(`meta[property="${name}"],meta[name="${name}"],meta[itemprop="${name}"]`)?.content || null;
   }
 
+  const BUY_BOX = ['#corePriceDisplay_desktop_feature_div', '#corePrice_feature_div', '#corePrice_desktop', '#apex_desktop',
+    '#buybox', '#desktop_buybox'];
+  function buyBoxPrice(which, extra = '') {
+    const sel = BUY_BOX.map((b) => `${b} .a-price${which} .a-offscreen`).join(',') + (extra ? `,${extra}` : '');
+    for (const el of document.querySelectorAll(sel)) {
+      const t = (el.textContent || '').trim();
+      const v = parseAmount(t);
+      if (v != null && !ignored(el)) return { v, t };
+    }
+    return null;
+  }
+
+  function itemprop(name) {
+    const el = document.querySelector(`[itemprop="${name}"]`);
+    if (!el) return null;
+    const v = el.getAttribute('content') || el.querySelector?.('[itemprop=name]')?.textContent || el.textContent;
+    return (v || '').replace(/\s+/g, ' ').trim().slice(0, 80) || null;
+  }
+
+  function bylineBrand() {
+    const t = (document.querySelector('#bylineInfo, [data-testid=brand-link], .product-brand, .product__vendor')?.innerText || '').trim();
+    const m = t.match(/^(?:Brand:\s*|Visit the\s+)?(.+?)(?:\s+Store)?$/i);
+    return m ? m[1].slice(0, 60) : null;
+  }
+
+  function urlSku() {
+    const u = location.pathname + location.search;
+    const m = u.match(/\/(?:dp|gp\/product)\/([A-Z0-9]{10})/) || u.match(/[?&]skuId=(\d+)/) || u.match(/\/(\d{6,8})\.p\b/)
+      || u.match(/\/ip\/(?:[^/]+\/)?(\d{5,})/) || u.match(/\/A-(\d{5,})/) || u.match(/\/itm\/(?:[^/]+\/)?(\d{9,})/);
+    return m ? m[1] : null;
+  }
+
+  // A spec row's value: "Model: WH-1000XM5", "Item model number WH1000XM5/B", "Brand: Sony", or a label and its value
+  // in separate cells (<th>Model</th><td>…</td>, <dt>Brand</dt><dd>…</dd>).
+  const SPEC = {
+    model: /\b(?:item\s+)?model(?:\s+(?:number|no\.?|#))?\s*[:#]?\s+([A-Z0-9][A-Z0-9._\/-]{2,30})\b/i,
+    brand: /\b[Bb]rand\s*[:#]?\s+([A-Z][\w&.'-]{1,30}(?:\s[A-Z][\w&.'-]{1,20})?)\b/,
+  };
+  function specValue(kind) {
+    const RE = SPEC[kind];
+    for (const el of findText(new RegExp(`\\b${kind}\\b`, 'i'), 6)) {
+      const row = el.closest('tr, li, dl, div') || el;
+      const m = (row.innerText || '').replace(/\s+/g, ' ').match(RE);
+      if (m && (kind !== 'model' || /\d/.test(m[1]))) return m[1];
+    }
+    return null;
+  }
+
   function readProduct() {
     const ld = readJsonLd() || {};
     const p = { ...ld };
-    p.name = p.name || meta('og:title') || document.querySelector('h1')?.innerText?.trim() || document.title;
+    p.name = p.name || document.querySelector('#productTitle')?.textContent?.trim() || meta('og:title')
+      || [...document.querySelectorAll('h1')].find((h) => !ignored(h))?.innerText?.trim() || document.title;
+    // Shops without JSON-LD (or with a thin one): brand, model and SKU from meta, microdata, the URL or a spec row.
+    p.brand = p.brand || meta('product:brand') || meta('og:brand') || itemprop('brand') || bylineBrand() || specValue('brand');
+    p.sku = p.sku || meta('product:retailer_item_id') || itemprop('sku') || urlSku();
+    p.model = p.model || itemprop('model') || itemprop('mpn') || specValue('model');
     if (p.price == null) {
       const m = meta('product:price:amount') || meta('og:price:amount') || document.querySelector('[itemprop=price]')?.getAttribute('content');
       if (m) { p.price = parseFloat(m); p.source = p.source || 'meta'; p.currency = p.currency || meta('product:price:currency'); }
     }
     if (p.price == null) {
+      // Amazon's buy box: the screen-reader copy of the price keeps the cents ("$15.99"); the visible one is split in spans.
+      const buy = buyBoxPrice(':not([data-a-strike])');
+      if (buy) { p.price = buy.v; p.currency = currencyOf(buy.t); p.source = 'buy-box'; }
+    }
+    if (p.was_price == null) {
+      const was = buyBoxPrice('[data-a-strike="true"]', '.basisPrice .a-offscreen');
+      if (was && (p.price == null || was.v > p.price)) p.was_price = was.v;
+    }
+    if (p.price == null) {
       // Visible fallback: the biggest price-looking text that is not struck through.
       let best = null;
-      document.querySelectorAll('[class*=price],[id*=price],[data-testid*=price],[itemprop=price]').forEach((el) => {
-        if (!visible(el) || el.closest('s,del,strike')) return;
+      document.querySelectorAll(`[class*=price],[id*=price],[data-testid*=price],[itemprop=price],${PRICE_SELECTORS}`).forEach((el) => {
+        if (!visible(el) || el.closest('s,del,strike,[data-a-strike="true"]') || ignored(el)) return;
         const t = el.innerText || '';
         const v = parseAmount(t);
         if (v == null) return;
@@ -143,11 +216,11 @@
   function claimedDiscounts() {
     const out = [];
     const els = new Set();
-    document.querySelectorAll('s,del,strike,[class*=strike],[class*=was-price],[class*=list-price],[class*=original-price],[class*=compare]')
-      .forEach((el) => { if (visible(el) && PRICE_RE.test(el.innerText || '')) els.add(el); });
-    findText(/\b(was|list price|reg\.?|regular|rrp|compare at)\b[^\n]{0,20}[$€£₹]\s?\d/i).forEach((el) => els.add(el));
+    document.querySelectorAll('s,del,strike,[class*=strike],[class*=was-price],[class*=list-price],[class*=original-price],[class*=compare],[data-a-strike="true"],.basisPrice')
+      .forEach((el) => { if (visible(el) && !ignored(el) && PRICE_RE.test(el.innerText || '')) els.add(el); });
+    findText(/\b(was|list price|typical price|reg\.?|regular|rrp|compare at)\b[^\n]{0,20}[$€£₹]\s?\d/i).forEach((el) => els.add(el));
     findText(/-\s?\d{1,2}\s?%|\b\d{1,2}\s?%\s?off\b|save\s+\d{1,2}\s?%/i).forEach((el) => els.add(el));
-    for (const el of [...els].slice(0, MAX_PER_TYPE)) {
+    for (const el of [...els].filter((e) => !PROMO_RE.test(block(e).innerText || '')).slice(0, MAX_PER_TYPE)) {
       const b = block(el);
       out.push({ type: 'claimed_discount', selector: cssPath(b), text: (b.innerText || '').replace(/\s+/g, ' ').trim().slice(0, 100), amount: parseAmount(el.innerText) });
     }
@@ -225,8 +298,18 @@
     return list.filter((s, i) => !els.some((other, j) => j !== i && other && els[i] && other !== els[i] && other.contains(els[i]) && list[j].type === s.type));
   }
 
+  // Links a careful shopper looks for: a returns/refund policy and a way to contact the store (for the Trust Agent).
+  function storeInfo() {
+    const links = [...document.querySelectorAll('a[href]')].filter((a) => !ignored(a));
+    const has = (re) => links.some((a) => re.test(`${a.textContent || ''} ${a.getAttribute('href') || ''}`));
+    const returns = has(/return|refund|exchange/i);
+    const contact = has(/contact|customer ?service|help ?cent(er|re)|support|\/help\b/i);
+    return [{ type: 'store_info', text: `returns link: ${returns ? 'yes' : 'no'} · contact link: ${contact ? 'yes' : 'no'}`,
+      detail: { returns, contact } }];
+  }
+
   async function readPage() {
-    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees()];
+    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo()];
     return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
   }
 
@@ -269,7 +352,7 @@
     const cands = new Set(findText(PRICE_RE, 40));
     document.querySelectorAll('[class*=price],[id*=price],[itemprop=price],[data-testid*=price]').forEach((el) => cands.add(el));
     for (const el of cands) {
-      if (!visible(el) || el.closest('s,del,strike') || !PRICE_RE.test(el.innerText || '')) continue;
+      if (!visible(el) || el.closest('s,del,strike') || ignored(el) || !PRICE_RE.test(el.innerText || '')) continue;
       const r = el.getBoundingClientRect();
       if (r.top + window.scrollY > limit) continue;
       const sizes = [el, ...el.querySelectorAll('*')].slice(0, 8).map((n) => parseFloat(getComputedStyle(n).fontSize) || 0);
@@ -278,7 +361,20 @@
     return false;
   }
 
-  function isProductPage() {
+  // Product URLs and controls of large shops that often ship no JSON-LD (read only: used to decide whether to check).
+  const STORE_PRODUCT_URL_RE = /\/dp\/[A-Z0-9]{10}|\/gp\/product\/[A-Z0-9]{10}|\/ip\/[^?#]+\/\d{5,}|\/ip\/\d{5,}|\/itm\/(?:[^/?#]+\/)?\d{9,}|\/site\/[^?#]+\.p(?:[/?]|$)|\/p\/[^?#]*\/-\/A-\d{5,}|\/products\/[^/?#]+\/?$/i;
+  const PRICE_SELECTORS = ['[itemprop=price]', '#corePrice_feature_div .a-price', '#corePrice_desktop .a-price',
+    '#corePriceDisplay_desktop_feature_div .a-price', '#priceblock_ourprice',
+    '[data-testid="customer-price"]', '.priceView-customer-price', '[data-test="product-price"]', '[itemprop=offers] [itemprop=price]',
+    '.x-price-primary', '[data-automation-id="product-price"]', '[itemprop="price"]', '.price-item--regular', '.product__price',
+    '.product-single__price'].join(',');
+  const ATC_SELECTORS = ['#add-to-cart-button', '#buy-now-button', '.add-to-cart-button', '[data-test="addToCartButton"]',
+    '[data-automation-id="atc"]', '#atcBtn_btn_1', 'form[action*="/cart/add"] [type=submit]', 'form[action*="/cart/add"] button',
+    'button[name="add"]', '[data-button-state="ADD_TO_CART"]'].join(',');
+  const anyVisible = (sel) => { try { return [...document.querySelectorAll(sel)].some(visible); } catch (_) { return false; } };
+
+  // { product: true|false, reason }: why this page was (or wasn't) treated as a product page. Logged once per URL.
+  function detectProduct() {
     const ld = ldTopLevel();
     const ldProducts = ld.filter((d) => ldType(d).some((t) => t === 'Product' || t === 'ProductGroup')).length;
     const itemList = ld.some((d) => ldType(d).includes('ItemList') && [].concat(d.itemListElement || []).length >= 3);
@@ -292,16 +388,38 @@
 
     // Several buy buttons on the first screen means a grid of products. "Related items" carousels sit lower on a
     // product page, so they don't count.
-    const listing = ldProducts > 1 || (itemList && ldProducts === 0) || microProducts > 2 || firstScreen.length >= 4;
-    if (listing) return false;
-    const structured = ldProducts === 1 || /^product/i.test(meta('og:type')) || !!meta('product:price:amount')
-      || !!meta('og:price:amount') || microProducts === 1 || (!!microOffer && microProducts <= 1);
-    if (structured) return true;
+    const no = (reason) => ({ product: false, reason });
+    const yes = (reason) => ({ product: true, reason });
+    if (ldProducts > 1) return no(`listing: ${ldProducts} JSON-LD products`);
+    if (itemList && ldProducts === 0) return no('listing: JSON-LD ItemList');
+    if (microProducts > 2) return no(`listing: ${microProducts} microdata products`);
+    const priceEl = anyVisible(PRICE_SELECTORS);
+    const atcEl = anyVisible(ATC_SELECTORS);
+    // A known product URL with a price or an add-to-cart control (before the button count: product pages of big shops
+    // show "Buy now", "Add to cart" and protection-plan buttons together on the first screen).
+    if (STORE_PRODUCT_URL_RE.test(location.pathname) && (priceEl || atcEl || buttons.length))
+      return yes(`store product URL + ${priceEl ? 'price element' : atcEl ? 'add-to-cart control' : 'buy button'}`);
+    if (firstScreen.length >= 4) return no(`listing: ${firstScreen.length} buy buttons on the first screen`);
+    if (ldProducts === 1) return yes('JSON-LD Product');
+    if (/product/i.test(meta('og:type'))) return yes(`og:type=${meta('og:type')}`);
+    if (meta('product:price:amount') || meta('og:price:amount')) return yes('product price meta');
+    if (microProducts === 1 || (!!microOffer && microProducts <= 1)) return yes('microdata Product/Offer');
     // Without structured data, the URL tells search, category and cart pages apart from a product.
     const listingPath = LISTING_PATH_RE.test(location.pathname) && !/\/products?\//i.test(location.pathname);
-    if (SEARCH_URL_RE.test(path) || listingPath || CART_URL_RE.test(location.pathname)) return false;
+    if (SEARCH_URL_RE.test(path)) return no('search results URL');
+    if (listingPath) return no('category URL');
+    if (CART_URL_RE.test(location.pathname)) return no('cart or checkout URL');
+    if (atcEl && priceEl) return yes('add-to-cart control + price element');
     const h1s = [...document.querySelectorAll('h1')].filter(visible);
-    return h1s.length === 1 && nearTop.length >= 1 && prominentPrice();
+    if (h1s.length === 1 && nearTop.length >= 1 && prominentPrice()) return yes('one heading + buy button + prominent price');
+    return no(h1s.length !== 1 ? `${h1s.length} main headings, no product data` : nearTop.length ? 'no prominent price' : 'no buy button');
+  }
+
+  let loggedUrl = null;
+  function logDecision(d) {
+    if (loggedUrl === location.href + d.reason) return;
+    loggedUrl = location.href + d.reason;
+    console.debug(`[Pricise] product page: ${d.product ? 'yes' : 'no'} (${d.reason})`); // DevTools > Console > Verbose
   }
 
   let checkedUrl = null;
@@ -310,7 +428,9 @@
     const url = location.href;
     const s = (await chrome.storage.local.get('pricise:settings'))['pricise:settings'] || {};
     if ((s.neverSites || []).includes(location.host)) return;
-    if (!isProductPage()) {
+    const d = detectProduct();
+    logDecision(d);
+    if (!d.product) {
       // Some shops render the product after load: look once more before giving up.
       if (retries > 0) setTimeout(() => { if (location.href === url) autoCheck(retries - 1); }, 2500);
       return;
@@ -344,6 +464,7 @@
   };
   watchTitle();
   if (document.head) new MutationObserver(() => { watchTitle(); onMaybeNewUrl(); }).observe(document.head, { childList: true });
+  setInterval(onMaybeNewUrl, 1500); // pushState without a title change (some Shopify themes, Walmart variants)
 
   // ---------------------------------------------------------------- outlines on the page
   let marks = [];
@@ -394,6 +515,7 @@
   // ---------------------------------------------------------------- messages from the side panel
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type === 'pricise:read') { readPage().then(sendResponse); return true; }
+    if (msg?.type === 'pricise:detect') { sendResponse(detectProduct()); }
     if (msg?.type === 'pricise:highlight') { sendResponse({ ok: true, count: highlight(msg.marks || []) }); }
     if (msg?.type === 'pricise:clear') { clearMarks(); sendResponse({ ok: true }); }
     if (msg?.type === 'pricise:untick') {

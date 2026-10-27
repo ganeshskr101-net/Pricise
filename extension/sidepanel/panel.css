@@ -24,14 +24,14 @@ main { display: flex; flex-direction: column; background: var(--surface); }
 .vt { font-size: 22px; font-weight: 700; letter-spacing: -.4px; margin: 4px 0 2px; line-height: 1.2; }
 .verdict.bad .vt { color: var(--bad); } .verdict.caution .vt { color: var(--caution); } .verdict.good .vt { color: var(--good); }
 .vs { color: var(--ink-2); font-size: 13px; }
-.stats { display: grid; grid-template-columns: 1.3fr 1fr 1fr; margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.stats { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, .7fr) minmax(0, 1.1fr); margin-top: 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .stat { padding: 9px 11px; min-width: 0; }
 .stat + .stat { border-left: 1px solid var(--line); }
 .stat .k { font-size: 12px; color: var(--ink-3); }
 .stat .v { font-size: 17px; font-weight: 650; letter-spacing: -.2px; margin-top: 1px; white-space: nowrap; }
 .stat .v small { font-size: 12px; font-weight: 500; color: var(--ink-3); text-decoration: line-through; margin-left: 4px; }
 .stat .v.bad { color: var(--bad); } .stat .v.caution { color: var(--caution); } .stat .v.good { color: var(--good); }
-.stat .v.unknown { color: var(--ink-3); font-size: 14px; padding-top: 3px; }
+.stat .v.unknown { color: var(--ink-3); font-size: 13px; padding-top: 4px; } /* "Unknown", "Not checked" fit at 360px */
 .alt { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
 .alt .ic { width: 28px; height: 28px; border-radius: 8px; background: var(--good-bg); color: var(--good); display: flex; align-items: center; justify-content: center; flex: none; }
 .alt .tx { flex: 1; min-width: 0; }
@@ -111,3 +111,8 @@ main { display: flex; flex-direction: column; background: var(--surface); }
 .ft .lock { display: flex; } .ft .lock svg.i { width: 13px; height: 13px; }
 .ft-links { margin-left: auto; display: flex; gap: 12px; }
 .ft a { color: var(--brand-2); font-weight: 500; }
+
+/* Compare prices: small store links beside the button, and links under a chat answer. */
+.cmp { font-size: 12px; color: var(--ink-3); align-self: center; }
+.cmp a, .msg .links a { color: var(--brand-2); }
+.msg .links { display: block; margin-top: 6px; font-size: 12.5px; }

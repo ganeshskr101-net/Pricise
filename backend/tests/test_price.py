@@ -72,7 +72,8 @@ def test_real_site_gets_one_careful_unverified_finding():
     res = price.assess("c1", url, PageFacts(url=url, host="shop.example", product={"name": "Headphones", "price": 199.0}))
     [f] = res.findings
     assert (f.agent, f.status, f.summary) == ("price", "unverified",
-                                              "Other-store comparison covers our demo catalog only, so other stores weren't checked for this page.")
+                                              "This page shows no model number, so prices on other stores can't be "
+                                              "matched. Use Compare prices to search other stores.")
     assert res.best_price.status == "unknown" and res.alt is None
 
 
@@ -150,12 +151,12 @@ def test_backend_demo_clock_day_9(real_price):
     assert events[-1]["card"]["best_price"]["total"] == 209
 
 
-def test_backend_real_page_says_demo_catalog_only(real_price):
+def test_backend_real_page_without_other_prices_says_so(real_price):
     page = {"url": "https://shop.example/x", "host": "shop.example", "product": {"name": "Ticket", "price": 89.0}, "signals": []}
     _, events = _check(page["url"], page)
     price_rows = [e["finding"] for e in events if e["kind"] == "finding" and e["finding"]["agent"] == "price"]
-    assert [f["status"] for f in price_rows] == ["unverified"] and "demo catalog only" in price_rows[0]["summary"]
-    assert events[-1]["card"]["best_price"]["headline"] == "Demo catalog only"
+    assert [f["status"] for f in price_rows] == ["unverified"] and "Compare prices" in price_rows[0]["summary"]
+    assert events[-1]["card"]["best_price"]["headline"] == "Compare"
 
 
 def test_backend_stub_mode_keeps_the_scripted_demo():

@@ -83,7 +83,7 @@ export function summarize(card, findings = [], page = null) {
   const m = card?.subtitle?.match(new RegExp(`real total \\$${AMOUNT}(?:, not \\$${AMOUNT})?`, 'i'));
   const listed = page?.product?.price ?? toNum(m?.[2]);
   const realTotal = m ? toNum(m[1]) : listed;
-  const risk = { bad: ['High', 'bad'], caution: ['Medium', 'caution'], good: ['Low', 'good'] }[card?.safe?.status] || ['Not checked', 'unknown'];
+  const risk = { bad: ['High', 'bad'], caution: ['Medium', 'caution'], good: ['Low', 'good'] }[card?.safe?.status] || ['Unknown', 'unknown'];
   const bp = card?.best_price;
   let safer = null;
   if (card?.alt?.store) safer = { store: card.alt.store, total: card.alt.total, url: card.alt.url };
@@ -135,9 +135,54 @@ export function quickVerdict(card, findings = [], page = null) {
   return { tone: 'good', title: 'No tricks spotted', lines };
 }
 
-// Friendly text when a chat question fails (the API client aborts after 8 s).
+// ------------------------------------------------------------------ compare on other stores (user-initiated, no scraping)
+// Search links built only from the page's own product fields. The user clicks one; Pricise never loads these pages itself.
+// Same rules as backend/compare.py (the chat's links), so the card, the panel and the chat search for the same thing.
+export const COMPARE_SITES = [
+  ['Google Shopping', 'https://www.google.com/search?tbm=shop&q='],
+  ['Best Buy', 'https://www.bestbuy.com/site/searchpage.jsp?st='],
+  ['Walmart', 'https://www.walmart.com/search?q='],
+  ['eBay', 'https://www.ebay.com/sch/i.html?_nkw='],
+];
+
+export function compareQuery(product) {
+  const p = product || {};
+  const clean = (s) => String(s || '').replace(/\s+/g, ' ').trim();
+  const brand = clean(p.brand);
+  const model = clean(p.model);
+  if (model) return (brand && !model.toLowerCase().includes(brand.toLowerCase()) ? `${brand} ${model}` : model).slice(0, 100);
+  return clean(p.name).split(/\s[|–—-]\s/)[0].slice(0, 100); // "Name | Store" -> "Name"
+}
+
+export function compareLinks(product) {
+  const q = compareQuery(product);
+  return q ? COMPARE_SITES.map(([label, base]) => ({ label, url: base + encodeURIComponent(q) })) : [];
+}
+
+export const isCompareUrl = (url) => COMPARE_SITES.some(([, base]) => String(url || '').startsWith(base));
+
+// ------------------------------------------------------------------ the quick card, in every state
+// { tone, title, lines, state }: state "checking" (no verdict yet), "error", or "final" (a verdict; it may still firm up).
+// The card shows from the moment a product page is found, so it always has something true to say.
+export function cardView({ card = null, findings = [], page = null, error = null, errorKind = null } = {}) {
+  if (card) return { ...quickVerdict(card, findings, page), state: 'final' };
+  if (error) {
+    const down = errorKind === 'backend';
+    return { tone: 'unknown', state: 'error', title: down ? "Pricise backend isn't running" : "Couldn't check this page",
+      lines: [[[down ? 'Start it on this laptop (scripts/run.sh), then reload the page.' : 'Reload the page to try again.']]] };
+  }
+  const done = findings.filter((f) => f.model !== PENDING);
+  const tricks = new Set(done.filter((f) => TRICK_TYPES.has(f.type) && f.status === 'confirmed').map((f) => f.type)).size;
+  const price = page?.product?.price;
+  const lines = [[[`Reading prices, fees and the store${price != null ? ` · listed ${money(price)}` : ''}`]]];
+  if (tricks) lines.push([[`${tricks} trick${tricks === 1 ? '' : 's'} found so far`, true]]);
+  else if (done.length) lines.push([[`${done.length} check${done.length === 1 ? '' : 's'} done so far`]]);
+  return { tone: tricks ? 'bad' : 'unknown', state: 'checking', title: 'Checking this page…', lines };
+}
+
+// Friendly text when a chat question fails (the API client aborts a chat call after 35 s).
 export function chatErrorText(err) {
-  if (err?.name === 'AbortError') return 'That took too long (over 8 seconds). Please try again.';
+  if (err?.name === 'AbortError') return 'That took too long. Please try again.';
   if (err instanceof TypeError) return "I can't reach Pricise on this laptop right now. Is the backend running?";
   return "Sorry, I couldn't answer that just now. Please try again.";
 }

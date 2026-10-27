@@ -1,7 +1,7 @@
 // Pricise side panel: reads the current page, asks the local backend to check it, and fills in live as findings stream in.
 // Layout follows docs/mockups/ui-v2/panel.html: verdict block, three question sections, "Checked by", chat, footer.
 import { api, money, esc } from '../shared/api.js';
-import { chatErrorText, followCheck, getSettings, money2, PENDING, saveSettings, summarize, TRICK_TYPES } from '../shared/check.js';
+import { chatErrorText, compareLinks, followCheck, getSettings, isCompareUrl, money2, PENDING, saveSettings, summarize, TRICK_TYPES } from '../shared/check.js';
 import { ICONS } from '../shared/icons.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -162,6 +162,7 @@ function render() {
     actions: card ? [
       bp?.url ? `<button class="btn" data-act="go" data-url="${esc(bp.url)}">Go to ${esc(bp.store)}</button>` : '',
       `<button class="btn" data-act="watch" ${state.watching ? 'disabled' : ''}>${state.watching ? `${ICONS.check}Watching` : `${ICONS.star}Watch price`}</button>`,
+      compareHtml(),
       bp?.url ? '' : `<button class="btn" data-act="evidence" data-view="stores">See why</button>`,
     ].join('') : '',
   }));
@@ -170,6 +171,15 @@ function render() {
   renderMeta();
   wire();
   updateAsk();
+}
+
+// "Compare prices": Google Shopping for this exact item, plus small links to the same search on other stores (new tabs).
+function compareHtml() {
+  const links = compareLinks(state.page?.product);
+  if (!links.length) return '';
+  const [main, ...rest] = links;
+  return `<button class="btn" data-act="compare" data-url="${esc(main.url)}">Compare prices</button>`
+    + `<span class="cmp">${rest.map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`).join(' · ')}</span>`;
 }
 
 function verdictHtml(card) {
@@ -304,7 +314,9 @@ function renderThread() {
   $('#ask-thread').innerHTML = (state?.chat || []).map((m, i) => {
     const cls = (m.role === 'user' ? 'user' : `bot${m.pending ? ' pending' : ''}${m.error ? ' error' : ''}`) + (i >= seen ? ' new' : '');
     const src = m.sources?.length ? `<span class="src">From: ${esc(m.sources.map((t) => t.replace(/_/g, ' ')).join(', '))}</span>` : '';
-    return `<div class="msg ${cls}">${esc(m.text)}${src}</div>`;
+    const links = (m.links || []).filter((l) => isCompareUrl(l.url))
+      .map((l) => `<a href="${esc(l.url)}" target="_blank" rel="noopener noreferrer">${esc(l.label)}</a>`).join(' · ');
+    return `<div class="msg ${cls}">${esc(m.text)}${links ? `<span class="links">${links}</span>` : ''}${src}</div>`;
   }).join('');
   if (state) state.chatShown = state.chat.length;
   updateAsk();
@@ -323,7 +335,7 @@ async function ask(text) {
   $('#ask').scrollIntoView({ block: 'end', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
   try {
     const res = await api.chat(mine.checkId, question, history);
-    Object.assign(reply, { text: res.answer, sources: res.sources || [], pending: false });
+    Object.assign(reply, { text: res.answer, sources: res.sources || [], links: res.links || [], pending: false });
   } catch (err) {
     Object.assign(reply, { text: chatErrorText(err), pending: false, error: true });
   }
@@ -363,6 +375,8 @@ async function onAction(e) {
   if (act === 'evidence') {
     const url = chrome.runtime.getURL(`evidence/index.html?check=${state.checkId}${el.dataset.view ? '#' + el.dataset.view : ''}`);
     chrome.tabs.create({ url });
+  } else if (act === 'compare') {
+    if (isCompareUrl(el.dataset.url)) chrome.tabs.create({ url: el.dataset.url, index: state.tab.index + 1 });
   } else if (act === 'go') {
     chrome.tabs.update(state.tab.id, { url: el.dataset.url });
   } else if (act === 'untick') {

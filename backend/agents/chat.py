@@ -33,6 +33,7 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str
     sources: list[str] = Field(default_factory=list)  # finding types the answer used, e.g. ["fake_discount"]
+    links: list[dict] = Field(default_factory=list)  # [{"label", "url"}]: compare-on-other-stores searches (backend/compare.py)
 
 
 IGNORED = "This page contains text trying to instruct me; I ignored it."
@@ -106,6 +107,34 @@ def _real_total(check: dict) -> tuple[Optional[float], Optional[float]]:
     return total, listed
 
 
+def cheaper_answer(check: dict) -> ChatResponse:
+    """"Where can I get this cheaper?": the Price Agent's best safe price and the prices the shopper saw on other stores,
+    always with compare-search links. Never only "I can't verify that yet"."""
+    from backend.compare import compare_links
+    from backend.contracts import PageProduct
+
+    product = ((check.get("page") or {}).get("product")) or {}
+    links = compare_links(PageProduct(**{k: v for k, v in product.items() if k in PageProduct.model_fields}))
+    parts, sources = [], []
+    best = [f for f in _findings(check, "best_price", statuses=("confirmed",)) if f.get("agent") in ("price", "skeptic")]
+    alt = (check.get("final_card") or {}).get("alt") or {}
+    if best:
+        parts.append(_sentences(best[0]["summary"].split(" Skeptic:")[0], 1))
+        sources.append("best_price")
+    elif alt.get("store"):
+        parts.append(f"{alt['store']} has it for {_money(alt.get('total'))}.")
+        sources.append("best_price")
+    seen = _findings(check, "seen_elsewhere", statuses=("confirmed",))
+    if seen:
+        parts.append(_sentences(seen[0]["summary"], 2))
+        sources.append("seen_elsewhere")
+    if not parts:
+        parts.append("I haven't seen this item for less at another store yet.")
+    if links:
+        parts.append("Compare prices on other stores with the links below.")
+    return ChatResponse(answer=" ".join(parts), sources=sources, links=links)
+
+
 def rule_answer(check: dict, question: str) -> ChatResponse:
     kind = intent(question)
     if kind == "discount":
@@ -146,15 +175,7 @@ def rule_answer(check: dict, question: str) -> ChatResponse:
                                    "Fees can still appear later in checkout.", sources=[])
 
     if kind == "cheaper":
-        best = _findings(check, "best_price", statuses=("confirmed",))
-        if best:
-            return ChatResponse(answer=_sentences(best[0]["summary"], 2), sources=["best_price"])
-        card = check.get("final_card") or {}
-        alt = card.get("alt") or {}
-        if alt.get("store"):
-            return ChatResponse(answer=f"{alt['store']} has it for {_money(alt.get('total'))}.", sources=["best_price"])
-        return ChatResponse(answer=f"{CANT}: the other-store price search isn't connected for this page.",
-                            sources=[f["type"] for f in _findings(check, "not_connected")][:1])
+        return cheaper_answer(check)
 
     if kind == "timer":
         reset = _findings(check, "resetting_timer", statuses=("confirmed",))
@@ -237,6 +258,8 @@ def answer(check: dict, question: str, history: Optional[list[ChatTurn]] = None)
     """Blocking (up to CHAT_TIMEOUT_S per attempt, one retry); call it with asyncio.to_thread from async code."""
     question = " ".join(question.split())[:300]
     rules = rule_answer(check, question)
+    if intent(question) == "cheaper":  # facts from the Price Agent + links, no model wording: prices must be exact
+        return _with_injection_note(check, rules)
     reply = meterless.complete(build_prompt(check, question, history or []), "fast", max_tokens=160,
                                timeout=CHAT_TIMEOUT_S)
     res = _parse_model(reply, check) if reply else None
@@ -244,6 +267,10 @@ def answer(check: dict, question: str, history: Optional[list[ChatTurn]] = None)
         res = rules
     elif not res.sources:
         res.sources = rules.sources  # the model didn't cite: use what the rules would have cited
+    return _with_injection_note(check, res)
+
+
+def _with_injection_note(check: dict, res: ChatResponse) -> ChatResponse:
     if has_injection(check):
         res.answer = f"{IGNORED} {res.answer}"
         res.sources = list(dict.fromkeys([*res.sources, "page_text"]))

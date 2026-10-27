@@ -1,23 +1,32 @@
 #!/usr/bin/env bash
 # Starts the Pricise backend on http://localhost:8787 (the port the extension calls).
 # Usage: scripts/run.sh [--real | --stub] [--reload]
-#   --real    AGENT_DEAL=real: the real Deal Agent (hidden browser on Store Lab pages)
-#   --stub    AGENT_DEAL=stub: the scripted demo (the default when .env doesn't say otherwise)
+#   (default) everything real: AGENT_DEAL/TRUST/PRICE=real, AGENT_ORCH=on, DATA_SOURCE=zetaris (falls back to the fixture
+#             data if Zetaris doesn't answer). A switch already set in your shell wins; these defaults beat .env.
+#   --real    same as the default (kept for old notes)
+#   --stub    the scripted demo: every agent stub, AGENT_ORCH=off, DATA_SOURCE=fixture
 #   --reload  restart automatically when backend code changes
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 EXTRA=()
+MODE=real
 for arg in "$@"; do
   case "$arg" in
-    --real) export AGENT_DEAL=real ;;
-    --stub) export AGENT_DEAL=stub ;;
+    --real) MODE=real ;;
+    --stub) MODE=stub ;;
     --reload) EXTRA+=(--reload) ;;
-    -h|--help) sed -n '2,6p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
     *) echo "Unknown option: $arg (try --help)"; exit 2 ;;
   esac
 done
 [ -x .venv/bin/python ] || { echo "Run scripts/setup.sh first."; exit 1; }
+if [ "$MODE" = stub ]; then
+  export AGENT_DEAL=stub AGENT_TRUST=stub AGENT_PRICE=stub AGENT_ORCH=off DATA_SOURCE=fixture
+else
+  export AGENT_DEAL="${AGENT_DEAL:-real}" AGENT_TRUST="${AGENT_TRUST:-real}" AGENT_PRICE="${AGENT_PRICE:-real}" \
+         AGENT_ORCH="${AGENT_ORCH:-on}" DATA_SOURCE="${DATA_SOURCE:-zetaris}"
+fi
 
 # The engine sidecar on 127.0.0.1:8788 (same as: cd backend/engines/world_model_ts && npx tsx server.ts), started here
 # and stopped when the backend stops. Optional: without Node 20+ the backend works on its own.
@@ -38,5 +47,7 @@ else
   echo "Engine sidecar not started (needs Node 20+ and scripts/setup.sh); the backend works without it."
 fi
 
-echo "Pricise backend on http://localhost:8787  (AGENT_DEAL=${AGENT_DEAL:-from .env, default stub})"
+echo "Pricise backend on http://localhost:8787"
+echo "  AGENT_DEAL=$AGENT_DEAL AGENT_TRUST=$AGENT_TRUST AGENT_PRICE=$AGENT_PRICE AGENT_ORCH=$AGENT_ORCH DATA_SOURCE=$DATA_SOURCE"
+echo "  (check: curl -s localhost:8787/health)"
 .venv/bin/python -m uvicorn backend.stub_server:app --port 8787 ${EXTRA[@]+"${EXTRA[@]}"}

@@ -9,11 +9,15 @@ Every function raises ZetarisError / PgError on failure; callers decide the fall
 from __future__ import annotations
 
 import json
+import logging
+import re
 from typing import Optional
+from urllib.parse import urlsplit, urlunsplit
 
 from backend.contracts import Finding, WishlistItem
 from backend.data import catalog, pg, zetaris
 
+log = logging.getLogger("pricise.data")
 MONEY = ("price", "shipping", "fees", "card_offer", "true_total")
 WISHLIST_COLS = ("id", "name", "url", "rule", "target", "best_price", "best_store", "status", "tone")
 
@@ -115,3 +119,79 @@ def count_findings(check_id: str) -> int:
     ds = zetaris.datasource()
     rows = zetaris.run_sql(f"SELECT COUNT(*) AS n FROM {ds}.findings WHERE check_id = {zetaris.lit(check_id)}")
     return int(rows[0]["n"]) if rows else 0
+
+
+# ----------------------------------------------------------------------------- price observations (real store pages)
+# Every real product page Pricise checks leaves one row: host, brand, model/sku, name, price, condition, url (no query
+# string), seen_at. Nothing personal. Same url + price again within DEDUPE_S is not saved twice. Writes go to the Pricise
+# Postgres (DATA_SOURCE=zetaris) or to memory (fixture mode); reads go through Zetaris, or straight to that Postgres if the
+# price_observations table isn't registered in Zetaris yet (logged), or memory.
+
+OBS_COLS = ("host", "brand", "model", "model_key", "sku", "name", "price", "currency", "condition", "safe", "url", "seen_at")
+DEDUPE_S = 3600
+OBS_MEMORY: list[dict] = []
+_REFURB_RE = re.compile(r"\b(refurbished|renewed|reconditioned)\b", re.I)
+_USED_RE = re.compile(r"\b(used|pre-?owned|open[- ]box|second[- ]hand)\b", re.I)
+
+
+def clean_url(url: str) -> str:
+    """The page URL without query string or fragment (they can carry session, tracking or account ids)."""
+    s = urlsplit(url or "")
+    return urlunsplit((s.scheme, s.netloc, s.path, "", ""))
+
+
+def condition_of(name: Optional[str]) -> str:
+    return "refurbished" if _REFURB_RE.search(name or "") else "used" if _USED_RE.search(name or "") else "new"
+
+
+def save_observation(obs: dict) -> bool:
+    """Store one observation. False = a duplicate (same url and price within the hour) or nothing to store."""
+    obs = {k: obs.get(k) for k in OBS_COLS}
+    if not obs["host"] or obs["price"] is None or not obs["url"] or not (obs["model_key"] or obs["sku"] or obs["name"]):
+        return False
+    since = float(obs["seen_at"]) - DEDUPE_S
+    if not zetaris.use_zetaris():
+        if any(o["url"] == obs["url"] and o["price"] == obs["price"] and o["seen_at"] > since for o in OBS_MEMORY):
+            return False
+        OBS_MEMORY.append(obs)
+        return True
+    with pg.connect() as conn, conn.cursor() as cur:
+        cur.execute("SELECT 1 FROM price_observations WHERE url = %s AND price = %s AND seen_at > %s LIMIT 1",
+                    [obs["url"], obs["price"], since])
+        if cur.fetchone():
+            return False
+        cur.execute(f"INSERT INTO price_observations ({', '.join(OBS_COLS)}) VALUES ({', '.join(['%s'] * len(OBS_COLS))})",
+                    [obs[c] for c in OBS_COLS])
+    return True
+
+
+def observations_sql(model_key: str, condition: str, host: str) -> str:
+    ds = zetaris.datasource()
+    return (f"SELECT host, brand, model, name, price, currency, condition, safe, url, seen_at FROM {ds}.price_observations "
+            f"WHERE model_key = {zetaris.lit(model_key)} AND condition = {zetaris.lit(condition)} "
+            f"AND host <> {zetaris.lit(host)} ORDER BY price, seen_at DESC LIMIT 20")
+
+
+def _obs_row(r: dict) -> dict:
+    return {**r, "price": _num(r.get("price")), "seen_at": float(r.get("seen_at") or 0)}
+
+
+def other_observations(model_key: str, condition: str, host: str) -> tuple[list[dict], Optional[str], str]:
+    """(rows cheapest first, sql or None, source) for the same model and condition seen on OTHER hosts, never an unsafe one."""
+    if not model_key:
+        return [], None, "none"
+    if not zetaris.use_zetaris():
+        rows = [o for o in OBS_MEMORY if o["model_key"] == model_key and o["condition"] == condition and o["host"] != host]
+        return sorted(rows, key=lambda o: (o["price"], -o["seen_at"])), None, "memory"
+    sql = observations_sql(model_key, condition, host)
+    try:
+        rows, source = zetaris.run_sql(sql), "zetaris"
+    except zetaris.ZetarisError as e:  # e.g. price_observations not registered in Zetaris yet
+        log.warning("price observations from Zetaris failed, reading the Pricise Postgres directly: %s", e)
+        with pg.connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT host, brand, model, name, price, currency, condition, safe, url, seen_at "
+                        "FROM price_observations WHERE model_key = %s AND condition = %s AND host <> %s "
+                        "ORDER BY price, seen_at DESC LIMIT 20", [model_key, condition, host])
+            names = [d.name for d in cur.description]
+            rows, source = [dict(zip(names, r)) for r in cur.fetchall()], "postgres"
+    return [_obs_row(r) for r in rows if r.get("safe") != "bad"], sql, source

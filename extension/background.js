@@ -1,6 +1,6 @@
 // Pricise service worker: runs every page check (one per tab + URL, shared by the side panel and the quick verdict card),
 // keeps the toolbar badge, opens the side panel, shows desktop notifications.
-import { getSettings, PENDING, quickVerdict, runCheck, upsertFinding } from './shared/check.js';
+import { cardView, compareLinks, getSettings, isCompareUrl, PENDING, runCheck, upsertFinding } from './shared/check.js';
 import { ICONS } from './shared/icons.js';
 
 const checks = new Map(); // tabId -> { url, page, checkId, findings, card, error, done, wantCard }
@@ -26,6 +26,10 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
     // Called straight from the card's click so Chrome can see the user gesture; if it still refuses, the card says so.
     chrome.sidePanel.open({ tabId: sender.tab.id }).then(() => sendResponse({ ok: true }), () => sendResponse({ ok: false }));
     return true;
+  } else if (msg?.type === 'pricise:open-url' && sender.tab) {
+    // "Compare prices" on the card: only our own search links, opened as a new tab next to the shop (user click only).
+    if (isCompareUrl(msg.url)) chrome.tabs.create({ url: msg.url, openerTabId: sender.tab.id, index: sender.tab.index + 1 });
+    sendResponse({ ok: isCompareUrl(msg.url) });
   } else if (msg?.type === 'notify') {
     chrome.notifications.create(msg.id || `pricise-${Date.now()}`, {
       type: 'basic',
@@ -81,7 +85,13 @@ function start(tabId, url, page, wantCard, fresh = false) {
   runCheck(url, page, {
     fresh,
     onStart: (id) => { c.checkId = id; },
-    onFinding: (f) => { if (checks.get(tabId) !== c) return; c.findings = upsertFinding(c.findings, f); c.seq += 1; broadcast(tabId, c); },
+    onFinding: (f) => {
+      if (checks.get(tabId) !== c) return;
+      c.findings = upsertFinding(c.findings, f);
+      c.seq += 1;
+      broadcast(tabId, c);
+      if (c.wantCard && !c.card) showCard(tabId, c); // "Checking this page…" counts findings as they land
+    },
     onCard: (card) => {
       // Each verdict firms up the last one. "Still checking" rows stay only while the verdict still lists them as pending.
       if (checks.get(tabId) !== c) return;
@@ -94,7 +104,10 @@ function start(tabId, url, page, wantCard, fresh = false) {
       if (c.wantCard) showCard(tabId, c);
     },
   }).catch((err) => {
-    c.error = err?.message || String(err); // backend not running: the panel says so; the page shows nothing
+    c.error = err?.message || String(err);
+    // No check id yet: /health or POST /check never answered, so the backend isn't running (or not reachable).
+    c.errorKind = !c.checkId && (err instanceof TypeError || err?.name === 'AbortError') ? 'backend' : 'check';
+    if (c.wantCard && checks.get(tabId) === c && !c.card) showCard(tabId, c); // the card says so instead of vanishing
   }).finally(() => {
     c.done = true;
     c.seq += 1;
@@ -102,6 +115,7 @@ function start(tabId, url, page, wantCard, fresh = false) {
     running -= 1;
     if (!running) { clearInterval(keepAlive); keepAlive = null; }
   });
+  if (wantCard) showCard(tabId, c); // straight away, in the "Checking this page…" state
   return c;
 }
 
@@ -111,7 +125,9 @@ async function autoCheck(tab, page) {
   const cur = checks.get(tab.id);
   if (cur && cur.url === tab.url && !cur.error) {
     cur.wantCard = true;
-    if (cur.card) { setBadge(tab.id, cur.card.tricks || 0); cur.cardSent = false; showCard(tab.id, cur); } // a reload: new page view
+    if (cur.card) setBadge(tab.id, cur.card.tricks || 0);
+    cur.cardSent = false; // a reload: a new page view gets the card again, in whatever state the check is in
+    showCard(tab.id, cur);
     return;
   }
   start(tab.id, tab.url, page, true);
@@ -134,10 +150,12 @@ async function showCard(tabId, c) {
   if (!enabled || neverSites.includes(host)) return;
   const tab = await chrome.tabs.get(tabId).catch(() => null);
   if (!tab || tab.url !== c.url) return; // the user has moved on
-  // Every checked product page gets a card: red (tricks), amber (claims we can't verify yet) or green (nothing found).
-  const verdict = quickVerdict(c.card, c.findings, c.page);
+  // Every product page gets a card from the moment it is found: "Checking this page…", then red (tricks), amber (claims we
+  // can't verify yet) or green (nothing found), or a plain error ("backend isn't running", "couldn't check").
+  const verdict = cardView(c);
   // update: a firmer verdict for the card already shown on this page view (the card decides whether to show it).
-  const data = { ...verdict, checkId: c.checkId, host, update: c.cardSent, logo: chrome.runtime.getURL('icons/logo.svg'), close: ICONS.close, css: await loadCardCss() };
+  const data = { ...verdict, checkId: c.checkId, host, update: c.cardSent, compare: compareLinks(c.page?.product),
+    logo: chrome.runtime.getURL('icons/logo.svg'), close: ICONS.close, css: await loadCardCss() };
   c.cardSent = true;
   await chrome.tabs.sendMessage(tabId, { type: 'pricise:quick-card', data }).catch(() => {}); // every page load; × closes it for this view
 }

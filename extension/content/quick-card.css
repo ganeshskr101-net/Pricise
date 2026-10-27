@@ -38,3 +38,15 @@
 .qnote { padding: 0 15px 10px; font-size: 12px; color: var(--ink-2); }
 .qnote[hidden] { display: none; }
 :focus-visible { outline: 2px solid var(--brand-2); outline-offset: 2px; }
+
+/* "Checking this page…": grey edge pulses gently until the first verdict. */
+.qc.checking::before { animation: qc-pulse 1.4s ease-in-out infinite; }
+@keyframes qc-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .qc.checking::before { animation: none; } }
+
+/* Compare prices: one link-style action plus small store links, same weight as the footer links. */
+.qcmp { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; margin-top: 8px; font-size: 12.5px; }
+.qcmp button { font: inherit; border: 0; background: none; padding: 0; cursor: pointer; }
+.qcmp .main { color: var(--brand-2); font-weight: 600; }
+.qcmp .alt { color: var(--ink-3); font-size: 12px; }
+.qcmp button:hover { text-decoration: underline; }

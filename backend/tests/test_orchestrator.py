@@ -321,5 +321,6 @@ def test_trust_failure_becomes_agent_failed_and_check_completes(monkeypatch, tmp
     assert _rows(events, "trust") == [("agent_failed", "unverified")]
     failed = next(e["finding"] for e in events if e["kind"] == "finding" and e["finding"]["type"] == "agent_failed")
     assert "store down" not in failed["summary"] and "RuntimeError" in failed["summary"]
-    assert events[-1]["kind"] == "final_card" and events[-1]["card"]["safe"]["headline"] == "Not fully checked"
+    # Trust is real but failed: the placeholder says "Unknown" (never the stub's "not connected" wording)
+    assert events[-1]["kind"] == "final_card" and events[-1]["card"]["safe"]["headline"] == "Unknown"
     assert (tmp_path / f"{cid}.json").exists()

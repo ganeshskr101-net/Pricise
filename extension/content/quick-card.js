@@ -1,4 +1,5 @@
-// Pricise quick card: a small card at the top-right of every checked product page, red / amber / green by result.
+// Pricise quick card: a small card at the top-right of every product page, from "Checking this page…" to red / amber /
+// green, updated live as findings arrive. It stays until the user closes it (×) for this page view.
 // It sits in a closed Shadow DOM, so the store's CSS can't change it and its CSS can't change the store.
 // It never clicks or changes anything on the page. Questions about the page are asked in the side panel.
 (() => {
@@ -6,8 +7,6 @@
   window.__priciseCard = true;
 
   const SETTINGS_KEY = 'pricise:settings'; // same key as extension/shared/check.js
-  const HIDE_AFTER_MS = 8000;
-  const SEVERITY = { good: 0, unknown: 1, caution: 2, bad: 3 };
   let host = null;
   let view = { dismissed: false, tone: null, refresh: null }; // this page view: closed with ×? last tone shown? live updater
 
@@ -25,12 +24,12 @@
     return n;
   }
 
-  // A firmer verdict for this page view (proof from the run-ahead or timer test landed). Update the visible card in place;
-  // if it was closed with ×, leave it closed; if it hid itself, bring it back only when the verdict got worse.
+  // A newer state for this page view (a finding landed, the verdict firmed up). Update the visible card in place; if it was
+  // closed with ×, leave it closed.
   function update(data) {
     if (view.dismissed) return;
-    if (host && view.refresh) return view.refresh(data);
-    if (view.tone == null || (SEVERITY[data.tone] ?? 1) > (SEVERITY[view.tone] ?? 1)) show(data);
+    if (host && host.isConnected && view.refresh) return view.refresh(data);
+    show(data);
   }
 
   function show(data) {
@@ -57,12 +56,26 @@
     const body = el('div', 'qb');
     const fill = (d) => {
       const tone = ['good', 'bad', 'caution'].includes(d.tone) ? d.tone : 'unknown';
-      card.className = `qc ${tone}`;
+      card.className = `qc ${tone}${d.state === 'checking' ? ' checking' : ''}`;
+      card.setAttribute('aria-busy', d.state === 'checking' ? 'true' : 'false');
       view.tone = tone;
       body.replaceChildren(el('div', 'qt', d.title || 'Checked'));
       for (const line of (d.lines || []).slice(0, 2)) {
         const row = el('div', 'qs');
         for (const [text, bold] of line) row.appendChild(bold ? el('b', 'num', text) : document.createTextNode(text));
+        body.appendChild(row);
+      }
+      // Compare prices: search links for this exact item (built from the page's own brand + model). Opens a new tab.
+      const links = (d.compare || []).filter((x) => x && x.url);
+      if (links.length) {
+        const row = el('div', 'qcmp');
+        links.forEach((x, i) => {
+          const b = el('button', i === 0 ? 'main' : 'alt', i === 0 ? 'Compare prices' : x.label);
+          b.type = 'button';
+          b.title = i === 0 ? `Search ${x.label} for this item` : `Search ${x.label}`;
+          b.addEventListener('click', () => chrome.runtime.sendMessage({ type: 'pricise:open-url', url: x.url }).catch(() => {}));
+          row.appendChild(b);
+        });
         body.appendChild(row);
       }
     };
@@ -81,16 +94,8 @@
     root.append(style, card);
     document.documentElement.appendChild(host);
 
-    // Auto-hide after 8 s unless the pointer or keyboard focus is on the card.
-    let timer = null;
-    const hold = () => clearTimeout(timer);
-    const arm = () => { clearTimeout(timer); timer = setTimeout(() => hide(card), HIDE_AFTER_MS); };
-    card.addEventListener('mouseenter', hold);
-    card.addEventListener('mouseleave', arm);
-    card.addEventListener('focusin', hold);
-    card.addEventListener('focusout', arm);
-    arm();
-    view.refresh = (d) => { fill(d); if (!card.matches(':hover') && !card.contains(root.activeElement)) arm(); };
+    // No auto-hide: the card stays until × (this page view) or "Don't show on this site".
+    view.refresh = (d) => fill(d);
 
     close.addEventListener('click', () => { view.dismissed = true; hide(card); }); // this page view only
     details.addEventListener('click', async () => {

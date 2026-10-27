@@ -55,7 +55,9 @@ def test_no_model_gives_rule_based_answer(no_model):
     assert res["answer"].startswith("I can't verify that yet") and res["sources"] == ["claimed_discount"]
     assert "scam" not in res["answer"].lower()
     cheaper = _ask(cid, "Is there a cheaper safe option?")
-    assert cheaper["answer"].startswith("I can't verify that yet")
+    # never only "I can't verify that yet": say what we know and offer compare-search links for this product
+    assert "haven't seen this item for less" in cheaper["answer"] and "I can't verify" not in cheaper["answer"]
+    assert cheaper["links"][0]["label"] == "Google Shopping" and "Blender" in cheaper["links"][0]["url"]
 
 
 def test_page_instructions_are_not_obeyed(no_model):
@@ -95,7 +97,7 @@ def test_good_model_answer_is_used_with_valid_sources_only(monkeypatch):
                         lambda *a, **k: "No. It was $149 almost every day.\nSOURCES: fake_discount, made_up_type")
     cid = _checked(DEMO)
     res = _ask(cid, "Is this discount real?")
-    assert res == {"answer": "No. It was $149 almost every day.", "sources": ["fake_discount"]}
+    assert res == {"answer": "No. It was $149 almost every day.", "sources": ["fake_discount"], "links": []}
 
 
 def test_model_saying_scam_falls_back_to_rules(monkeypatch):
@@ -118,4 +120,4 @@ def test_chat_never_loads_the_page(monkeypatch, no_model):
 def test_unknown_check_and_bad_input():
     assert client.post("/chat", json={"check_id": "nope", "question": "hi"}).status_code == 404
     assert client.post("/chat", json={"check_id": "nope", "question": ""}).status_code == 422
-    assert json.loads(chat.ChatResponse(answer="a").model_dump_json()) == {"answer": "a", "sources": []}
+    assert json.loads(chat.ChatResponse(answer="a").model_dump_json()) == {"answer": "a", "sources": [], "links": []}

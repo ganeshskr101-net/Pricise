@@ -1,9 +1,9 @@
 // Small client for the local Pricise backend. The extension holds no keys; everything goes to localhost.
 export const BACKEND = 'http://localhost:8787';
 
-async function call(path, opts = {}) {
+async function call(path, opts = {}, timeoutMs = 8000) {
   const ctrl = new AbortController();
-  const t = setTimeout(() => ctrl.abort(), 8000);
+  const t = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     const res = await fetch(BACKEND + path, {
       ...opts,
@@ -21,7 +21,8 @@ export const api = {
   health: () => call('/health'),
   startCheck: (url, page, fresh = false) => call(`/check${fresh ? '?fresh=1' : ''}`, { method: 'POST', body: JSON.stringify({ url, page }) }),
   getCheck: (id) => call(`/check/${id}`),
-  chat: (check_id, question, history) => call('/chat', { method: 'POST', body: JSON.stringify({ check_id, question, history }) }),
+  // The backend gives the model 15 s per attempt plus one retry (backend/agents/chat.py CHAT_TIMEOUT_S).
+  chat: (check_id, question, history) => call('/chat', { method: 'POST', body: JSON.stringify({ check_id, question, history }) }, 35000),
   untick: (check_id, selector, amount) => call('/action/untick', { method: 'POST', body: JSON.stringify({ check_id, selector, amount }) }),
   wishlist: () => call('/wishlist'),
   addWishlist: (item) => call('/wishlist', { method: 'POST', body: JSON.stringify(item) }),

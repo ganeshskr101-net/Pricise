@@ -21,6 +21,7 @@ FAKE_CHROME = """
   try { Object.defineProperty(window, 'chrome', { value: fake, configurable: true, writable: true }); }
   catch { Object.assign(window.chrome, fake); }
   window.__priciseRead = () => new Promise((resolve) => listener({ type: 'pricise:read' }, {}, resolve));
+  window.__priciseAsk = (msg) => new Promise((resolve) => listener(msg, {}, resolve));
 })();
 """
 
@@ -52,3 +53,20 @@ async def read_page_facts(url: str) -> dict:
         await page.goto(url, wait_until="load")
         await page.add_script_tag(content=CONTENT_JS.read_text())
         return await page.evaluate("window.__priciseRead()")
+
+
+async def detect_product(url: str) -> tuple[dict, dict, list[str]]:
+    """(detectProduct() result, PageFacts, Pricise console lines) from the real content.js on a local test page."""
+    from backend.tools.browser import chromium
+
+    async with chromium() as browser:
+        page = await browser.new_page(viewport={"width": 1400, "height": 1000})
+        logs: list[str] = []
+        page.on("console", lambda m: logs.append(m.text) if m.text.startswith("[Pricise]") else None)
+        await page.add_init_script(FAKE_CHROME)
+        await page.goto(url, wait_until="load")
+        await page.add_script_tag(content=CONTENT_JS.read_text())
+        found = await page.evaluate("window.__priciseAsk({ type: 'pricise:detect' })")
+        facts = await page.evaluate("window.__priciseRead()")
+        await page.wait_for_timeout(300)  # autoCheck() logs its decision on load
+        return found, facts, logs

@@ -29,6 +29,7 @@ import time
 import uuid
 from contextlib import asynccontextmanager
 from pathlib import Path
+from urllib.parse import urlsplit
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
@@ -287,10 +288,13 @@ def real_findings(cid: str, page: PageFacts) -> list[Finding]:
         out.append(_f(cid, "deal", "drip_fees", "confirmed", f"${total_fees:,.2f} in extra fees{base} ({names}).", ev, confidence=0.8))
     if not page.https:
         out.append(_f(cid, "trust", "no_https", "confirmed", "This page is not using a secure connection (no HTTPS).", confidence=0.99))
-    out.append(_f(cid, "trust", "not_connected", "unverified",
-                  f"Store checks for {page.host or 'this site'} (domain age, company record) need the Trust Agent, not connected yet."))
-    out.append(_f(cid, "price", "not_connected", "unverified",
-                  "Other-store price search needs the Price Agent, not connected yet."))
+    # Stub mode only: with AGENT_TRUST / AGENT_PRICE=real those agents report for themselves, never "not connected".
+    if _trust_mode() != "real":
+        out.append(_f(cid, "trust", "not_connected", "unverified",
+                      f"Store checks for {page.host or 'this site'} (domain age, company record) need the Trust Agent, not connected yet."))
+    if _price_mode() != "real":
+        out.append(_f(cid, "price", "not_connected", "unverified",
+                      "Other-store price search needs the Price Agent, not connected yet."))
     return out
 
 
@@ -321,19 +325,26 @@ def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float
     honest = Verdict(status="bad" if n else ("caution" if soft else "good"),
                      headline=f"{n} trick{'s' if n != 1 else ''}" if n else ("Check these" if soft else "Looks honest"),
                      reasons=honest_reasons)
+    trust_real, price_real = _trust_mode() == "real", _price_mode() == "real"
     safe_reasons = [Reason(text="Secure connection (HTTPS)" if page.https else "No secure connection (HTTPS)",
                            tone="good" if page.https else "bad"),
-                    Reason(text="Domain age and company record: Trust Agent not connected yet", tone="unknown")]
-    safe = Verdict(status="unknown" if page.https else "bad", headline="Not fully checked" if page.https else "Risky",
-                   reasons=safe_reasons)
+                    Reason(text="Store checks (domain age, links): no answer from the Trust Agent yet" if trust_real
+                           else "Domain age and company record: Trust Agent not connected yet", tone="unknown")]
+    # With AGENT_TRUST=real this is only a placeholder until trust.safe_verdict() replaces it.
+    safe = Verdict(status="unknown" if page.https else "bad",
+                   headline=("Unknown" if trust_real else "Not fully checked") if page.https else "Risky", reasons=safe_reasons)
     p = page.product
     bp_reasons = []
     if p.name:
         bp_reasons.append(Reason(text=f"Product: {p.name[:70]}", tone="unknown"))
     if p.price is not None:
         bp_reasons.append(Reason(text=f"Price on this page: ${p.price:,.2f}", tone="unknown"))
-    bp_reasons.append(Reason(text="Other-store search: Price Agent not connected yet", tone="unknown"))
-    best = BestPrice(status="unknown", headline="Search not connected", reasons=bp_reasons)
+    if price_real:  # placeholder until the Price Agent answers (stub_server._apply_price)
+        bp_reasons.append(Reason(text="Looking for prices you've seen on other stores…", tone="unknown"))
+        best = BestPrice(status="unknown", headline="Compare", reasons=bp_reasons)
+    else:
+        bp_reasons.append(Reason(text="Other-store search: Price Agent not connected yet", tone="unknown"))
+        best = BestPrice(status="unknown", headline="Search not connected", reasons=bp_reasons)
     if n:
         title, tone = "Be careful here", "caution"
     elif soft:
@@ -362,9 +373,13 @@ def real_evidence(page: PageFacts) -> dict:
 
 @app.get("/health")
 def health() -> dict:
+    from backend.llm import meterless
+    from backend.tools import rdap
+
     return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "agent_trust": _trust_mode(),
-            "agent_price": _price_mode(), "data_source": "zetaris" if zetaris.use_zetaris() else "fixture",
-            "checks": len(CHECKS)}
+            "agent_price": _price_mode(), "agent_orch": "on" if os.environ.get("AGENT_ORCH", "off").lower() == "on" else "off",
+            "data_source": "zetaris" if zetaris.use_zetaris() else "fixture", "trust_rdap": "on" if rdap.enabled() else "off",
+            "nemotron": {"fast": meterless.configured("fast"), "deep": meterless.configured("deep")}, "checks": len(CHECKS)}
 
 
 @app.get("/")
@@ -440,8 +455,36 @@ async def check_events(cid: str):
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+def observation(chk: dict) -> Optional[dict]:
+    """The price the shopper saw on a REAL store page (never Store Lab or bench), for repo.save_observation. None when the
+    page has no price or nothing to match on, or when the finished check found the store unsafe."""
+    from backend.data import catalog
+    from backend.tools.common import is_storelab
+
+    page = PageFacts(**chk["page"])
+    p, safe = page.product, ((chk.get("final_card") or {}).get("safe") or {}).get("status")
+    if is_storelab(chk["url"]) or "/bench/" in chk["url"] or p.price is None or safe == "bad":
+        return None
+    host = (page.host or urlsplit(chk["url"]).netloc).lower().removeprefix("www.")
+    return {"host": host, "brand": p.brand, "model": p.model, "model_key": catalog.key(p.model or ""), "sku": p.sku,
+            "name": (p.name or "")[:160] or None, "price": round(float(p.price), 2), "currency": p.currency,
+            "condition": repo.condition_of(p.name), "safe": safe, "url": repo.clean_url(chk["url"]), "seen_at": time.time()}
+
+
+async def _save_observation(chk: dict) -> None:
+    """Best effort, once per check: a failure is a log line, never a broken check."""
+    try:
+        obs = observation(chk)
+        if obs and await asyncio.to_thread(repo.save_observation, obs):
+            chk["observation_saved"] = True
+    except (PgError, ValueError, KeyError) as err:
+        _log.warning("price observation not stored: %s", err)
+
+
 async def _store_findings(chk: dict) -> None:
-    """DATA_SOURCE=zetaris: keep the finished check's findings in the Pricise Postgres. Best effort: never breaks a check."""
+    """DATA_SOURCE=zetaris: keep the finished check's findings in the Pricise Postgres. Best effort: never breaks a check.
+    Every mode: a real store page's price becomes a price observation (Postgres with zetaris, memory with fixture)."""
+    await _save_observation(chk)
     if not zetaris.use_zetaris():
         return
     try:
