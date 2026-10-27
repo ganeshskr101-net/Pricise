@@ -278,6 +278,29 @@ def test_agent_orch_unset_keeps_todays_behaviour(sidecar, monkeypatch):
 # the real server.ts (skipped without Node or node_modules)
 
 
+class _SidecarProcess(subprocess.Popen):
+    """tsx's CLI runs server.ts in a CHILD node process, so killing the CLI alone left the server answering (a "stopped"
+    sidecar kept serving, and every test run leaked node processes). kill()/terminate() stop the whole process tree."""
+
+    def __init__(self, *args, **kw):
+        if os.name != "nt":
+            kw["start_new_session"] = True  # own process group, so killpg reaches tsx's child
+        super().__init__(*args, **kw)
+
+    def kill(self) -> None:
+        if self.poll() is not None:
+            return
+        if os.name == "nt":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(self.pid)], capture_output=True)
+        else:
+            try:
+                os.killpg(self.pid, 9)
+            except ProcessLookupError:
+                pass
+
+    terminate = kill
+
+
 def _start_real_sidecar(port: int, data_dir: Path | None = None, env_extra: dict | None = None) -> subprocess.Popen:
     """data_dir: where H-MEM keeps notes (HMEM_DATA_DIR); a fresh temp folder by default, never the repo's .pricise-data.
     env_extra: test-only settings such as MARKOVIAN_CHUNK_TIMEOUT_MS."""
@@ -286,8 +309,8 @@ def _start_real_sidecar(port: int, data_dir: Path | None = None, env_extra: dict
     env["WORLD_MODEL_URL"] = f"http://127.0.0.1:{port}"
     env["HMEM_DATA_DIR"] = str(data_dir or tempfile.mkdtemp(prefix="hmem-test-"))
     env.update(env_extra or {})
-    proc = subprocess.Popen([shutil.which("node"), str(tsx), "server.ts"], cwd=ENGINE_DIR, env=env,
-                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    proc = _SidecarProcess([shutil.which("node"), str(tsx), "server.ts"], cwd=ENGINE_DIR, env=env,
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     deadline = time.time() + 15
     while time.time() < deadline:
         try:

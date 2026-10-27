@@ -83,7 +83,7 @@ def bp(cid, name, store, total, model=True, condition=True, evidence=True, statu
 def _fake_price(monkeypatch, make=None, error=None):
     from backend.agents import price
 
-    async def fake(check_id, url, page, day=1, use_trust=False):
+    async def fake(check_id, url, page, day=1, use_trust=False, propose_lookalikes=False):
         if error is not None:
             raise error
         found = make(check_id)
@@ -228,7 +228,8 @@ def test_contract_with_the_real_price_agent():
     """What the wiring relies on. Skips if price.py is missing; fails loudly if its shape changes."""
     price = pytest.importorskip("backend.agents.price")
     assert inspect.iscoroutinefunction(price.assess_async)
-    assert list(inspect.signature(price.assess_async).parameters) == ["check_id", "url", "page", "day", "use_trust"]
+    assert list(inspect.signature(price.assess_async).parameters) == ["check_id", "url", "page", "day", "use_trust",
+                                                                      "propose_lookalikes"]
     page = PageFacts(url=LAB.format("audiodealz"), product={"sku": "WH1000XM5/B"})
     res = asyncio.run(price.assess_async("c1", page.url, page, 1))
     assert isinstance(res, price.PriceResult) and all(isinstance(f, Finding) for f in res.findings)
@@ -240,5 +241,12 @@ def test_contract_with_the_real_price_agent():
     from backend.data import repo
 
     assert res.source.startswith("fixture") and callable(price._identify) and callable(repo._catalog_listings)  # adapter
+    # propose_lookalikes (the orchestrator): cheaper look-alikes become "proposed" best_price findings with the exact-match
+    # ref, for the Skeptic; the winner is unchanged
+    proposed = asyncio.run(price.assess_async("c1", page.url, page, 1, propose_lookalikes=True)).findings
+    looks = [f for f in proposed if f.type == "best_price" and f.status == "proposed"]
+    assert {f.summary.split(",")[0] for f in looks} == {"Store B", "Store I"}
+    assert all(rechecker.parse_ref(f) for f in looks)
+    assert [f.status for f in proposed if f.type == "best_price" and f.status != "proposed"] == ["confirmed"]
     real_site = asyncio.run(price.assess_async("c1", "https://shop.example/x", PageFacts(url="https://shop.example/x")))
     assert [f.status for f in real_site.findings] == ["unverified"]  # real sites: never compared, never raises

@@ -171,7 +171,7 @@ def card_wording(finding: Finding) -> str:
 # Optional wording helper -------------------------------------------------------------------------------------------
 
 def _clean_reply(text: str) -> str:
-    return " ".join(_THINK_RE.sub("", text or "").split())
+    return " ".join(meterless.strip_reasoning(_THINK_RE.sub("", text or "")).split())
 
 
 def challenge_reason(finding: Finding, result: RuleResult) -> str:

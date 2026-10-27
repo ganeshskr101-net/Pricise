@@ -172,6 +172,11 @@ def _complete(
     payload.pop("model", None)
     payload["model"] = requested
     payload["messages"] = messages
+    # Nemotron reasons before answering (~500 tokens on the fast lane). Every Pricise call is a short wording task, so
+    # reasoning is off unless the caller passes its own chat_template_kwargs. With it on, a max_tokens below the reasoning
+    # length made Nightshift answer HTTP 502 (fast lane), and the deep lane returned its reasoning ending in a bare
+    # "</think>" with no opening tag.
+    payload.setdefault("chat_template_kwargs", {"enable_thinking": False})
 
     url = f"{settings['base_url']}/chat/completions"
     headers = {
@@ -389,6 +394,15 @@ _THINK_RE = re.compile(r"<think>.*?</think>", re.DOTALL | re.IGNORECASE)
 _COMPLETE_TIMEOUT_S = 8.0
 
 
+def strip_reasoning(text: str) -> str:
+    """The answer without the model's reasoning: drops <think>...</think> blocks, and everything up to a closing </think>
+    that has no opening tag (Nemotron's reasoning can arrive as plain text ending in "</think>")."""
+    text = _THINK_RE.sub("", text or "")
+    if re.search(r"</think>", text, re.IGNORECASE):
+        text = re.split(r"</think>", text, flags=re.IGNORECASE)[-1]
+    return re.sub(r"<think>.*\Z", "", text, flags=re.DOTALL | re.IGNORECASE).strip()  # unfinished reasoning: no answer
+
+
 def configured(lane: str = "fast") -> bool:
     """True when the base URL, token and the lane's model name are all set."""
     return all(
@@ -421,7 +435,7 @@ def complete(prompt: str, lane: str = "fast", max_tokens: int = 64) -> str:
         )
     except MeterlessError:
         return ""
-    return _THINK_RE.sub("", text).strip()
+    return strip_reasoning(text)
 
 @lru_cache(maxsize=1)
 def _dotenv() -> dict[str, str]:

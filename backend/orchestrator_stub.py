@@ -76,7 +76,10 @@ def stub_agents(chk: dict, done: set[str]) -> list[orchestrator.Agent]:
         from backend import rechecker
         from backend.agents import price
 
-        res = await price.assess_async(cid, chk["url"], page, s.CLOCK["day"], use_trust=trust_real)
+        # propose_lookalikes: cheaper listings of another model or condition become best_price proposals, so the
+        # Skeptic (not the Price Agent) decides "same item?" and rejects them with its rule.
+        res = await price.assess_async(cid, chk["url"], page, s.CLOCK["day"], use_trust=trust_real,
+                                       propose_lookalikes=True)
         s.PRICE[cid] = res  # for _apply_price, as stub_server's _with_price does
         chk["evidence_data"]["stores"], chk["evidence_data"]["stores_sql"] = res.stores, res.sql
         for f in await asyncio.to_thread(rechecker.adapt, res, page, chk["url"]):

@@ -347,6 +347,29 @@ async def challenge(f: Finding, rechecker: Optional[Rechecker]) -> AsyncIterator
         if result is None:
             yield before.model_copy(update={"challenged_by": "skeptic"})  # inputs missing: back to its status
             return
-        yield (f := skeptic.next_status(f, result))
+        yield (f := await explain(before, result, skeptic.next_status(f, result)))
         if result.status != "unverified" or f.rounds >= skeptic.MAX_ROUNDS:
             return
+
+
+SKEPTIC_SAYS = " Skeptic: "
+
+
+async def explain(before: Finding, result: RuleResult, decided: Finding) -> Finding:
+    """With Nightshift configured, the deep lane words the Skeptic's reason for the shopper (skeptic.challenge_reason) and the
+    finding names the model. The rule's status is never changed; on any model failure the rule's own reason is shown."""
+    from backend.llm import meterless
+
+    if not meterless.configured("deep"):
+        return decided
+    try:
+        text = await asyncio.to_thread(skeptic.challenge_reason, before, result)
+    except Exception as err:  # challenge_reason already falls back; this is belt and braces
+        log.info("orchestrator skeptic wording failed: %s", type(err).__name__)
+        text = result.reason
+    worded = bool(text) and text != result.reason
+    base = before.summary.split(SKEPTIC_SAYS)[0]
+    update: dict[str, Any] = {"summary": f"{base}{SKEPTIC_SAYS}{(text or result.reason).rstrip('.')}."}
+    if worded:
+        update["model"] = meterless.model_name("deep")
+    return decided.model_copy(update=update)

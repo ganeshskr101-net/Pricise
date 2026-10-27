@@ -10,6 +10,9 @@ Explicit rules (no model) then decide, and every decision is a finding:
     with use_trust=False (AGENT_TRUST=stub): the seeded flags in the catalog (scam / risky -> rejected) are the fallback
   - a store that is down                                     -> unverified, skipped
   - the cheapest remaining true total wins. Evidence cites the SQL.
+propose_lookalikes=True (the orchestrator, where the Skeptic re-checks every best_price): a cheaper safe listing of a
+different model or condition is not rejected here but proposed as its own best_price finding (status "proposed", with the
+exact-match ref backend/rechecker.py reads), so the Skeptic decides "same item?". The winner is unchanged.
 Real sites: read only, no scraping of other stores: one "unverified" finding that the comparison covers our demo catalog only.
 Never raises: if Zetaris fails it falls back to the in-memory catalog and says so; anything else becomes an unverified finding.
 """
@@ -51,6 +54,7 @@ class Judgement:
     why: str = ""             # finding text after "Store X, $Y: "
     short: str = ""           # for "Skipped Store D (short), ..."
     by: Optional[str] = None  # challenged_by
+    lookalike: bool = False   # a different model or condition: "same item?" is the Skeptic's call in propose mode
 
 
 def _f(check_id: str, type_: str, status: str, summary: str, evidence: Optional[list[dict]] = None,
@@ -168,9 +172,10 @@ def _safety(r: dict, trust: Optional[dict[str, dict]]) -> Optional[Judgement]:
 
 def _judge(r: dict, item: dict, trust: Optional[dict[str, dict]]) -> Judgement:
     if r["model_key"] != item["model_key"]:
-        return Judgement("rejected", "rejected", f"{r['model']} is a different model, not the same item", r["model"])
+        return Judgement("rejected", "rejected", f"{r['model']} is a different model, not the same item", r["model"],
+                         lookalike=True)
     if r["condition"] != item["condition"]:
-        return Judgement("rejected", "rejected", f"{r['condition']}, not the same item", r["condition"])
+        return Judgement("rejected", "rejected", f"{r['condition']}, not the same item", r["condition"], lookalike=True)
     unsafe = _safety(r, trust)
     if unsafe:
         return unsafe
@@ -191,7 +196,8 @@ def _own_is_safe(own: dict, trust: Optional[dict[str, dict]]) -> bool:
 # ----------------------------------------------------------------------------- the agent
 
 
-async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, use_trust: bool = False) -> PriceResult:
+async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, use_trust: bool = False,
+                       propose_lookalikes: bool = False) -> PriceResult:
     """The Price Agent's findings and "Best safe price" verdict for one page on demo `day` (1..9). Never raises.
     use_trust=True asks the Trust Agent about every candidate store (AGENT_TRUST=real); False uses the seeded flags."""
     if not is_storelab(url):
@@ -205,7 +211,7 @@ async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, u
         if use_trust and item:
             urls = {r["store_id"]: r["url"] for r in rows if r["family"] == item["family"]}
             trust = await vet_stores(check_id, urls)
-        res = _decide(check_id, day, rows, sql, source, here, own, item, trust)
+        res = _decide(check_id, day, rows, sql, source, here, own, item, trust, propose_lookalikes)
         res.trust = "trust agent" if trust is not None else "seeded"
         return res
     except Exception as e:  # never break a check
@@ -224,7 +230,8 @@ def assess(check_id: str, url: str, page: PageFacts, day: int = 1, use_trust: bo
 
 
 def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], source: str, here: str,
-            own: Optional[dict], item: Optional[dict], trust: Optional[dict[str, dict]]) -> PriceResult:
+            own: Optional[dict], item: Optional[dict], trust: Optional[dict[str, dict]],
+            propose_lookalikes: bool = False) -> PriceResult:
     res = PriceResult(sql=sql, source=source)
     if not item:
         res.findings.append(_f(check_id, "catalog_match", "unverified",
@@ -240,7 +247,7 @@ def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], sourc
                            f"Same model ({item['model']}, {item['condition']}) found at {len(same)} other Store Lab "
                            f"store{'s' if len(same) != 1 else ''}" + (" in Zetaris." if sql else "."),
                            _sql_ev(res, len(rows)), confidence=0.95))
-    ok, groups = [], {}
+    ok, judged = [], []
     for r in family:
         j = _judge(r, item, trust)
         res.stores.append({"store": r["store"], "total": r["true_total"], "status": j.status,
@@ -248,8 +255,20 @@ def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], sourc
         if j.status == "ok":
             ok.append(r)
         else:
+            judged.append((r, j))
+
+    best = min(ok, key=lambda r: (r["true_total"], r["store"])) if ok else None
+    here_best = own is not None and _own_is_safe(own, trust) and (best is None or own["true_total"] <= best["true_total"])
+    if here_best:
+        best = own
+    groups, proposals = {}, []
+    for r, j in judged:
+        cheaper = best is None or r["true_total"] < best["true_total"]
+        if propose_lookalikes and j.lookalike and cheaper and _safety(r, trust) is None and r["status"] != "outage":
+            proposals.append((r, j))
+        else:
             groups.setdefault((j.why, j.finding_status, j.short, j.by), []).append(r)
-    skipped = []
+    skipped = [([r], j.short) for r, j in proposals if r["model_key"] == item["model_key"]]
     for (why, f_status, short, by), group in groups.items():
         if group[0]["model_key"] == item["model_key"]:
             skipped.append((group, short))
@@ -260,11 +279,9 @@ def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], sourc
         extra = {"challenged_by": by, "rounds": 1} if by else {}
         res.findings.append(_f(check_id, "candidate", f_status, text, [{"kind": "url", "ref": r["url"]} for r in group],
                                confidence=0.9 if f_status == "rejected" else 0.0, **extra))
+    for r, j in proposals:
+        res.findings.append(_proposal(check_id, day, r, item, j, res, len(rows)))
 
-    best = min(ok, key=lambda r: (r["true_total"], r["store"])) if ok else None
-    here_best = own is not None and _own_is_safe(own, trust) and (best is None or own["true_total"] <= best["true_total"])
-    if here_best:
-        best = own
     skipped_text = _and([f"{len(g)} stores ({short})" if len(g) > 2 else _and([f"{r['store']} ({short})" for r in g])
                          for g, short in skipped])
     if not best:
@@ -297,6 +314,21 @@ def _decide(check_id: str, day: int, rows: list[dict], sql: Optional[str], sourc
     rank = {"chosen": 0, "ok": 1, "rejected": 2, "skipped": 3}
     res.stores.sort(key=lambda s: (rank[s["status"]], s["total"] if s["total"] is not None else 1e9))
     return res
+
+
+def _proposal(check_id: str, day: int, r: dict, item: dict, j: Judgement, res: PriceResult, n: int) -> Finding:
+    """A cheaper look-alike, proposed as a best price for the Skeptic to accept or reject (propose_lookalikes=True)."""
+    from backend.rechecker import exact_ref  # the exact-match ref shape the Skeptic's rechecker reads
+
+    ref = exact_ref(r["url"], r["model_key"] == item["model_key"], r["condition"] == item["condition"], r["true_total"])
+    what = r["model"] if r["model_key"] != item["model_key"] else r["condition"]
+    return _f(check_id, "best_price", "proposed",
+              f"{r['store']}, {money(r['true_total'])}: cheaper look-alike ({what}). Proposed for the Skeptic to check it is "
+              f"the same item.",
+              [{"kind": "url", "ref": r["url"]},
+               {"kind": "price_row", "ref": f"listing:{r['store_id']}:{r['product_id']}:day{day}",
+                "label": f"{_math(r)} = {money(r['true_total'])}"},
+               {"kind": "price_row", "ref": ref, "label": "Exact match"}] + _sql_ev(res, n), confidence=0.5)
 
 
 def _and(items: list[str]) -> str:
