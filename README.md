@@ -17,7 +17,7 @@ check the store, the deal and the price; a Skeptic agent challenges their findin
 | Demo video | TBD |
 | Slide deck | TBD |
 | Setup | [Run it in 2 minutes](#run-it-in-2-minutes-sample-mode) · [Run it for real](#run-it-for-real) |
-| Usage + 3 sample inputs and outputs | [Run it in 2 minutes](#run-it-in-2-minutes-sample-mode) · [input_examples/](input_examples/) · [output_examples/](output_examples/) |
+| Usage + sample inputs and outputs (3 real pages, 1 synthetic) | [Run it in 2 minutes](#run-it-in-2-minutes-sample-mode) · [input_examples/](input_examples/) · [output_examples/](output_examples/) |
 | Dependencies | [backend/requirements.txt](backend/requirements.txt) · [engine sidecar package.json](backend/engines/world_model_ts/package.json) |
 | Agent traces | [output_examples/example_1_trace.jsonl](output_examples/example_1_trace.jsonl) (every run writes `logs/<check_id>.jsonl`) |
 | Meterless engine tests | [test_scout_guard.py](backend/tests/test_scout_guard.py) · [test_scout_sidecar.py](backend/tests/test_scout_sidecar.py) · [test_world_model_dedupe.py](backend/tests/test_world_model_dedupe.py) · [test_orchestrator.py](backend/tests/test_orchestrator.py) · [screenshot](docs/images/13-engine-tests.png) |
@@ -68,16 +68,18 @@ Agent trace: logs/<check_id>.jsonl (8 finding events)
 neither. Windows: `scripts\setup.ps1`, then `.venv\Scripts\python run.py`. `run.py` starts the backend for the run and
 stops it afterwards.
 
-**The three examples.** Each input is what the extension read from a real product page in Chrome.
+**The examples.** Inputs 1-3 are what the extension read from real product pages in Chrome. Input 4 is AudioDealz, a
+fake store we built for testing (`storelab/`), run with the real agents: "Don't buy here", 3 tricks, real total $191.
 
 | # | Page | Input | Output and trace |
 |---|---|---|---|
 | 1 | JBL Flip 6, Blue, amazon.com, $114.95 | [example_1.json](input_examples/example_1.json) | [result](output_examples/example_1_result.json) · [trace](output_examples/example_1_trace.jsonl) |
-| 2 | Kindle Paperwhite Signature 32GB, amazon.com, $249.99 | [example_2.json](input_examples/example_2.json) | [result](output_examples/example_2_result.json) · [trace](output_examples/example_2_trace.jsonl) |
-| 3 | TBD | TBD | TBD |
+| 2 | Kindle Paperwhite 16GB (2024), amazon.com, $199.99 | [example_2.json](input_examples/example_2.json) | [result](output_examples/example_2_result.json) · [trace](output_examples/example_2_trace.jsonl) |
+| 3 | Open-box JBL Flip 7, Blue, walmart.com, $68.53 | [example_3.json](input_examples/example_3.json) | [result](output_examples/example_3_result.json) · [trace](output_examples/example_3_trace.jsonl) |
+| 4 | Synthetic test store (made up by us): shows the red verdict | [example_4.json](input_examples/example_4.json) | [result](output_examples/example_4_result.json) · [trace](output_examples/example_4_trace.jsonl) |
 
-`.venv/bin/python run.py --input input_examples/example_2.json` runs another input. Only pages with a recording in
-`samples/` replay a real run in sample mode; other pages get a scripted result.
+`.venv/bin/python run.py --input input_examples/example_2.json` runs another input (2, 3 or 4). All four replay their
+recorded run in sample mode (`samples/`); any other page gets a scripted result.
 
 **See it in Chrome:** `scripts/run.sh` (backend on :8787) → `chrome://extensions` → Developer mode → **Load unpacked** →
 the `extension/` folder → open https://www.amazon.com/dp/B09GJZKQ3K and click the Pricise icon for the side panel.
@@ -205,7 +207,7 @@ More detail: [docs/SPONSORS.md](docs/SPONSORS.md).
 
 - Real store pages are read only, in the shopper's own Chrome. Saved price observations keep product fields and the URL
   without its query string; nothing personal.
-- Store Lab (`storelab/`) holds synthetic test pages, kept only for the tests.
+- Store Lab (`storelab/`) holds synthetic test stores made up by us, used by the tests and by example 4. No real shop.
 
 ## Team
 

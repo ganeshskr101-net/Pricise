@@ -145,6 +145,24 @@ def _with_trust(card: FinalCard, tv) -> FinalCard:
     return _safe_headline(card)
 
 
+def _with_condition(card: FinalCard, page: PageFacts) -> FinalCard:
+    """An open box, refurbished or used listing says so on the card: first in "Best safe price", in the subtitle, and a
+    green card becomes "Check before you buy". Called last, after the Price Agent's verdict (copies, never edits it)."""
+    from backend.tools.shopping import page_condition
+
+    cond = page_condition(page)
+    if cond == "new":
+        return card
+    line = f"This listing is {cond}, not new"
+    rest = [r for r in card.best_price.reasons if r.text != line]
+    card.best_price = card.best_price.model_copy(update={"reasons": [Reason(text=line, tone="caution", proof="stores"), *rest][:5]})
+    if "not new" not in card.subtitle:
+        card.subtitle = f"{card.subtitle} · {cond}, not new"
+    if card.tone == "good":
+        card.tone, card.title = "caution", "Check before you buy"
+    return card
+
+
 def _safe_headline(card: FinalCard) -> FinalCard:
     """A risky or doubtful store raises the card's tone and title ("Shop safe?" bad or caution); never lowers them.
     Call it once card.safe is final (after the Trust verdict replaced real_card's provisional section)."""
@@ -254,6 +272,14 @@ def real_findings(cid: str, page: PageFacts) -> list[Finding]:
         model = f" · model {p.model}" if p.model else ""
         out.append(_f(cid, "page", "product", "confirmed", f"Read the page: {p.name or 'Unnamed product'}, {price}{model}.",
                       [{"kind": "text", "ref": p.source or "page"}], confidence=0.9))
+    from backend.tools.shopping import page_condition
+
+    cond = page_condition(page)
+    if cond != "new":  # "(Open Box)" in the title or a "Condition: Pre-owned" row: the shopper should know first
+        where = next((s for s in page.signals if s.type == "item_condition"), None)
+        ev = ([{"kind": "selector", "ref": where.selector, "label": "Condition"}] if where and where.selector
+              else [{"kind": "text", "ref": "title", "label": (where.text if where else cond)}])
+        out.append(_f(cid, "page", "item_condition", "confirmed", f"This listing is {cond}, not new.", ev, confidence=0.9))
     seen_sel: set[str] = set()
     for s in page.signals:
         if s.selector and s.selector in seen_sel:
@@ -416,7 +442,7 @@ def start_check(req: CheckRequest, fresh: bool = False) -> dict:
     CHECKS[cid] = {"check_id": cid, "url": req.url, "demo": demo, "page": page.model_dump(), "started": time.time(),
                    "findings": [], "final_card": None, "fresh": fresh, "not_product": skip,
                    "evidence_data": demo_evidence() if demo else real_evidence(page)}
-    if sample_mode() and not demo:  # a recorded real run of this page replaces the scripted stub
+    if sample_mode():  # a recorded run of this page (the Store Lab demo too) replaces the scripted stub
         from backend import recordings
 
         rec = recordings.match(req.url)
@@ -533,7 +559,7 @@ async def check_events(cid: str):
         await asyncio.sleep(delay)
         elapsed = time.time() - chk["started"]
         card = demo_card(cid, elapsed) if chk["demo"] else real_card(cid, page, findings, elapsed)
-        card = _apply_price(cid, _with_trust(card, tv))
+        card = _with_condition(_apply_price(cid, _with_trust(card, tv)), page)
         chk["final_card"] = card.model_dump()
         yield f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
         await _store_findings(chk)
@@ -685,7 +711,7 @@ def _live_card(cid: str, chk: dict, page: PageFacts, seen: list[Finding], done: 
     if pending:
         kept = [r for r in card.honest.reasons if not r.text.startswith("No timers")]
         card.honest.reasons = (kept + [Reason(text=f.summary, tone="unknown") for f in pending])[:5]
-    return _apply_price(cid, card)
+    return _with_condition(_apply_price(cid, card), page)
 
 
 def _money_short(v: float) -> str:

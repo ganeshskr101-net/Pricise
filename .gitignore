@@ -23,3 +23,6 @@ settings.local.json
 # OS / editors
 .DS_Store
 node_modules/
+
+# Local coding-agent instructions (kept on disk, not committed)
+CLAUDE.md

@@ -128,7 +128,7 @@ def card_builder(chk: dict, done: set[str] | None = None) -> orchestrator.CardBu
 
             card = s._apply_price(cid, card)  # the Price Agent's verdict, once it has answered
             card.best_price, card.alt = best_price_on_card(chk, findings, card.best_price, card.alt)
-        return card
+        return s._with_condition(card, page)  # "This listing is open box, not new", after the Price Agent's verdict
 
     return build
 

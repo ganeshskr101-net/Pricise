@@ -9,7 +9,7 @@
    "name": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime - Walmart.com",
    "price": 68.53,
    "currency": "USD",
-   "was_price": null,
+   "was_price": 77.0,
    "brand": null,
    "model": null,
    "sku": "21220572138",
@@ -18,38 +18,20 @@
   },
   "signals": [
    {
-    "type": "claimed_discount",
-    "selector": "#grid-cell-0 > fieldset > div > div:nth-of-type(1) > span > div",
-    "text": "current price $429.95, Was $563.70",
-    "amount": 563.7,
-    "detail": null
-   },
-   {
-    "type": "claimed_discount",
-    "selector": "#grid-cell-0 > fieldset > div > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div > div",
-    "text": "current price $429.95, Was $563.70",
-    "amount": 563.7,
-    "detail": null
-   },
-   {
-    "type": "claimed_discount",
-    "selector": "#grid-cell-4 > fieldset > div > div:nth-of-type(1) > span > div",
-    "text": "current price $149.95, Was $199.95",
-    "amount": 199.95,
-    "detail": null
-   },
-   {
-    "type": "claimed_discount",
-    "selector": "#grid-cell-4 > fieldset > div > div:nth-of-type(2) > div:nth-of-type(2) > div:nth-of-type(1) > div > div",
-    "text": "current price $149.95, Was $199.95",
-    "amount": 199.95,
-    "detail": null
-   },
-   {
-    "type": "scarcity",
-    "selector": "body > div > div:nth-of-type(1) > div > div:nth-of-type(1) > div > div:nth-of-type(2) > div > div",
-    "text": "Only 1 left",
+    "type": "item_condition",
+    "selector": null,
+    "text": "Open Box",
     "amount": null,
+    "detail": {
+     "condition": "open box",
+     "source": "title"
+    }
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "body > div:nth-of-type(1) > div > div:nth-of-type(2) > div > div > div:nth-of-type(1) > section > div",
+    "text": "Current price is USDNow $68.53You save $8.47was $77.00",
+    "amount": 77.0,
     "detail": null
    },
    {
@@ -65,7 +47,7 @@
    {
     "type": "page_text",
     "selector": null,
-    "text": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime\nProduct details\nSpecifications\nSponsored Hero image 0 of (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime, 0 of 1 Visit the JBL Store (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime (No ratings yet) Key item features Portable JBL Flip 7 Bluetooth speaker with bold JBL Pro Sound and AI Sound Boost for bigger, clearer audio Compact pint-sized design that delivers powerful sound for parties, outdoor activities, and everyday listening IP68 waterproof, dustproof, and drop-proof construction for reliable use at the beach, pool, backyard, or on the go Up to 16 hours of playtime with Playtime Boost so music can keep going day and night without frequent recharging Auracast-enabled to effortlessly connect with other compatible JBL speakers and spread the same playlist across more spaces PushLock system with interchangeable accessories for easy carrying, mounting, and personalization of the speaker View all item details Specs Sponsored Product 1 of 20JBL Boombox 4 Portable Waterproof Bluetooth Speaker with Electronics Expo Gear Weather-Resistant Hard-Shell Travel Case \u2013 Powerful Bass, 34-Hour Playtime, IP68 Waterproof, Auracast, BLACKcurrent price $429.95, Was $563.70Reduced priceOptionsSponsored3.7 out of 5 Stars. 3 reviewsProduct 2 of 20JBL Clip 5 Black Orange Portable Bluetooth Speakercurrent price $79.95Best sellerOptions+5More options from $54.994.6 out of 5 Stars. 1519 reviewsProduct 3 of 20JBL Flip 7 Sand Portable Bluetooth Speakercurrent price $129.95Add4.5 out of 5 Stars. 355 reviewsProduct 4 of 20JBL Grip Teal Portable Bluetooth Speakercurrent price $99.95Add4.4 out of 5 Stars. 138 reviewsProduct 5 of 20JBL Charge 6 - Portable waterproof & drop-proof Bluetooth speaker, Bold JBL Pro Sound with AI Sound Boost, 28Hrs of Playtime, Built-in powerbank & comes with a sturdy/removable carrying strap (Squad)current price $149.95, Was $199.95In 25+ people's cartsOptions+5More options from $115.744.6 out of 5 Stars. 3156 reviewsProduct 6 of 20JBL Clip 4 Teal Portable Bluetooth Speakercurrent price $64.95OptionsMore options from $44.974.3 out of 5 Stars. 337 reviewsProduct 7 of 20JBL Flip 7 Black Orange Portable Bluetooth Speakercurrent price $129.95Add4.5 out of 5 Stars. 346 reviewsProduct 8 of 20JBL Clip 4 Blue Purple Portable Bluetooth Speakercurrent price $64.95Add$64.954.2 out of 5 Stars. 312 reviewsProduct 9 of 20Restored JBL Flip 5 Black Portable Bluetooth Speaker, 1 Speaker, Water Resistantcurrent price $73.96AddProduct 10 of 20JBL Charge 6 - Portable waterproof and drop-proof Bluetooth speaker - Turquoisecurrent price Now $159.95, Was $199.95Add4.6 out of 5 Stars. 448 reviewsProduct 11 of 20(Open Box) JBL Flip 7 Portable Waterproof Drop-Proof Speaker with AI Sound Boost, Bluecurrent price $109.77Add5 out of 5 Stars. 8 reviewsProduct 12 of 20JBL Clip 4 Yellow Portable Bluetooth Speakercurrent price $64.95Add4.2 out of 5 Stars. 310 reviewsView more A",
+    "text": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime\nProduct details\nSpecifications\nHero image 0 of (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime, 0 of 1 Visit the JBL Store (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime (No ratings yet) Key item features Portable JBL Flip 7 Bluetooth speaker with bold JBL Pro Sound and AI Sound Boost for bigger, clearer audio Compact pint-sized design that delivers powerful sound for parties, outdoor activities, and everyday listening IP68 waterproof, dustproof, and drop-proof construction for reliable use at the beach, pool, backyard, or on the go Up to 16 hours of playtime with Playtime Boost so music can keep going day and night without frequent recharging Auracast-enabled to effortlessly connect with other compatible JBL speakers and spread the same playlist across more spaces PushLock system with interchangeable accessories for easy carrying, mounting, and personalization of the speaker View all item details Specs About this itemProduct details Specifications Warranty Rewards debit card.Earn 3% cash back, on up to $150spent each month.Terms apply.Join OnePay Cash Current price is USDNow $68.53You save $8.47was $77.00 Price when purchased online As low as $12/mo or 0% APRCheck Offer 5 free offers, including Apple Music up to 2 months Free Out of stock Notify me when it is back in stockNotify me How you'll get this item:How do you want your item?Out of stock Add to listAdd to registry JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model) $136.45current price $136.45JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model)4.5 out of 5 Stars. 15 reviewsShipping, arrives tomorrowAdd to cartSponsored JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model) $136.45current price $136.45JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model)4.5 out of 5 Stars. 15 reviewsShipping, arrives tomorrowAdd to cartSponsored",
     "amount": null,
     "detail": null
    }

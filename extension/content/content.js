@@ -14,6 +14,12 @@
     '[id*="cart-drawer"]', '[class*="cart-drawer"]', '[class*="side-cart"]', '[class*="cart-flyout"]'].join(',');
   // (Not every "subtotal" box: on a checkout page the fee rows Pricise must read often sit inside one.)
   const ignored = (el) => { try { return !!el?.closest?.(IGNORE_SEL); } catch (_) { return false; } };
+  // Other items' cards: carousels, "similar items", sponsored and recommended rows. Their prices and "was" claims are
+  // not about this item (Walmart's #grid-cell-N cards showed "current price $429.95, Was $563.70" on a $68.53 page).
+  const OTHER_ITEMS_SEL = ['[id^="grid-cell-"]', '[class*="carousel"]', '[data-testid*="carousel"]',
+    '[aria-roledescription="carousel"]', '[class*="recommend"]', '[data-testid*="recommend"]', '[class*="sponsored"]',
+    '[data-testid*="sponsored"]', '[class*="similar-items"]', '[data-testid*="item-stack"]'].join(',');
+  const otherItem = (el) => { try { return !!el?.closest?.(OTHER_ITEMS_SEL); } catch (_) { return false; } };
   // Payment-card and membership offers are not discounts on the item ("Prime Visa", reward points, "pay $0.00 at checkout",
   // Subscribe & Save, cash back): never read them as a discount claim.
   const PROMO_RE = /prime visa|\bvisa\b|mastercard|credit card|card ?member|rewards?( points?| card| visa)?\b.*\bpoints?\b|\bpoints\b|pay \$?0(\.00)? (at|upon)|\$0\.00 (at checkout|upon approval)|subscribe ?(&|and) ?save|cash ?back|% back\b|gift card|apply now|upon approval|trade-?in|with activation/i;
@@ -199,7 +205,7 @@
       // Visible fallback: the biggest price-looking text that is not struck through.
       let best = null;
       document.querySelectorAll(`[class*=price],[id*=price],[data-testid*=price],[itemprop=price],${PRICE_SELECTORS}`).forEach((el) => {
-        if (!visible(el) || el.closest('s,del,strike,[data-a-strike="true"]') || ignored(el)) return;
+        if (!visible(el) || el.closest('s,del,strike,[data-a-strike="true"]') || ignored(el) || otherItem(el)) return;
         const t = el.innerText || '';
         const v = parseAmount(t);
         if (v == null) return;
@@ -208,17 +214,68 @@
       });
       if (best) { p.price = best.v; p.currency = currencyOf(best.t); p.source = 'visible'; }
     }
+    if (p.was_price == null && p.price != null) {
+      const was = struckNear(mainPriceEl(p.price), p.price);
+      if (was != null) p.was_price = was;
+    }
     p.name = (p.name || '').replace(/\s+/g, ' ').trim().slice(0, 160) || null;
     return p;
+  }
+
+  // The element showing this item's price: the largest visible one with that amount, outside other items' cards.
+  function mainPriceEl(price) {
+    if (price == null) return null;
+    let best = null;
+    document.querySelectorAll(`[class*=price],[id*=price],[data-testid*=price],[itemprop=price],${PRICE_SELECTORS}`).forEach((el) => {
+      if (!visible(el) || el.closest('s,del,strike,[data-a-strike="true"]') || ignored(el) || otherItem(el)) return;
+      const v = parseAmount(el.innerText || '');
+      if (v == null || Math.abs(v - price) > 0.005) return;
+      const size = parseFloat(getComputedStyle(el).fontSize) || 0;
+      if (!best || size > best.size) best = { el, size };
+    });
+    return best?.el || null;
+  }
+
+  const STRUCK_SEL = 's,del,strike,[class*=strike],[class*=was-price],[class*=list-price],[class*=original-price],[data-a-strike="true"]';
+  // The main price's block: the price element, its parent and grandparent ("Now $68.53 $77.00 You save $8.47"),
+  // never the whole page.
+  function priceBlocks(main) {
+    const out = [];
+    for (let node = main; node && out.length < 3 && node !== document.body && node !== document.documentElement; node = node.parentElement) out.push(node);
+    return out;
+  }
+  const nearMainPrice = (el, main) => priceBlocks(main).some((node) => node.contains(el));
+  // The struck-through price in the main price's block, when it is higher than today's price.
+  function struckNear(main, price) {
+    for (const node of priceBlocks(main)) {
+      for (const el of node.querySelectorAll(STRUCK_SEL)) {
+        const v = parseAmount(cleanText(el));
+        if (visible(el) && !otherItem(el) && v != null && v > price + 0.005) return v;
+      }
+    }
+    return null;
   }
 
   // ---------------------------------------------------------------- signals (what a careful shopper would notice)
   // Text as a person reads it: screen-reader duplicates (aria-hidden copies of a price) left out, so "$15.99 $15.99" or
   // "$37 . 99" never reaches a claim.
+  // Text nodes are joined with a space where they would glue two words, or a word to a price ("USDNow", "$68.53You save");
+  // a price split across nodes ("214" + ".99", "$" + "214") stays whole. Screen-reader boilerplate ("Current price is USD")
+  // is dropped, and " · " separates a price from the words after it: "Now $68.53 · You save $8.47 · was $77.00".
   function cleanText(el) {
     const copy = el.cloneNode(true);
     copy.querySelectorAll('[aria-hidden="true"], script, style').forEach((n) => n.remove());
-    return (copy.textContent || '').replace(/\s+/g, ' ').replace(/\$\s+(\d)/g, '$$$1').trim();
+    let text = '';
+    const walker = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+    for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+      const t = n.nodeValue || '';
+      if (text && /[A-Za-z0-9)]$/.test(text) && /^[A-Za-z(]/.test(t)) text += ' ';
+      else if (text && /[A-Za-z]$/.test(text) && /^[$€£₹]/.test(t)) text += ' ';
+      text += t;
+    }
+    return text.replace(/\s+/g, ' ').replace(/\$\s+(\d)/g, '$$$1')
+      .replace(/\bcurrent price(?: is)?(?: [A-Z]{3}\b)?\s*/gi, '')
+      .replace(/([$€£₹]\d[\d,]*(?:\.\d{1,2})?)\s+(?=[A-Za-z])/g, '$1 · ').trim();
   }
 
   function claimedDiscounts() {
@@ -232,7 +289,17 @@
     // sponsored or "compare with similar items" products.
     const boxes = [...document.querySelectorAll(BUY_BOX.join(','))].filter(visible);
     const price = readProduct().price;
-    let cands = [...els].filter((e) => !PROMO_RE.test(cleanText(block(e))) && (!boxes.length || boxes.some((b) => b.contains(e))));
+    // Without a buy box: a claim is about this item when it sits in the main price's block, or its block shows no price
+    // (a "-20%" badge) or this item's price. A block showing another current price belongs to another item.
+    const main = boxes.length ? null : mainPriceEl(price);
+    const aboutThisItem = (e) => {
+      if (otherItem(e)) return false;
+      if (!main || nearMainPrice(e, main)) return true;
+      const amounts = (cleanText(block(e)).match(new RegExp(PRICE_RE.source, 'g')) || []).map(parseAmount).filter((v) => v != null);
+      return !amounts.length || price == null || amounts.some((v) => Math.abs(v - price) < 0.005);
+    };
+    let cands = [...els].filter((e) => !PROMO_RE.test(cleanText(block(e)))
+      && (boxes.length ? boxes.some((b) => b.contains(e)) : aboutThisItem(e)));
     cands = cands.filter((e) => {
       const amount = parseAmount(cleanText(e));
       return amount == null || price == null || amount > price + 0.005; // a list price at or below today's price is no discount
@@ -396,9 +463,26 @@
       detail: { sold_by: soldBy, ships_from: shipsFrom || null } }];
   }
 
+  // Not a new item: "(Open Box) JBL Flip 7", "Restored Apple iPhone 12", "... (Renewed)", or a "Condition: Pre-owned" row.
+  // "Used" and "Restored" count only at the start of the title or after a bracket or dash ("Most used" is not a condition).
+  const TITLE_COND_RE = /\b(open[- ]box|refurbished|renewed|pre-?owned)\b|(?:^|[(\[|\u2013-]\s*)(restored|used)\b/i;
+  const ROW_COND_RE = /\bcondition\s*:?\s*(new|open[- ]box|restored|refurbished|renewed|pre-?owned|used)\b/i;
+  const condKey = (w) => (/^open/i.test(w) ? 'open box' : /refurb|renew|restor/i.test(w) ? 'refurbished' : /owned|used/i.test(w) ? 'used' : 'new');
+  function itemCondition(name) {
+    const m = (name || '').match(TITLE_COND_RE);
+    if (m) return [{ type: 'item_condition', text: m[0].trim().slice(0, 40), detail: { condition: condKey(m[1] || m[2]), source: 'title' } }];
+    for (const el of findText(/\bcondition\b/i, 6)) {
+      if (otherItem(el)) continue;
+      const r = ((el.closest('tr, li, dl, div') || el).innerText || '').replace(/\s+/g, ' ').match(ROW_COND_RE);
+      if (r) return [{ type: 'item_condition', selector: cssPath(block(el)), text: r[0].slice(0, 40), detail: { condition: condKey(r[1]), source: 'page' } }];
+    }
+    return [];
+  }
+
   async function readPage() {
-    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo(), ...sellerInfo(), ...pageHistory(), ...pageText()];
-    return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
+    const product = readProduct();
+    const signals = [...itemCondition(product.name), ...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo(), ...sellerInfo(), ...pageHistory(), ...pageText()];
+    return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product, signals };
   }
 
   // ---------------------------------------------------------------- automatic check on single product pages (any site)

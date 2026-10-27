@@ -1,0 +1,660 @@
+{
+ "name": "walmart_jbl_flip7_openbox",
+ "recorded_at": "2026-10-27",
+ "url": "https://www.walmart.com/ip/JBL-Flip-7-Portable-Bluetooth-Speaker-IP68-Waterproof-and-Dustproof-Blue-14-Hours-Playtime/21220572138?wmlspartner=wlpa&selectedSellerId=152&adid=2222222222721220572138_152_199492704626_24219758109&wl0=&wl1=g&wl2=c&wl3=823751273895&wl4=pla-2449037643288&wl5=9007576&wl6=&wl7=&wl8=&wl9=pla&wl10=106529944&wl11=online&wl12=21220572138_152&veh=sem&gad_source=1&gad_campaignid=24219758109&gbraid=0AAAAADmfBIqacN3tuAMXP1RajccoG-qtQ&gclid=CjwKCAjwl4HXBhAjEiwAHlpWhGv9X8v1AdqXPOE1LNNsliOTqdGE7PjW0qrlyJ1K3DMzySOFT5vjyxoCqpkQAvD_BwE",
+ "page": {
+  "url": "https://www.walmart.com/ip/JBL-Flip-7-Portable-Bluetooth-Speaker-IP68-Waterproof-and-Dustproof-Blue-14-Hours-Playtime/21220572138?wmlspartner=wlpa&selectedSellerId=152&adid=2222222222721220572138_152_199492704626_24219758109&wl0=&wl1=g&wl2=c&wl3=823751273895&wl4=pla-2449037643288&wl5=9007576&wl6=&wl7=&wl8=&wl9=pla&wl10=106529944&wl11=online&wl12=21220572138_152&veh=sem&gad_source=1&gad_campaignid=24219758109&gbraid=0AAAAADmfBIqacN3tuAMXP1RajccoG-qtQ&gclid=CjwKCAjwl4HXBhAjEiwAHlpWhGv9X8v1AdqXPOE1LNNsliOTqdGE7PjW0qrlyJ1K3DMzySOFT5vjyxoCqpkQAvD_BwE",
+  "host": "www.walmart.com",
+  "title": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime - Walmart.com",
+  "https": true,
+  "product": {
+   "name": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime - Walmart.com",
+   "price": 68.53,
+   "currency": "USD",
+   "was_price": 77.0,
+   "brand": null,
+   "model": null,
+   "sku": "21220572138",
+   "image": null,
+   "source": "visible"
+  },
+  "signals": [
+   {
+    "type": "item_condition",
+    "selector": null,
+    "text": "Open Box",
+    "amount": null,
+    "detail": {
+     "condition": "open box",
+     "source": "title"
+    }
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "body > div:nth-of-type(1) > div > div:nth-of-type(2) > div > div > div:nth-of-type(1) > section > div",
+    "text": "Current price is USDNow $68.53You save $8.47was $77.00",
+    "amount": 77.0,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: yes \u00b7 contact link: yes",
+    "amount": null,
+    "detail": {
+     "returns": true,
+     "contact": true
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime\nProduct details\nSpecifications\nHero image 0 of (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime, 0 of 1 Visit the JBL Store (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime (No ratings yet) Key item features Portable JBL Flip 7 Bluetooth speaker with bold JBL Pro Sound and AI Sound Boost for bigger, clearer audio Compact pint-sized design that delivers powerful sound for parties, outdoor activities, and everyday listening IP68 waterproof, dustproof, and drop-proof construction for reliable use at the beach, pool, backyard, or on the go Up to 16 hours of playtime with Playtime Boost so music can keep going day and night without frequent recharging Auracast-enabled to effortlessly connect with other compatible JBL speakers and spread the same playlist across more spaces PushLock system with interchangeable accessories for easy carrying, mounting, and personalization of the speaker View all item details Specs About this itemProduct details Specifications Warranty Rewards debit card.Earn 3% cash back, on up to $150spent each month.Terms apply.Join OnePay Cash Current price is USDNow $68.53You save $8.47was $77.00 Price when purchased online As low as $12/mo or 0% APRCheck Offer 5 free offers, including Apple Music up to 2 months Free Out of stock Notify me when it is back in stockNotify me How you'll get this item:How do you want your item?Out of stock Add to listAdd to registry JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model) $136.45current price $136.45JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model)4.5 out of 5 Stars. 15 reviewsShipping, arrives tomorrowAdd to cartSponsored JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model) $136.45current price $136.45JBL Flip 7 Portable Speaker (Blue), IP68 Waterproof with Travel Case (International Model)4.5 out of 5 Stars. 15 reviewsShipping, arrives tomorrowAdd to cartSponsored",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ },
+ "events": [
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "page",
+    "type": "product",
+    "status": "confirmed",
+    "summary": "Read the page: (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and Dustproof, Blue, 14 Hours Playtime - Walmart.com, $68.53.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "visible",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "extension (no model call)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113954.918622
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "page",
+    "type": "item_condition",
+    "status": "confirmed",
+    "summary": "This listing is open box, not new.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "title",
+      "label": "Open Box",
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "extension (no model call)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113955.1261618
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "trust",
+    "type": "store_records",
+    "status": "unverified",
+    "summary": "Company record and reviews for www.walmart.com aren't checked (no data source for real stores yet).",
+    "evidence": [],
+    "confidence": 0.2,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113955.422009
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "deal",
+    "type": "claimed_discount",
+    "status": "unverified",
+    "summary": "The page claims a reduced price (Current price is USDNow $68.53You save $8.47was $77.00). Only 1 days of the prices seen here before, too little to check it, so this is unverified.",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "body > div:nth-of-type(1) > div > div:nth-of-type(2) > div > div > div:nth-of-type(1) > section > div",
+      "label": "Discount claim",
+      "placement": null
+     }
+    ],
+    "confidence": 0.4,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113964.6046
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "price",
+    "type": "catalog_only",
+    "status": "unverified",
+    "summary": "This page shows no model number, so prices on other stores can't be matched. Use Compare prices to search other stores.",
+    "evidence": [],
+    "confidence": 0.0,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113964.852942
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "price",
+    "type": "offers_filtered",
+    "status": "confirmed",
+    "summary": "Rejected 39 offers by rule: 21 not from a credible store, 9 marketplace sellers, 6 used or refurbished, 3 a different item.",
+    "evidence": [
+     {
+      "kind": "log",
+      "ref": "google_shopping:JBL Flip 7 Portable Bluetooth Speaker Blue",
+      "label": "Rejected offers, by reason",
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113964.852885
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "26b25817d5e8",
+    "agent": "price",
+    "type": "online_offers",
+    "status": "unverified",
+    "summary": "No trusted store had this exact item at a real price (40 offers checked). Also checked: Best Buy (a different item only); Target (a different item only); Amazon (not found). Use Compare prices to search other stores.",
+    "evidence": [
+     {
+      "kind": "sql",
+      "ref": "SELECT fetched_at, source, domain, title, price, shipping, total, shipping_note, condition, link FROM pricise_pg.shopping_offers WHERE query_key = 'jblflip7portablebluetoothspeakerblue' AND fetched_at > 1793092365 ORDER BY fetched_at DESC, total",
+      "label": "40 offers (cache); 0 credible stores, 40 dropped",
+      "placement": null
+     }
+    ],
+    "confidence": 0.0,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793113964.852919
+   }
+  },
+  {
+   "kind": "final_card",
+   "card": {
+    "check_id": "26b25817d5e8",
+    "title": "Check before you buy",
+    "subtitle": "0 tricks \u00b7 1 claim to check \u00b7 open box, not new",
+    "tone": "caution",
+    "safe": {
+     "status": "good",
+     "headline": "Looks safe",
+     "reasons": [
+      {
+       "text": "Secure connection (HTTPS)",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Domain registered 31 years ago",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Returns policy link on the page",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Contact or customer service link on the page",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Company record and reviews for www.walmart.com aren't checked (no data source for real stores yet)",
+       "tone": "unknown",
+       "proof": "whois"
+      }
+     ]
+    },
+    "honest": {
+     "status": "caution",
+     "headline": "Check these",
+     "reasons": [
+      {
+       "text": "The page claims a reduced price (Current price is USDNow $68.53You save $8.47was $77.00). Only 1 days of the prices seen here before, too little to check it, so this is unverified.",
+       "tone": "caution",
+       "proof": null
+      }
+     ]
+    },
+    "best_price": {
+     "status": "unknown",
+     "headline": "Compare",
+     "reasons": [
+      {
+       "text": "This listing is open box, not new",
+       "tone": "caution",
+       "proof": "stores"
+      },
+      {
+       "text": "Product: (Open Box) JBL Flip 7 Portable Bluetooth Speaker, IP68 Waterproof and ",
+       "tone": "unknown",
+       "proof": null
+      },
+      {
+       "text": "This page shows no model number, so prices on other stores can't be matched; use Compare prices to search other stores",
+       "tone": "unknown",
+       "proof": null
+      }
+     ],
+     "store": null,
+     "total": null,
+     "url": null
+    },
+    "tricks": 0,
+    "elapsed_s": 10.4,
+    "alt": null
+   }
+  }
+ ],
+ "evidence_data": {
+  "price_history": null,
+  "timer_frames": [],
+  "fees": [
+   {
+    "label": "Item",
+    "amount": 68.53,
+    "step": null
+   }
+  ],
+  "total": 68.53,
+  "stores": [],
+  "store_checks": [
+   {
+    "check": "no_https",
+    "result": "Secure connection (HTTPS).",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://www.walmart.com/ip/JBL-Flip-7-Portable-Bluetooth-Speaker-IP68-Waterproof-and-Dustproof-Blue-14-Hours-Playtime/21220572138?wmlspartner=wlpa&selectedSellerId=152&adid=2222222222721220572138_152_199492704626_24219758109&wl0=&wl1=g&wl2=c&wl3=823751273895&wl4=pla-2449037643288&wl5=9007576&wl6=&wl7=&wl8=&wl9=pla&wl10=106529944&wl11=online&wl12=21220572138_152&veh=sem&gad_source=1&gad_campaignid=24219758109&gbraid=0AAAAADmfBIqacN3tuAMXP1RajccoG-qtQ&gclid=CjwKCAjwl4HXBhAjEiwAHlpWhGv9X8v1AdqXPOE1LNNsliOTqdGE7PjW0qrlyJ1K3DMzySOFT5vjyxoCqpkQAvD_BwE"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "domain_age",
+    "result": "Domain registered 31 years ago.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://rdap.org/domain/walmart.com"
+     },
+     {
+      "kind": "log",
+      "ref": "domain_created=1995-02-23 as_of=2026-10-27 age_days=11569"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "bad_returns",
+    "result": "Returns policy link on the page.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page links: returns=True contact=True"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "no_contact",
+    "result": "Contact or customer service link on the page.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page links: returns=True contact=True"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "store_records",
+    "result": "Company record and reviews for www.walmart.com aren't checked (no data source for real stores yet).",
+    "evidence": [],
+    "status": "unchecked"
+   }
+  ],
+  "timings": {
+   "addons": 0.0,
+   "scarcity": 0.0,
+   "timer": 0.0,
+   "runahead": 0.0,
+   "discount": 9.84
+  },
+  "stores_sql": null,
+  "online": {
+   "query": "JBL Flip 7 Portable Bluetooth Speaker Blue",
+   "source": "cache",
+   "sellers_source": "no token (Google gave none)",
+   "sql": "SELECT fetched_at, source, domain, title, price, shipping, total, shipping_note, condition, link FROM pricise_pg.shopping_offers WHERE query_key = 'jblflip7portablebluetoothspeakerblue' AND fetched_at > 1793092365 ORDER BY fetched_at DESC, total",
+   "shown": [],
+   "fetched": [],
+   "usl_fallback": "no rows for this product in safe_price",
+   "dropped": [
+    {
+     "source": "eBay",
+     "price": 39.99,
+     "title": "Flip 7 Bluetooth Wireless Portable Speaker Green Camouflage",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 68.0,
+     "title": "Jbl Flip 7 Portable Waterproof Wireless Bluetooth Speaker -black",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "PayMore Malvern",
+     "price": 69.99,
+     "title": "Jbl Flip 7 Portable Waterproof Bluetooth Speaker Purple FLIP7T",
+     "reason": "\"pre-owned\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Poshmark",
+     "price": 80.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 7 Portable Bluetooth Speaker - Purple | Color: Purpl",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Joyus",
+     "price": 89.99,
+     "title": "Joyus JBL Flip 7 Portable Speaker",
+     "reason": "\"pre-owned\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Joyus",
+     "price": 89.99,
+     "title": "Joyus JBL Flip 7 Portable Speaker",
+     "reason": "\"pre-owned\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Joyus",
+     "price": 89.99,
+     "title": "Joyus JBL Flip 7 Portable Speaker",
+     "reason": "\"pre-owned\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Poshmark",
+     "price": 90.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 7 Portable Bluetooth Speaker - Green Camo | Color: B",
+     "reason": "\"pre-owned\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Groupon.com",
+     "price": 92.99,
+     "title": "Refurbished JBL Flip 7 Speaker Purple in rgb",
+     "reason": "\"Refurbished\" in its title",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 100.0,
+     "title": "Flip 7 Portable Bluetooth Speaker Usb-c, White",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Poshmark",
+     "price": 105.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 7 Purple Bluetooth Portable Speaker Nwt | Color: Pur",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "www.460estore.com",
+     "price": 112.0,
+     "title": "JBL Flip 7 Portable Waterproof Speaker - Pink",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 119.55,
+     "title": "Jbl Flip 7 Black Orange Portable Bluetooth Speaker",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - Electronics Expo (Authorized Dealer)",
+     "price": 119.77,
+     "title": "JBL Flip 7 Waterproof Portable Speaker With Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart",
+     "price": 129.95,
+     "title": "JBL Flip 7 Bluetooth Portable Waterproof Speaker",
+     "reason": "this page's own store",
+     "group": "This page's own store"
+    },
+    {
+     "source": "Gshop Pty",
+     "price": 134.99,
+     "title": "JBL Flip 7 35W Bluetooth IP68 | GSHOP Panam\u00e1 Rojo",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 136.45,
+     "title": "Jbl Flip 7 + Bundle with divvi! Protective Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Target",
+     "price": 136.45,
+     "title": "JBL Flip 7",
+     "reason": "not the same item: other model",
+     "group": "Different item"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 136.45,
+     "title": "Jbl Flip 7 + Bundle with divvi! Protective Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 136.45,
+     "title": "Jbl Flip 7 + Bundle with divvi! Protective Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Best Buy",
+     "price": 136.45,
+     "title": "JBL Flip 7 Waterproof Portable Speaker Bundle with gSport Carbon Fiber Case",
+     "reason": "not the same item: bundle or combo",
+     "group": "Different item"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 Portable Bluetooth Speaker IP68 USB-C Audio Funky Black",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 Portable Bluetooth Speaker IP68 USB-C Audio Pink",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 Portable Bluetooth Speaker IP68 USB-C Audio Red",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 Portable Bluetooth Speaker IP68 USB-C Audio Black",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 Portable Bluetooth Speaker IP68 USB-C Audio White",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 \ud734\ub300\uc6a9 \ube14\ub8e8\ud22c\uc2a4 \uc2a4\ud53c\ucee4 IP68 USB-C \uc9c0\uc6d0 White",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 139.0,
+     "title": "JBL Flip 7 \ud734\ub300\uc6a9 \ube14\ub8e8\ud22c\uc2a4 \uc2a4\ud53c\ucee4 IP68 USB-C \uc9c0\uc6d0 Red",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - Datavision Computer Video",
+     "price": 143.95,
+     "title": "Jbl Flip 7 Portable Bluetooth Speaker - Camoflauge + 13-Month Axiom Care, Green",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart - Datavision Computer Video",
+     "price": 148.95,
+     "title": "Jbl Flip 7 Portable Bluetooth Speaker - Camoflauge + 27-Month Axiom Care, Green",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart - Datavision Computer Video",
+     "price": 148.95,
+     "title": "Jbl Flip 7 Portable Bluetooth Speaker - Red + 27-Month Axiom Care",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 156.0,
+     "title": "JBL Flip 7 \ud734\ub300\uc6a9 \ube14\ub8e8\ud22c\uc2a4 \uc2a4\ud53c\ucee4 IP68 USB-C \uc9c0\uc6d0 Sand",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - World Wide Stereo (Authorized)",
+     "price": 169.9,
+     "title": "Jbl Flip 7 Portable Bluetooth Speaker Bundle with Magnetic Mount (White)",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Poshmark",
+     "price": 200.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 7 Purple Portable Speaker Both Of Them Included | Co",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Newegg.com - Myriad Mart",
+     "price": 204.74,
+     "title": "FLIP 7 (Purple) Waterproof Portable Speaker Bundle with X-Halo Hardcase (Black)",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Best Buy",
+     "price": 259.9,
+     "title": "JBL Flip 7 Waterproof Portable Speaker Bundle",
+     "reason": "not the same item: bundle or combo",
+     "group": "Different item"
+    },
+    {
+     "source": "4AllPromos.com",
+     "price": 802.67,
+     "title": "3 Promo Speakers - Low Minimum - JBL Flip 7 Portable Speaker - Purple",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Logotech",
+     "price": 1079.7,
+     "title": "Personalized Jbl 6 Pcs. Flip 7 Portable Speaker Red",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Logotech",
+     "price": 1079.7,
+     "title": "Personalized Jbl 6 Pcs. Flip 7 Portable Speaker Purple",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "ExecutiveAdvertising.com",
+     "price": 1415.4,
+     "title": "6 Branded JBL Flip 7 Portable Speaker - Purple",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    }
+   ],
+   "also_checked": [
+    "Best Buy (a different item only)",
+    "Target (a different item only)",
+    "Amazon (not found)"
+   ],
+   "offers_seen": 40
+  }
+ },
+ "note": "Recorded from a real full-mode check (agents, Google Shopping via SerpApi, Nemotron wording). Replayed as is with SAMPLE_MODE=true."
+}

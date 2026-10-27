@@ -1,0 +1,1303 @@
+{
+ "name": "storelab_audiodealz",
+ "recorded_at": "2026-10-27",
+ "url": "http://localhost:8797/storelab/audiodealz/",
+ "page": {
+  "url": "http://localhost:8797/storelab/audiodealz/",
+  "host": "localhost:8797",
+  "title": "Sony WH-1000XM5 Wireless Headphones | AudioDealz",
+  "https": true,
+  "product": {
+   "name": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
+   "price": 149.0,
+   "currency": "USD",
+   "was_price": null,
+   "brand": "Sony",
+   "model": "WH-1000XM5",
+   "sku": "WH1000XM5/B",
+   "image": null,
+   "source": "json-ld"
+  },
+  "signals": [
+   {
+    "type": "claimed_discount",
+    "selector": "#deal-badge",
+    "text": "Limited time deal -40%$14900 List Price: $249.00",
+    "amount": 249.0,
+    "detail": null
+   },
+   {
+    "type": "countdown",
+    "selector": "#timer",
+    "text": "\u23f1 Deal ends in 09:58",
+    "amount": null,
+    "detail": {
+     "remaining_s": 598
+    }
+   },
+   {
+    "type": "prechecked_addon",
+    "selector": "#addon-row",
+    "text": "Add 2-Year Protection Plan for $4.99 Covers accidental damage",
+    "amount": 4.99,
+    "detail": {
+     "checkbox": "#addon"
+    }
+   },
+   {
+    "type": "scarcity",
+    "selector": "body > div:nth-of-type(4) > div:nth-of-type(2)",
+    "text": "Only 2 left in stock - order soon.",
+    "amount": null,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: no \u00b7 contact link: no",
+    "amount": null,
+    "detail": {
+     "returns": false,
+     "contact": false
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "Sony WH-1000XM5 Wireless Industry Leading Noise Cancelling Headphones, Black\naudiodealz \ud83d\udd0d Hello, sign inAccount & Lists\ud83d\uded2 Cart \u2630 AllToday's DealsHeadphonesSpeakersGift Cards Electronics \u203a Headphones \u203a Over-Ear Sony WH-1000XM5 Wireless Industry Leading Noise Cancelling Headphones, Black Visit the Sony Store \u2605\u2605\u2605\u2605\u2606 4.6 12,481 ratings Limited time deal -40%$14900 List Price: $249.00 \u23f1 Deal ends in 09:58 Only 2 left in stock - order soon. About this item Industry-leading noise cancellation with two processors and eight microphones Up to 30-hour battery life with quick charging (3 min charge for 3 hours) Crystal clear hands-free calling with four beamforming microphones Model: WH-1000XM5 \u00b7 Colour: Black \u00b7 Condition: New $14900 FREE delivery Tuesday \u00b7 Ships from AudioDealz In Stock Add 2-Year Protection Plan for $4.99Covers accidental damage Add to Cart Buy Now \ud83d\udd12 Secure transaction \u00b7 Returns: see policy at checkout Store Lab \u00b7 made-up store for the Pricise demo",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ },
+ "events": [
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "deal",
+    "type": "prechecked_addon",
+    "status": "confirmed",
+    "summary": "An add-on costing $4.99 is ticked for you: \"Add 2-Year Protection Plan for $4.99 Covers accidental damage\".",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "#addon-row",
+      "label": "Pre-ticked $4.99",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "Add 2-Year Protection Plan for $4.99 Covers accidental damage",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.97,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112753.530346
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "deal",
+    "type": "scarcity",
+    "status": "proposed",
+    "summary": "Pressure message: \"Only 2 left in stock - order soon.\". Stock claims can't be verified from the page.",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "body > div:nth-of-type(4) > div:nth-of-type(2)",
+      "label": "Pressure message",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112753.530777
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "page",
+    "type": "product",
+    "status": "confirmed",
+    "summary": "Read the page: Sony WH-1000XM5, listed at $149 (\"was $249\").",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "#product-title",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.99,
+    "model": "extension (no model call)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.068798
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "trust",
+    "type": "domain_age",
+    "status": "proposed",
+    "summary": "Domain registered 6 days ago.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/about.json",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "domain_created=2026-10-18 as_of=2026-10-24 age_days=6",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.95,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.5589602
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "trust",
+    "type": "no_company",
+    "status": "proposed",
+    "summary": "No address or company record found for this store.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/about.json",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "address_present=False company_number_present=False",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.5589929
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "trust",
+    "type": "copied_photos",
+    "status": "proposed",
+    "summary": "Product photos are copied from another store.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/img/product.png",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-c/img/product.png",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "phash_distance=0 (match <= 4); this domain 2026-10-18, original 2018-01-19",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.559007
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "trust",
+    "type": "review_burst",
+    "status": "proposed",
+    "summary": "70% of reviews were posted in a single week.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/reviews.json",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "max_7day_share=0.70 window_start=2026-10-19 reviews=30",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.8,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.559018
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "trust",
+    "type": "bad_returns",
+    "status": "proposed",
+    "summary": "Only 5 days to return items.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/returns.html",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "return_window_days=5",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.85,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.559029
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "deal",
+    "type": "drip_fees",
+    "status": "confirmed",
+    "summary": "$37.01 in fees appear only at checkout step 4 (service $22.00 + processing $15.01). Real total: $191.00.",
+    "evidence": [
+     {
+      "kind": "screenshot",
+      "ref": "/traces/6a24dfcb418c/runahead-step4.png",
+      "label": "Checkout step 4",
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "runahead:6a24dfcb418c",
+      "label": "5 checkout pages walked; stopped before payment: refused \"Place order\"",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "Item $149.00 (step 1) \u00b7 2-Year Protection Plan $4.99 (step 1) \u00b7 Service fee $22.00 (step 4) \u00b7 Processing fee $15.01 (step 4) \u00b7 Real total $191.00",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.97,
+    "model": "hidden browser run-ahead + rules",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112754.893876
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "deal",
+    "type": "fake_discount",
+    "status": "confirmed",
+    "summary": "\"40% off\" is not real: the price was $149.00 for 81 of the last 90 days. $249.00 appeared for 2 days only.",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "#deal-badge",
+      "label": "Fake 40% off",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "history:storelab/audiodealz:WH1000XM5/B",
+      "label": "$149.00 on 81 of 90 days; $249.00 on 2 days; median $149.00",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT h.day_offset, h.price FROM pricise_pg.price_history h JOIN pricise_pg.listings l ON l.store_id = h.store_id AND l.product_id = h.product_id JOIN pricise_pg.products p ON p.product_id = l.product_id JOIN pricise_pg.stores s ON s.store_id = l.store_id WHERE s.path = 'storelab/audiodealz' AND (l.sku_key = 'wh1000xm5b' OR p.model_key = 'wh1000xm5b') AND h.day_offset BETWEEN -89 AND 0 ORDER BY h.day_offset",
+      "label": "Zetaris returned 90 daily rows: $149.00 x 81, $169.00 x 7, $249.00 x 2",
+      "placement": null
+     }
+    ],
+    "confidence": 0.93,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112756.493817
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "catalog_match",
+    "status": "confirmed",
+    "summary": "Same model (WH-1000XM5, new) found at 9 other Store Lab stores in Zetaris.",
+    "evidence": [
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.95,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112756.283773
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "candidate",
+    "status": "rejected",
+    "summary": "Store D, $189: blocked by the Trust Agent (Domain registered 6 days ago; No address or company record found for this store).",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-d/",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "rules (no model)",
+    "challenged_by": "trust",
+    "rounds": 1,
+    "ts": 1793112756.283919
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "candidate",
+    "status": "unverified",
+    "summary": "Store E, $245: the Trust Agent couldn't check this store (it did not respond).",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-e/",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.0,
+    "model": "rules (no model)",
+    "challenged_by": "trust",
+    "rounds": 1,
+    "ts": 1793112756.2839391
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "proposed",
+    "summary": "Store I, $178: cheaper look-alike (WH-1000XM4). Proposed for the Skeptic to check it is the same item.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-i/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-i:sony-wh1000xm4:day1",
+      "label": "$178, free shipping = $178",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-i/;model=0;variant=1;condition=1;warranty=1;price=178",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112756.283972
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "proposed",
+    "summary": "Store B, $199: cheaper look-alike (refurbished). Proposed for the Skeptic to check it is the same item.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-b/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-b:sony-wh1000xm5:day1",
+      "label": "$199, free shipping = $199",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-b/;model=1;variant=1;condition=0;warranty=1;price=199",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112756.2839968
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "confirmed",
+    "summary": "Store C, $229: exact match (new, same model), $255 minus a $26 card offer, free shipping. Cheapest true total among 6 stores the Trust Agent checked. Model and condition checked against data; variant and warranty not in data, assumed equal.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-c/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-c:sony-wh1000xm5:day1",
+      "label": "$255 minus a $26 card offer, free shipping = $229",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-c/;model=1;variant=1;condition=1;warranty=1;price=229",
+      "label": "Exact match",
+      "placement": null
+     }
+    ],
+    "confidence": 0.94,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112756.284029
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "deal",
+    "type": "resetting_timer",
+    "status": "confirmed",
+    "summary": "The \"deal ends\" timer restarts at 09:59 on every visit (seen on 3 visits).",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "#timer",
+      "label": "Timer resets",
+      "placement": null
+     },
+     {
+      "kind": "screenshot",
+      "ref": "/traces/6a24dfcb418c/timer-visit1.png",
+      "label": "Visit 1 \u00b7 10:52:34 \u00b7 09:59",
+      "placement": null
+     },
+     {
+      "kind": "screenshot",
+      "ref": "/traces/6a24dfcb418c/timer-visit2.png",
+      "label": "Visit 2 \u00b7 10:52:39 \u00b7 09:59",
+      "placement": null
+     },
+     {
+      "kind": "screenshot",
+      "ref": "/traces/6a24dfcb418c/timer-visit3.png",
+      "label": "Visit 3 \u00b7 10:52:45 \u00b7 09:59",
+      "placement": null
+     }
+    ],
+    "confidence": 0.97,
+    "model": "hidden browser, 3 fresh visits + rules",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793112765.300268
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "challenged",
+    "summary": "Store I, $178: cheaper look-alike (WH-1000XM4). Proposed for the Skeptic to check it is the same item.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-i/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-i:sony-wh1000xm4:day1",
+      "label": "$178, free shipping = $178",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-i/;model=0;variant=1;condition=1;warranty=1;price=178",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": "skeptic",
+    "rounds": 0,
+    "ts": 1793112756.283972
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "rejected",
+    "summary": "Store I, $178: cheaper look-alike (WH-1000XM4). Proposed for the Skeptic to check it is the same item. Skeptic: This offer was rejected because it is a different model (WH-1000XM4) than the one you are looking for.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-i/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-i:sony-wh1000xm4:day1",
+      "label": "$178, free shipping = $178",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-i/;model=0;variant=1;condition=1;warranty=1;price=178",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "challenged_by": "skeptic",
+    "rounds": 1,
+    "ts": 1793112756.283972
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "challenged",
+    "summary": "Store B, $199: cheaper look-alike (refurbished). Proposed for the Skeptic to check it is the same item.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-b/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-b:sony-wh1000xm5:day1",
+      "label": "$199, free shipping = $199",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-b/;model=1;variant=1;condition=0;warranty=1;price=199",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": "skeptic",
+    "rounds": 0,
+    "ts": 1793112756.2839968
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "rejected",
+    "summary": "Store B, $199: cheaper look-alike (refurbished). Proposed for the Skeptic to check it is the same item. Skeptic: This offer was rejected because it is a refurbished item, not new.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-b/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-b:sony-wh1000xm5:day1",
+      "label": "$199, free shipping = $199",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-b/;model=1;variant=1;condition=0;warranty=1;price=199",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "challenged_by": "skeptic",
+    "rounds": 1,
+    "ts": 1793112756.2839968
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "challenged",
+    "summary": "Store C, $229: exact match (new, same model), $255 minus a $26 card offer, free shipping. Cheapest true total among 6 stores the Trust Agent checked. Model and condition checked against data; variant and warranty not in data, assumed equal.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-c/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-c:sony-wh1000xm5:day1",
+      "label": "$255 minus a $26 card offer, free shipping = $229",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-c/;model=1;variant=1;condition=1;warranty=1;price=229",
+      "label": "Exact match",
+      "placement": null
+     }
+    ],
+    "confidence": 0.94,
+    "model": "rules (no model)",
+    "challenged_by": "skeptic",
+    "rounds": 0,
+    "ts": 1793112756.284029
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "6a24dfcb418c",
+    "agent": "price",
+    "type": "best_price",
+    "status": "confirmed",
+    "summary": "Store C, $229: exact match (new, same model), $255 minus a $26 card offer, free shipping. Cheapest true total among 6 stores the Trust Agent checked. Model and condition checked against data; variant and warranty not in data, assumed equal. Skeptic: Store C has the lowest actual price you will pay for this exact new model.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-c/",
+      "label": null,
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "listing:store-c:sony-wh1000xm5:day1",
+      "label": "$255 minus a $26 card offer, free shipping = $229",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+      "label": "Zetaris returned 11 Store Lab listings",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=http://localhost:8797/storelab/store-c/;model=1;variant=1;condition=1;warranty=1;price=229",
+      "label": "Exact match",
+      "placement": null
+     }
+    ],
+    "confidence": 0.94,
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "challenged_by": "skeptic",
+    "rounds": 1,
+    "ts": 1793112756.284029
+   }
+  },
+  {
+   "kind": "final_card",
+   "card": {
+    "check_id": "6a24dfcb418c",
+    "title": "Don't buy here",
+    "subtitle": "Risky store \u00b7 3 tricks \u00b7 real total $191, not $149",
+    "tone": "bad",
+    "safe": {
+     "status": "bad",
+     "headline": "Risky",
+     "reasons": [
+      {
+       "text": "Domain registered 6 days ago",
+       "tone": "bad",
+       "proof": "whois"
+      },
+      {
+       "text": "No address or company record found for this store",
+       "tone": "bad",
+       "proof": "whois"
+      },
+      {
+       "text": "Product photos are copied from another store",
+       "tone": "bad",
+       "proof": "whois"
+      },
+      {
+       "text": "70% of reviews were posted in a single week",
+       "tone": "caution",
+       "proof": "whois"
+      },
+      {
+       "text": "Only 5 days to return items",
+       "tone": "caution",
+       "proof": "whois"
+      }
+     ]
+    },
+    "honest": {
+     "status": "bad",
+     "headline": "3 tricks",
+     "reasons": [
+      {
+       "text": "Fake 40% off: it was $149 for 81 of 90 days",
+       "tone": "bad",
+       "proof": "chart"
+      },
+      {
+       "text": "Timer resets on every visit",
+       "tone": "bad",
+       "proof": "replay"
+      },
+      {
+       "text": "$37 in fees appear at checkout step 4",
+       "tone": "bad",
+       "proof": "fees"
+      }
+     ]
+    },
+    "best_price": {
+     "status": "good",
+     "headline": "Store C \u00b7 $229",
+     "reasons": [
+      {
+       "text": "Exact match: same model, new",
+       "tone": "good",
+       "proof": "stores"
+      },
+      {
+       "text": "$255 minus a $26 card offer, free shipping",
+       "tone": "good",
+       "proof": "stores"
+      },
+      {
+       "text": "Skipped Store B (refurbished), Store D (unsafe store) and Store E (couldn't check)",
+       "tone": "caution",
+       "proof": "stores"
+      }
+     ],
+     "store": "Store C",
+     "total": 229.0,
+     "url": "http://localhost:8797/storelab/store-c/"
+    },
+    "tricks": 3,
+    "elapsed_s": 17.3,
+    "alt": {
+     "store": "Store C",
+     "total": 229.0,
+     "url": "http://localhost:8797/storelab/store-c/"
+    }
+   }
+  }
+ ],
+ "evidence_data": {
+  "price_history": {
+   "store": "AudioDealz",
+   "label": "Synthetic history (Store Lab)",
+   "points": [
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    169.0,
+    169.0,
+    169.0,
+    169.0,
+    169.0,
+    169.0,
+    169.0,
+    149.0,
+    149.0,
+    149.0,
+    249.0,
+    249.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0,
+    149.0
+   ],
+   "claimed_was": 249.0,
+   "days_at_claim": 2,
+   "days_at_price": 81,
+   "sql": "SELECT h.day_offset, h.price FROM pricise_pg.price_history h JOIN pricise_pg.listings l ON l.store_id = h.store_id AND l.product_id = h.product_id JOIN pricise_pg.products p ON p.product_id = l.product_id JOIN pricise_pg.stores s ON s.store_id = l.store_id WHERE s.path = 'storelab/audiodealz' AND (l.sku_key = 'wh1000xm5b' OR p.model_key = 'wh1000xm5b') AND h.day_offset BETWEEN -89 AND 0 ORDER BY h.day_offset",
+   "source": "Zetaris"
+  },
+  "timer_frames": [
+   {
+    "visit": 1,
+    "time": "10:52:34",
+    "shown": "09:59",
+    "screenshot": "/traces/6a24dfcb418c/timer-visit1.png",
+    "at": 1793112754.0656462,
+    "remaining_s": 599
+   },
+   {
+    "visit": 2,
+    "time": "10:52:39",
+    "shown": "09:59",
+    "screenshot": "/traces/6a24dfcb418c/timer-visit2.png",
+    "at": 1793112759.6890419,
+    "remaining_s": 599
+   },
+   {
+    "visit": 3,
+    "time": "10:52:45",
+    "shown": "09:59",
+    "screenshot": "/traces/6a24dfcb418c/timer-visit3.png",
+    "at": 1793112765.21254,
+    "remaining_s": 599
+   }
+  ],
+  "fees": [
+   {
+    "label": "Item",
+    "amount": 149.0,
+    "step": 1
+   },
+   {
+    "label": "2-Year Protection Plan",
+    "amount": 4.99,
+    "step": 1
+   },
+   {
+    "label": "Service fee",
+    "amount": 22.0,
+    "step": 4
+   },
+   {
+    "label": "Processing fee",
+    "amount": 15.01,
+    "step": 4
+   }
+  ],
+  "total": 191.0,
+  "stores": [
+   {
+    "store": "Store C",
+    "total": 229.0,
+    "status": "chosen",
+    "note": "$255 minus a $26 card offer, free shipping \u00b7 new"
+   },
+   {
+    "store": "Store G",
+    "total": 248.0,
+    "status": "ok",
+    "note": "$219 + $29 fees, free shipping \u00b7 new"
+   },
+   {
+    "store": "Store I",
+    "total": 249.0,
+    "status": "ok",
+    "note": "$249, free shipping \u00b7 new"
+   },
+   {
+    "store": "Store A",
+    "total": 252.0,
+    "status": "ok",
+    "note": "$239 + $13 shipping \u00b7 new"
+   },
+   {
+    "store": "Store H",
+    "total": 254.99,
+    "status": "ok",
+    "note": "$245 + $9.99 shipping \u00b7 new"
+   },
+   {
+    "store": "Store F",
+    "total": 259.0,
+    "status": "ok",
+    "note": "$259, free shipping \u00b7 new"
+   },
+   {
+    "store": "Store I",
+    "total": 178.0,
+    "status": "rejected",
+    "note": "WH-1000XM4 is a different model, not the same item"
+   },
+   {
+    "store": "Store D",
+    "total": 189.0,
+    "status": "rejected",
+    "note": "Blocked by the Trust Agent (Domain registered 6 days ago; No address or company record found for this store)"
+   },
+   {
+    "store": "Store B",
+    "total": 199.0,
+    "status": "rejected",
+    "note": "Refurbished, not the same item"
+   },
+   {
+    "store": "Store E",
+    "total": 245.0,
+    "status": "skipped",
+    "note": "The Trust Agent couldn't check this store (it did not respond)"
+   }
+  ],
+  "addons": [
+   {
+    "label": "Add 2-Year Protection Plan for $4.99 Covers accidental damage",
+    "amount": 4.99
+   }
+  ],
+  "timings": {
+   "addons": 0.0,
+   "scarcity": 0.0,
+   "runahead": 1.36,
+   "discount": 2.96,
+   "timer": 11.77
+  },
+  "store_checks": [
+   {
+    "check": "domain_age",
+    "result": "Domain registered 6 days ago.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/about.json"
+     },
+     {
+      "kind": "log",
+      "ref": "domain_created=2026-10-18 as_of=2026-10-24 age_days=6"
+     }
+    ],
+    "status": "flag"
+   },
+   {
+    "check": "no_company",
+    "result": "No address or company record found for this store.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/about.json"
+     },
+     {
+      "kind": "log",
+      "ref": "address_present=False company_number_present=False"
+     }
+    ],
+    "status": "flag"
+   },
+   {
+    "check": "copied_photos",
+    "result": "Product photos are copied from another store.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/img/product.png"
+     },
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/store-c/img/product.png"
+     },
+     {
+      "kind": "log",
+      "ref": "phash_distance=0 (match <= 4); this domain 2026-10-18, original 2018-01-19"
+     }
+    ],
+    "status": "flag"
+   },
+   {
+    "check": "review_burst",
+    "result": "70% of reviews were posted in a single week.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/reviews.json"
+     },
+     {
+      "kind": "log",
+      "ref": "max_7day_share=0.70 window_start=2026-10-19 reviews=30"
+     }
+    ],
+    "status": "flag"
+   },
+   {
+    "check": "duplicate_reviews",
+    "result": "No copy-pasted reviews.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/reviews.json"
+     },
+     {
+      "kind": "log",
+      "ref": "duplicate_share=0.00 most_repeated=1x"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "bad_returns",
+    "result": "Only 5 days to return items.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "http://localhost:8797/storelab/audiodealz/returns.html"
+     },
+     {
+      "kind": "log",
+      "ref": "return_window_days=5"
+     }
+    ],
+    "status": "flag"
+   }
+  ],
+  "stores_sql": "SELECT s.store_id, s.name AS store, s.url, s.trust, s.status, l.product_id, p.family, p.model, p.model_key, l.sku_key, l.condition, COALESCE(h.price, l.price) AS price, l.shipping, l.fees, COALESCE(o.amount, 0) AS card_offer, COALESCE(h.price, l.price) + l.shipping + l.fees - COALESCE(o.amount, 0) AS true_total FROM pricise_pg.listings l JOIN pricise_pg.stores s ON s.store_id = l.store_id JOIN pricise_pg.products p ON p.product_id = l.product_id LEFT JOIN pricise_pg.price_history h ON h.store_id = l.store_id AND h.product_id = l.product_id AND h.day_offset = 0 LEFT JOIN pricise_pg.card_offers o ON o.store_id = l.store_id AND o.product_id = l.product_id WHERE s.kind = 'storelab' ORDER BY true_total, s.name",
+  "online": null,
+  "runahead": {
+   "steps": [
+    {
+     "step": 0,
+     "url": "http://localhost:8797/storelab/audiodealz/cart.html?addon=1",
+     "title": "Your cart | AudioDealz",
+     "screenshot": "/traces/6a24dfcb418c/runahead-step0.png"
+    },
+    {
+     "step": 1,
+     "url": "http://localhost:8797/storelab/audiodealz/checkout-1.html?addon=1",
+     "title": "Shipping address | AudioDealz",
+     "screenshot": null
+    },
+    {
+     "step": 2,
+     "url": "http://localhost:8797/storelab/audiodealz/checkout-2.html?addon=1",
+     "title": "Delivery | AudioDealz",
+     "screenshot": null
+    },
+    {
+     "step": 3,
+     "url": "http://localhost:8797/storelab/audiodealz/checkout-3.html?addon=1",
+     "title": "Review items | AudioDealz",
+     "screenshot": null
+    },
+    {
+     "step": 4,
+     "url": "http://localhost:8797/storelab/audiodealz/checkout-4.html?addon=1",
+     "title": "Payment | AudioDealz",
+     "screenshot": "/traces/6a24dfcb418c/runahead-step4.png"
+    }
+   ],
+   "stopped": "stopped before payment: refused \"Place order\""
+  }
+ },
+ "note": "SYNTHETIC TEST STORE, made up by us: Store Lab's AudioDealz page (storelab/audiodealz/), not a real shop. Recorded on 27 Oct 2026 with the real agents (STORELAB_DEMO=on, orchestrator on), not the scripted demo, to show the red verdict."
+}

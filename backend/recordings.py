@@ -46,7 +46,11 @@ def match(url: str) -> Optional[dict]:
 
 
 def label(rec: dict) -> str:
+    from backend.tools.common import is_storelab
+
     when = time.strftime("%-d %b %Y", time.strptime(rec["recorded_at"][:10], "%Y-%m-%d"))
+    if is_storelab(rec.get("url", "")):  # Store Lab is made up by us: say so, even though the agents ran for real
+        return f"recorded from the real agents on a synthetic test store on {when}"
     return f"recorded from a real run on {when}"
 
 

@@ -1,0 +1,72 @@
+{
+ "_note": "SYNTHETIC TEST STORE, made up by us: Store Lab's AudioDealz page (storelab/audiodealz/), not a real shop. Recorded on 27 Oct 2026 with the real agents (STORELAB_DEMO=on, orchestrator on), not the scripted demo, to show the red verdict.",
+ "url": "http://localhost:8797/storelab/audiodealz/",
+ "page": {
+  "url": "http://localhost:8797/storelab/audiodealz/",
+  "host": "localhost:8797",
+  "title": "Sony WH-1000XM5 Wireless Headphones | AudioDealz",
+  "https": true,
+  "product": {
+   "name": "Sony WH-1000XM5 Wireless Noise Cancelling Headphones",
+   "price": 149.0,
+   "currency": "USD",
+   "was_price": null,
+   "brand": "Sony",
+   "model": "WH-1000XM5",
+   "sku": "WH1000XM5/B",
+   "image": null,
+   "source": "json-ld"
+  },
+  "signals": [
+   {
+    "type": "claimed_discount",
+    "selector": "#deal-badge",
+    "text": "Limited time deal -40%$14900 List Price: $249.00",
+    "amount": 249.0,
+    "detail": null
+   },
+   {
+    "type": "countdown",
+    "selector": "#timer",
+    "text": "\u23f1 Deal ends in 09:58",
+    "amount": null,
+    "detail": {
+     "remaining_s": 598
+    }
+   },
+   {
+    "type": "prechecked_addon",
+    "selector": "#addon-row",
+    "text": "Add 2-Year Protection Plan for $4.99 Covers accidental damage",
+    "amount": 4.99,
+    "detail": {
+     "checkbox": "#addon"
+    }
+   },
+   {
+    "type": "scarcity",
+    "selector": "body > div:nth-of-type(4) > div:nth-of-type(2)",
+    "text": "Only 2 left in stock - order soon.",
+    "amount": null,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: no \u00b7 contact link: no",
+    "amount": null,
+    "detail": {
+     "returns": false,
+     "contact": false
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "Sony WH-1000XM5 Wireless Industry Leading Noise Cancelling Headphones, Black\naudiodealz \ud83d\udd0d Hello, sign inAccount & Lists\ud83d\uded2 Cart \u2630 AllToday's DealsHeadphonesSpeakersGift Cards Electronics \u203a Headphones \u203a Over-Ear Sony WH-1000XM5 Wireless Industry Leading Noise Cancelling Headphones, Black Visit the Sony Store \u2605\u2605\u2605\u2605\u2606 4.6 12,481 ratings Limited time deal -40%$14900 List Price: $249.00 \u23f1 Deal ends in 09:58 Only 2 left in stock - order soon. About this item Industry-leading noise cancellation with two processors and eight microphones Up to 30-hour battery life with quick charging (3 min charge for 3 hours) Crystal clear hands-free calling with four beamforming microphones Model: WH-1000XM5 \u00b7 Colour: Black \u00b7 Condition: New $14900 FREE delivery Tuesday \u00b7 Ships from AudioDealz In Stock Add 2-Year Protection Plan for $4.99Covers accidental damage Add to Cart Buy Now \ud83d\udd12 Secure transaction \u00b7 Returns: see policy at checkout Store Lab \u00b7 made-up store for the Pricise demo",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ }
+}

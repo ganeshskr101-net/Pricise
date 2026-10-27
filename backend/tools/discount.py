@@ -186,7 +186,8 @@ def market_check(check_id: str, page: PageFacts, price: float, was: float, claim
     from backend.tools import rdap, shopping
 
     p = page.product
-    launch = msrp.lookup(p.brand, p.name)
+    cond = shopping.page_condition(page)  # open box, refurbished or used: a launch price and new prices aren't its "was"
+    launch = msrp.lookup(p.brand, p.name) if cond == "new" else None
     query = shopping.query_for(p)
     # The same offers the Price Agent compares: the USL's safe_price first (Zetaris), else the search; then the sellers list
     from backend.data import catalog, repo
@@ -198,11 +199,11 @@ def market_check(check_id: str, page: PageFacts, price: float, was: float, claim
     stores: dict[str, float] = {}
     if offers is not None:
         mine = rdap.registrable(page.host or "")
-        kept, _, _ = shopping.classify_offers(p, offers, price, mine)
+        kept, _, _ = shopping.classify_offers(p, offers, price, mine, cond)
         if len({o["domain"] for o in kept}) < 3:  # the Price Agent's own rule: the same sellers lookup, shared via the cache
             extra, _ = shopping.sellers_for(query, p, None if source == "zetaris usl" else offers)
             if extra:
-                kept, _, _ = shopping.classify_offers(p, offers + extra, price, mine)
+                kept, _, _ = shopping.classify_offers(p, offers + extra, price, mine, cond)
         for o in kept:  # the lowest new, full-price offer per credible store
             name = display_name(o["domain"])
             stores[name] = min(stores.get(name, o["total"]), o["total"])
@@ -233,6 +234,11 @@ def market_check(check_id: str, page: PageFacts, price: float, was: float, claim
                       ev + [{"kind": "text", "ref": f"msrp: {money(launch[0])} ({launch[1]})", "label": "MSRP"}], confidence=0.8)
         return out
     prices = list(stores.values())
+    if cond != "new":
+        return finding(check_id, "claimed_discount", "unverified",
+                       f"The page claims a reduced price ({claim_text}). {history} Unverified: this listing is {cond}, so "
+                       "its \"was\" price can't be checked against the launch price (MSRP) or new prices at other stores."
+                       + (f"{now.replace('Credible stores', 'New at credible stores', 1)}" if now else ""), ev, confidence=0.4)
     if len(prices) >= 2 and max(prices) <= INFLATED * was:
         return finding(check_id, "inflated_discount", "proposed",
                        f"Discount claim looks inflated: every credible store charges {money(min(prices))} to "

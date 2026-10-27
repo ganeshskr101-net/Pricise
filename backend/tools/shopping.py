@@ -61,9 +61,33 @@ def _words(text: str) -> list[str]:
     return [w for w in re.findall(r"[a-z0-9][a-z0-9.+-]*", (text or "").lower()) if w not in STOP]
 
 
+# Not a new item, as a page states it: "(Open Box) JBL Flip 7", "Restored Apple iPhone 12", "... (Renewed)". "Used" and
+# "Restored" count only at the start of the title or after a bracket or dash. Mirrors extension/content/content.js.
+TITLE_COND_RE = re.compile(r"\b(open[- ]box|refurbished|renewed|pre-?owned)\b|(?:^|[(\[|\u2013-]\s*)(restored|used)\b", re.I)
+COND_TAG_RE = re.compile(r"^\s*[(\[]\s*(?:open[- ]box|refurbished|renewed|restored|pre-?owned|used)\s*[)\]]\s*"
+                         r"|^\s*(?:restored|renewed|refurbished|pre-?owned|used)\s+", re.I)
+
+
+def condition_word(word: str) -> str:
+    w = (word or "").lower()
+    return "open box" if w.startswith("open") else "refurbished" if re.search(r"refurb|renew|restor", w) \
+        else "used" if re.search(r"owned|used", w) else "new"
+
+
+def page_condition(page) -> str:
+    """"new", "open box", "refurbished" or "used": the extension's item_condition signal (title or a "Condition:" row),
+    else the title. Pages that don't say are new."""
+    for sig in getattr(page, "signals", None) or []:
+        if sig.type == "item_condition" and (sig.detail or {}).get("condition"):
+            return sig.detail["condition"]
+    m = TITLE_COND_RE.search((page.product.name or "") if getattr(page, "product", None) else "")
+    return condition_word(m.group(1) or m.group(2)) if m else "new"
+
+
 def clean_title(name: str, brand: Optional[str] = None, max_words: int = 8) -> str:
-    """"SWIFTVEST Running Vest ... | Lightweight ..." -> the first part, brand first, at most max_words words."""
-    first = re.split(r"\s[|–—]\s|,\s|\s-\s|\(", name or "")[0]
+    """"SWIFTVEST Running Vest ... | Lightweight ..." -> the first part, brand first, at most max_words words. A leading
+    condition tag ("(Open Box) JBL Flip 7 ...") is dropped first: the search is for the item, not its condition."""
+    first = re.split(r"\s[|–—]\s|,\s|\s-\s|\(", COND_TAG_RE.sub("", name or ""))[0]
     words = first.split()
     if brand and brand.lower() not in first.lower():
         words = [brand, *words]
@@ -78,7 +102,7 @@ def query_for(product) -> str:
     if model and (named or not product.name):
         return (f"{brand} {model}" if brand and brand.lower() not in model.lower() else model)[:100]
     q = clean_title(product.name or "", brand)
-    colour = [c for c in _variant(product.name or "")["color"] if c not in q.lower()]
+    colour = [c for c in _variant(product.name or "")["color"] if not re.search(rf"\b{c}\b", q, re.I)]  # "Bluetooth" isn't blue
     return (f"{q} {sorted(colour)[0].capitalize()}" if len(colour) == 1 else q)[:100]
 
 
@@ -102,6 +126,17 @@ def _variant(text: str) -> dict:
     return {"storage": {f"{n}{u.lower()}" for n, u in STORAGE_RE.findall(text or "")},
             "edition": words & EDITIONS, "color": words & COLORS,
             "gen": set(GEN_RE.findall(text or "")), "year": set(YEAR_RE.findall(text or ""))}
+
+
+def model_name(product) -> str:
+    """The model name the title starts with, as a key with its number: "JBL Flip 6 - Portable..." -> "jblflip6",
+    "(Open Box) JBL Flip 7 Portable Bluetooth Speaker, ..." -> "jblflip7" (it ends at its number). "" when there is none."""
+    words = [w for w in _words(clean_title(product.name or "", None, max_words=4)) if w not in _words(product.brand or "")]
+    digit = next((i for i, w in enumerate(words) if any(c.isdigit() for c in w)), None)
+    if digit is not None:
+        words = words[:digit + 1]
+    short = catalog.key(" ".join(words))
+    return short if len(short) >= 4 and any(c.isdigit() for c in short) else ""
 
 
 def same_item(product, offer: dict, ignore_condition: bool = False) -> tuple[bool, str]:
@@ -131,9 +166,8 @@ def same_item(product, offer: dict, ignore_condition: bool = False) -> tuple[boo
     model_key = catalog.key(product.model or "")
     if len(model_key) >= 4 and model_key in catalog.key(title):
         return True, "model number matches"
-    words = [w for w in _words(clean_title(product.name or "", None, max_words=4)) if w not in _words(product.brand or "")]
-    short = catalog.key(" ".join(words))  # "JBL Flip 6" -> "flip6": the model name the title starts with, spaces ignored
-    if len(short) >= 4 and any(c.isdigit() for c in short):  # a model name with a number: it must be in the title
+    short = model_name(product)
+    if short:  # a model name with a number: it must be in the title
         if re.search(re.escape(short) + r"(?!\d)", catalog.key(title)):
             return True, "model name matches"
         return False, "other model"
@@ -292,13 +326,15 @@ def condition_kind(reason: str) -> str:
     return next((kind for kind, words in CONDITION_WORDS if any(w in low for w in words)), "not new")
 
 
-def classify_offers(product, offers: list[dict], page_price: Optional[float], page_domain: str
-                    ) -> tuple[list[dict], list[dict], list[dict]]:
+def classify_offers(product, offers: list[dict], page_price: Optional[float], page_domain: str,
+                    page_condition: str = "new") -> tuple[list[dict], list[dict], list[dict]]:
     """(kept, blocked, dropped). kept: credible stores (allowlisted retailers, or the brand's own or official store) with a
     new, full-price offer of the same item, sorted by true total; each has "seller" (a brand's official store on a
     retailer, else None) and "low" (under 70% of this page or of the kept offers' median: unusually low, for the Skeptic
     to review). blocked: the same item at a credible store but open box, refurbished, used or a monthly price, with
-    "kind": these go to the Skeptic too, who can never approve them. dropped: everything else, each with its reason (logged)."""
+    "kind": these go to the Skeptic too, who can never approve them. dropped: everything else, each with its reason (logged).
+    page_condition: on an open box, refurbished or used page, this page's own store's NEW listing of the same item is a fair
+    comparison: kept, with "same_store": True (shown as "new, same store")."""
     import statistics
 
     from backend.data.trusted_retailers import credible_domain, seller_of
@@ -315,10 +351,13 @@ def classify_offers(product, offers: list[dict], page_price: Optional[float], pa
         if not domain:
             drop(o, excluded_why or why)
             continue
-        if domain == page_domain:
-            drop(o, excluded_why or "this page's own store")
-            continue
         same, why = same_item(product, o, ignore_condition=bool(excluded_why))
+        if domain == page_domain:
+            if page_condition != "new" and not excluded_why and same:  # the new one at this store: e.g. Walmart new Flip 7
+                kept.append({**o, "domain": domain, "seller": seller_of(o.get("source") or ""), "low": False, "same_store": True})
+            else:
+                drop(o, excluded_why or "this page's own store")
+            continue
         other = other_model(product, o.get("title") or "") if not same and why == "other model" else None
         if not same and not other:
             drop(o, excluded_why or f"not the same item: {why}")

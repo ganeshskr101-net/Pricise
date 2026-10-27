@@ -135,7 +135,11 @@ def _real_site(check_id: str, page: PageFacts, url: str = "", propose: bool = Fa
                else "This page shows no model number, so prices on other stores can't be matched")
         res.best_price = BestPrice(status="unknown", headline="Compare", reasons=reasons)  # the Compare prices links follow
         _online(check_id, page, host, res, propose)
-        if not compared(res):  # only when nothing was compared: the online search had no result for this check
+        searched = bool(res.online)  # the online search answered (it sets res.online), whatever it found
+        from backend.tools import shopping
+
+        named = bool(model_key or shopping.model_name(p))  # a model number, or a model name in the title ("JBL Flip 7")
+        if not compared(res) and (not searched or not named):  # the line is true only then
             res.findings.insert(0, _f(check_id, "catalog_only", "unverified",
                                       f"{why}. Use Compare prices to search other stores.", confidence=0.0))
             res.best_price.reasons.append(Reason(text=f"{why}; use Compare prices to search other stores", tone="unknown"))
@@ -259,12 +263,13 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
                                "Online price search didn't answer. Use Compare prices to search other stores.", confidence=0.0))
         return
     mine = rdap.registrable(host)
-    kept, blocked, dropped = shopping.classify_offers(p, offers, p.price, mine)
+    cond = shopping.page_condition(page)  # open box, refurbished, used: a new item at the same price is the better buy
+    kept, blocked, dropped = shopping.classify_offers(p, offers, p.price, mine, cond)
     sellers_source, seen_offers = None, offers
     if len({o["domain"] for o in kept}) < 3:  # the sellers list: cached for 6 h, else looked up with the search's token
         extra, sellers_source = shopping.sellers_for(query, p, None if source == "zetaris usl" else offers)
         if extra:
-            kept, blocked, dropped = shopping.classify_offers(p, offers + extra, p.price, mine)
+            kept, blocked, dropped = shopping.classify_offers(p, offers + extra, p.price, mine, cond)
             seen_offers = offers + extra
     if kept:
         tvs = _vet_domains(check_id, list(dict.fromkeys(o["domain"] for o in kept))[:SHOW_MAX + 2])
@@ -291,7 +296,8 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
                   "sql": (usl_sql if source == "zetaris usl" else
                           repo.offers_sql(catalog.key(query), time.time() - shopping.CACHE_S) if source == "cache" and zetaris_on() else None),
                   "shown": [{"store": s["store"], "price": s["price"], "shipping": s["shipping_note"], "total": s["total"],
-                             "condition": "new", "title": s["title"], "url": s["url"], "seller": s.get("seller"),
+                             "condition": "new, same store" if s.get("same_store") else "new", "title": s["title"],
+                             "url": s["url"], "seller": s.get("seller"),
                              "low": s.get("low", False), "fetched_at": s.get("fetched_at")} for s in show],
                   "fetched": offers_fetched(catalog.key(query), source),
                   "usl_fallback": (repo.USL_ERRORS.get(catalog.key(query)) if usl_sql and source != "zetaris usl" else None),
@@ -323,7 +329,10 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
     level = [s for s in show if s not in cheaper]  # same price as here or dearer: what this page is compared with
     same = [s["store"] for s in level if price is not None and abs(s["total"] - price) < 1]
     if level:
-        text = (f"Same price at {_and(same)}, this page is as good as it gets." if same
+        text = (f"This listing is {cond}, not new. New at credible stores: "
+                + ", ".join(f"{s['store']} {money(s['total'])}" + (" (new, same store)" if s.get("same_store") else "")
+                            for s in level) + "." if cond != "new" else
+                f"Same price at {_and(same)}, this page is as good as it gets." if same
                 else "This is the lowest price among trusted stores. Also at: "
                      + ", ".join(f"{s['store']} {money(s['total'])}" for s in level) + ".")
         lowest = _f(check_id, "lowest_price", "confirmed", text + also_text, links + [ev_search], confidence=0.75)
@@ -333,8 +342,9 @@ def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose
     approvable = [o for o in cheaper if (o.get("kind") or "new") == "new"]
     if level and not approvable:
         res.findings.append(lowest)
-    res.best_price = BestPrice(status="good" if level else "unknown",
-                               headline="As good as it gets" if same else "Lowest trusted price" if level else "Compare",
+    res.best_price = BestPrice(status=("caution" if cond != "new" else "good") if level else "unknown",
+                               headline=(f"New from {money(min(s['total'] for s in level))}" if cond != "new" and level
+                                         else "As good as it gets" if same else "Lowest trusted price" if level else "Compare"),
                                reasons=[Reason(text=f"Credible stores: {listed}; this page {money(price)}" if show
                                                else "No credible store had this item new", tone="good" if show else "unknown",
                                                proof="stores")])
