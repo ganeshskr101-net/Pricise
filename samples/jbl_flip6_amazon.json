@@ -1,0 +1,1139 @@
+{
+ "name": "jbl_flip6_amazon",
+ "recorded_at": "2026-10-27",
+ "url": "https://www.amazon.com/dp/B09GJZKQ3K",
+ "page": {
+  "url": "https://www.amazon.com/dp/B09GJZKQ3K",
+  "host": "www.amazon.com",
+  "title": "Amazon.com: JBL Flip 6 - Portable Waterproof Speaker - Blue | Louder, more powerful sound, IP67 waterproof and dustproof, 12 Hours of Playtime, Bold design : Electronics",
+  "https": true,
+  "product": {
+   "name": "JBL Flip 6 - Portable Waterproof Speaker - Blue",
+   "price": 114.95,
+   "currency": "USD",
+   "was_price": 129.95,
+   "brand": "JBL",
+   "model": null,
+   "sku": "B09GJZKQ3K",
+   "image": null,
+   "source": "buy-box"
+  },
+  "signals": [
+   {
+    "type": "claimed_discount",
+    "selector": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(2) > span",
+    "text": "List Price: $129.95 The List Price is the suggested retail price of a new product as provided by a m",
+    "amount": 129.95,
+    "detail": null
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(1)",
+    "text": "$114.95 with 12 percent savings $7.18 per ounce",
+    "amount": null,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: yes \u00b7 contact link: yes",
+    "amount": null,
+    "detail": {
+     "returns": true,
+     "contact": true
+    }
+   },
+   {
+    "type": "seller",
+    "selector": null,
+    "text": "Sold by Huppins, ships from Amazon",
+    "amount": null,
+    "detail": {
+     "sold_by": "Huppins",
+     "ships_from": "Amazon"
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "JBL Flip 6 - Portable Waterproof Speaker - Blue\nShips from Amazon Amazon Ships from Amazon Sold by Huppins Huppins Sold by Huppins Returns FREE 30-day refund/replacement FREE 30-day refund/replacement Quick refund Usually issued within 24 hours. See exceptions FREE return At least one free return option available. Convenient dropoff At any of our 50,000 US locations. See return policy Support Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout See more\nShips from Amazon Amazon Ships from Amazon Sold by Huppins Huppins Sold by Huppins Returns FREE 30-day refund/replacement FREE 30-day refund/replacement Quick refund Usually issued within 24 hours. See exceptions FREE return At least one free return option available. Convenient dropoff At any of our 50,000 US locations. See return policy Support Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout\nSupport Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout\nBrand JBL Speaker Maximum Output Power 30 watts Frequency Response 20000 KHz Connectivity Technology Bluetooth Audio Output Mode Stereo\nAbout this item Louder, more powerful sound The beat goes on with the JBL Flip 6 2-way speaker system, engineered to deliver loud, crystal clear,",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ },
+ "events": [
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "page",
+    "type": "product",
+    "status": "confirmed",
+    "summary": "Read the page: JBL Flip 6 - Portable Waterproof Speaker - Blue, $114.95.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "buy-box",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "extension (no model call)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110575.659348
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "trust",
+    "type": "seller",
+    "status": "unverified",
+    "summary": "Sold by Huppins, shipped by Amazon: a third-party seller on Amazon, not Amazon itself; Pricise didn't check the seller.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page: Sold by Huppins, ships from Amazon",
+      "label": null,
+      "placement": null
+     }
+    ],
+    "confidence": 0.5,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110575.7456708
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "trust",
+    "type": "store_records",
+    "status": "unverified",
+    "summary": "Company record and reviews for www.amazon.com aren't checked (no data source for real stores yet).",
+    "evidence": [],
+    "confidence": 0.2,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110575.7456908
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "deal",
+    "type": "claimed_discount",
+    "status": "confirmed",
+    "summary": "The $129.95 list price matches JBL's launch price (MSRP), so the discount is real against MSRP; credible stores charge from $79.95 to $134.95. Credible stores: Woot $79.95 lower, Walmart $114.95 same, JBL $134.95 higher (prices from Google Shopping (Zetaris snapshot), fetched 3:36 AM Oct 27; Google Shopping (Pricise cache), fetched 4:43 AM Oct 27).",
+    "evidence": [
+     {
+      "kind": "selector",
+      "ref": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(2) > span",
+      "label": "Discount: real vs launch price",
+      "placement": null
+     },
+     {
+      "kind": "selector",
+      "ref": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(1)",
+      "label": "",
+      "placement": null
+     },
+     {
+      "kind": "log",
+      "ref": "google_shopping:JBL Flip 6 Blue",
+      "label": "3 credible stores (zetaris usl)",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "msrp: $129.95 (JBL's US launch price for the Flip 6 (2021); samsung.com still lists $129.95 in the Google Shopping sellers list of 27 Oct 2026)",
+      "label": "MSRP",
+      "placement": null
+     }
+    ],
+    "confidence": 0.8,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110582.1319911
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "price",
+    "type": "offers_filtered",
+    "status": "confirmed",
+    "summary": "Rejected 72 offers by rule: 29 not from a credible store, 28 used or refurbished, 13 marketplace sellers, 2 a different item.",
+    "evidence": [
+     {
+      "kind": "log",
+      "ref": "google_shopping:JBL Flip 6 Blue",
+      "label": "Rejected offers, by reason",
+      "placement": null
+     }
+    ],
+    "confidence": 0.9,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110582.37079
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "price",
+    "type": "best_price",
+    "status": "proposed",
+    "summary": "Woot $79.95: new, unusually low price, cheaper than here (save $35). Proposed for the Skeptic to check.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue",
+      "label": "Woot $79.95",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=https://www.woot.com/search?query=JBL%20Flip%206%20Blue;model=1;variant=1;condition=1;warranty=1;price=79.95;seller=1;full_price=1;low=1;kind=new;domain=woot.com;name=Woot;save=35.00",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: 90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing)",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: colour not named in the listing: choose Blue",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.walmart.com/search?q=JBL%20Flip%206%20Blue",
+      "label": "Walmart $114.95",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.jbl.com/",
+      "label": "JBL $134.95",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT offer_source, retailer, store_domain, seller, title, price, item_condition, full_price, warranty_note, domain_age_days, unusually_low, is_safe, origin FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE product_key = 'jblflip6blue' ORDER BY price, offer_source",
+      "label": "77 offers (zetaris usl); 3 credible stores, 72 dropped",
+      "placement": null
+     }
+    ],
+    "confidence": 0.6,
+    "model": "rules (no model)",
+    "challenged_by": null,
+    "rounds": 0,
+    "ts": 1793110582.371003
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "price",
+    "type": "best_price",
+    "status": "challenged",
+    "summary": "Woot $79.95: new, unusually low price, cheaper than here (save $35). Proposed for the Skeptic to check.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue",
+      "label": "Woot $79.95",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=https://www.woot.com/search?query=JBL%20Flip%206%20Blue;model=1;variant=1;condition=1;warranty=1;price=79.95;seller=1;full_price=1;low=1;kind=new;domain=woot.com;name=Woot;save=35.00",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: 90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing)",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: colour not named in the listing: choose Blue",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.walmart.com/search?q=JBL%20Flip%206%20Blue",
+      "label": "Walmart $114.95",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.jbl.com/",
+      "label": "JBL $134.95",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT offer_source, retailer, store_domain, seller, title, price, item_condition, full_price, warranty_note, domain_age_days, unusually_low, is_safe, origin FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE product_key = 'jblflip6blue' ORDER BY price, offer_source",
+      "label": "77 offers (zetaris usl); 3 credible stores, 72 dropped",
+      "placement": null
+     }
+    ],
+    "confidence": 0.6,
+    "model": "rules (no model)",
+    "challenged_by": "skeptic",
+    "rounds": 0,
+    "ts": 1793110582.371003
+   }
+  },
+  {
+   "kind": "finding",
+   "finding": {
+    "check_id": "4d233f6e3b60",
+    "agent": "price",
+    "type": "best_price",
+    "status": "confirmed",
+    "summary": "Skeptic approved Woot $79.95, $35 less than here, unusually low and reviewed: Woot is a well-established retailer (domain registered 26 years ago) with secure HTTPS connection; Price of $79.95 is consistent across the offer and credible store prices data; Item is listed as new condition (decided by nvidia/nemotron-3-ultra-550b-a55b). Caveat: 90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing); colour not named in the listing: choose Blue.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue",
+      "label": "Woot $79.95",
+      "placement": null
+     },
+     {
+      "kind": "price_row",
+      "ref": "store=https://www.woot.com/search?query=JBL%20Flip%206%20Blue;model=1;variant=1;condition=1;warranty=1;price=79.95;seller=1;full_price=1;low=1;kind=new;domain=woot.com;name=Woot;save=35.00",
+      "label": "Exact match",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: 90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing)",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "text",
+      "ref": "caveat: colour not named in the listing: choose Blue",
+      "label": "Caveat",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.walmart.com/search?q=JBL%20Flip%206%20Blue",
+      "label": "Walmart $114.95",
+      "placement": null
+     },
+     {
+      "kind": "url",
+      "ref": "https://www.jbl.com/",
+      "label": "JBL $134.95",
+      "placement": null
+     },
+     {
+      "kind": "sql",
+      "ref": "SELECT offer_source, retailer, store_domain, seller, title, price, item_condition, full_price, warranty_note, domain_age_days, unusually_low, is_safe, origin FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE product_key = 'jblflip6blue' ORDER BY price, offer_source",
+      "label": "77 offers (zetaris usl); 3 credible stores, 72 dropped",
+      "placement": null
+     }
+    ],
+    "confidence": 0.6,
+    "model": "nvidia/nemotron-3-ultra-550b-a55b",
+    "challenged_by": "skeptic",
+    "rounds": 1,
+    "ts": 1793110582.371003
+   }
+  },
+  {
+   "kind": "final_card",
+   "card": {
+    "check_id": "4d233f6e3b60",
+    "title": "No tricks spotted",
+    "subtitle": "0 tricks \u00b7 0 claims to check",
+    "tone": "good",
+    "safe": {
+     "status": "good",
+     "headline": "Looks safe",
+     "reasons": [
+      {
+       "text": "Secure connection (HTTPS)",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Domain registered 32 years ago",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Returns policy link on the page",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Contact or customer service link on the page",
+       "tone": "good",
+       "proof": "whois"
+      },
+      {
+       "text": "Sold by Huppins, shipped by Amazon: a third-party seller on Amazon, not Amazon itself; Pricise didn't check the seller",
+       "tone": "unknown",
+       "proof": "whois"
+      }
+     ]
+    },
+    "honest": {
+     "status": "good",
+     "headline": "Looks honest",
+     "reasons": [
+      {
+       "text": "The $129.95 list price matches JBL's launch price (MSRP), so the discount is real against MSRP; credible stores charge from $79.95 to $134.95. Credible stores: Woot $79.95 lower, Walmart $114.95 same, JBL $134.95 higher (prices from Google Shopping (Zetaris snapshot), fetched 3:36 AM Oct 27; Google Shopping (Pricise cache), fetched 4:43 AM Oct 27).",
+       "tone": "good",
+       "proof": null
+      }
+     ]
+    },
+    "best_price": {
+     "status": "caution",
+     "headline": "Woot \u00b7 $79.95",
+     "reasons": [
+      {
+       "text": "Same item, new, full price, sold by Woot: approved by the Skeptic",
+       "tone": "good",
+       "proof": "stores"
+      },
+      {
+       "text": "$79.95 vs $114.95 here: save $35",
+       "tone": "good",
+       "proof": "stores"
+      },
+      {
+       "text": "Caveat: 90-day Woot warranty, not JBL's manufacturer warranty; colour not named in the listing: choose Blue",
+       "tone": "caution",
+       "proof": "stores"
+      },
+      {
+       "text": "Prices from Google Shopping (Zetaris snapshot), fetched 3:36 AM Oct 27; Google Shopping (Pricise cache), fetched 4:43 AM Oct 27",
+       "tone": "unknown",
+       "proof": "stores"
+      }
+     ],
+     "store": "Woot",
+     "total": 79.95,
+     "url": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue"
+    },
+    "tricks": 0,
+    "elapsed_s": 16.4,
+    "alt": {
+     "kind": "cheaper",
+     "store": "Woot",
+     "total": 79.95,
+     "url": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue",
+     "save": 35.0,
+     "caveat": "90-day Woot warranty, not JBL's manufacturer warranty",
+     "caveats": [
+      "90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing)",
+      "colour not named in the listing: choose Blue"
+     ]
+    }
+   }
+  }
+ ],
+ "evidence_data": {
+  "price_history": null,
+  "timer_frames": [],
+  "fees": [
+   {
+    "label": "Item",
+    "amount": 114.95,
+    "step": null
+   }
+  ],
+  "total": 114.95,
+  "stores": [
+   {
+    "store": "Woot",
+    "total": 79.95,
+    "status": "ok",
+    "note": "shipping not shown \u00b7 (NEW) JBL Flip 6 Portable IP67 Waterproof Speaker \u00b7 unusually low, for the Skeptic"
+   },
+   {
+    "store": "Walmart",
+    "total": 114.95,
+    "status": "ok",
+    "note": "shipping not shown \u00b7 JBL FLIP 6 Bluetooth Portable Waterproof Speaker"
+   },
+   {
+    "store": "JBL",
+    "total": 134.95,
+    "status": "ok",
+    "note": "shipping not shown \u00b7 JBL FLIP 6 Bluetooth Portable Waterproof Speaker"
+   }
+  ],
+  "timings": {
+   "addons": 0.0,
+   "scarcity": 0.0,
+   "timer": 0.0,
+   "runahead": 0.0,
+   "discount": 6.61
+  },
+  "store_checks": [
+   {
+    "check": "no_https",
+    "result": "Secure connection (HTTPS).",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://www.amazon.com/dp/B09GJZKQ3K"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "domain_age",
+    "result": "Domain registered 32 years ago.",
+    "evidence": [
+     {
+      "kind": "url",
+      "ref": "https://rdap.org/domain/amazon.com"
+     },
+     {
+      "kind": "log",
+      "ref": "domain_created=1994-11-01 as_of=2026-10-27 age_days=11683"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "bad_returns",
+    "result": "Returns policy link on the page.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page links: returns=True contact=True"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "no_contact",
+    "result": "Contact or customer service link on the page.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page links: returns=True contact=True"
+     }
+    ],
+    "status": "ok"
+   },
+   {
+    "check": "seller",
+    "result": "Sold by Huppins, shipped by Amazon: a third-party seller on Amazon, not Amazon itself; Pricise didn't check the seller.",
+    "evidence": [
+     {
+      "kind": "text",
+      "ref": "page: Sold by Huppins, ships from Amazon"
+     }
+    ],
+    "status": "unchecked"
+   },
+   {
+    "check": "store_records",
+    "result": "Company record and reviews for www.amazon.com aren't checked (no data source for real stores yet).",
+    "evidence": [],
+    "status": "unchecked"
+   }
+  ],
+  "stores_sql": null,
+  "online": {
+   "query": "JBL Flip 6 Blue",
+   "source": "zetaris usl",
+   "sellers_source": null,
+   "sql": "SELECT offer_source, retailer, store_domain, seller, title, price, item_condition, full_price, warranty_note, domain_age_days, unusually_low, is_safe, origin FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE product_key = 'jblflip6blue' ORDER BY price, offer_source",
+   "shown": [
+    {
+     "store": "Woot",
+     "price": 79.95,
+     "shipping": "shipping not shown",
+     "total": 79.95,
+     "condition": "new",
+     "title": "(NEW) JBL Flip 6 Portable IP67 Waterproof Speaker",
+     "url": "https://www.woot.com/search?query=JBL%20Flip%206%20Blue",
+     "seller": null,
+     "low": true,
+     "fetched_at": 1793086593.0,
+     "caveats": [
+      "90-day Woot warranty, not JBL's manufacturer warranty (Woot's usual terms, check the listing)",
+      "colour not named in the listing: choose Blue"
+     ]
+    },
+    {
+     "store": "Walmart",
+     "price": 114.95,
+     "shipping": "shipping not shown",
+     "total": 114.95,
+     "condition": "new",
+     "title": "JBL FLIP 6 Bluetooth Portable Waterproof Speaker",
+     "url": "https://www.walmart.com/search?q=JBL%20Flip%206%20Blue",
+     "seller": null,
+     "low": false,
+     "fetched_at": 1793086593.0
+    },
+    {
+     "store": "JBL",
+     "price": 134.95,
+     "shipping": "shipping not shown",
+     "total": 134.95,
+     "condition": "new",
+     "title": "JBL FLIP 6 Bluetooth Portable Waterproof Speaker",
+     "url": "https://www.jbl.com/",
+     "seller": null,
+     "low": false,
+     "fetched_at": 1793090624.6927328
+    }
+   ],
+   "fetched": [
+    {
+     "what": "Google Shopping (Zetaris snapshot)",
+     "at": 1793086593.0
+    },
+    {
+     "what": "Google Shopping (Pricise cache)",
+     "at": 1793090624.6927328
+    }
+   ],
+   "usl_fallback": null,
+   "dropped": [
+    {
+     "source": "eBay - littlefoote",
+     "price": 34.99,
+     "title": "Jbl Flip 6 Portable Speaker System - Blue W/case. Not Working. Parts",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 49.99,
+     "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Camo",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "PayMore University City",
+     "price": 56.99,
+     "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Camo JBLFLIP6SQUADAM.",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Mercari",
+     "price": 59.0,
+     "title": "JBL BRAND NEW Flip 6 Bluetooth Speaker Blue - New Electronics | Color: Blue",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Mercari",
+     "price": 60.0,
+     "title": "JBL Flip 6 (Camo) - New Electronics",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Mercari",
+     "price": 68.0,
+     "title": "JBL Flip 6 Wireless Bluetooth Speaker Camouflage - New Electronics",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay - bayoumy",
+     "price": 69.99,
+     "title": "Flip 6 Portable Waterproof Speaker - Blue | Bluetooth",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Mercari",
+     "price": 70.0,
+     "title": "JBL Flip6 Wireless Portable Bluetooth Speaker Waterproof & Dustproof Blue - Electronics | ",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Poshmark",
+     "price": 70.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 6 Waterproof Portable Rechargeable Bluetooth Speaker",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 70.0,
+     "title": "JBL Flip 6 Portable Bluetooth Wireless Speaker, Blue",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 74.99,
+     "title": "Flip 6 Portable Bluetooth Waterproof Speaker System with USB-C | Red | AUX",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay - da-kar",
+     "price": 74.99,
+     "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Blue",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Artblossom",
+     "price": 75.0,
+     "title": "JBL Flip 6",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 75.0,
+     "title": "JBL Flip 6 Portable Bluetooth Speaker System - Blue | USB-C | 30 W | 4800 mAh | Waterproof",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Mercari",
+     "price": 76.0,
+     "title": "JBL Flip 6 - New Electronics | Color: Red",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Poshmark",
+     "price": 79.0,
+     "title": "JBL Flip 6 Portable",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Mercari",
+     "price": 79.99,
+     "title": "JBL JBL FLIP 6 Waterproof Portable Bluetooth Speaker With PartyBoost Ocean Blue - New Elec",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 79.99,
+     "title": "Jbl Flip 6 (camo)",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "mercari.com",
+     "price": 79.99,
+     "title": "Brand New Navy Blue JBL Flip 6 \u2013 Portable Waterproof Bluetooth Speaker",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Mercari",
+     "price": 80.0,
+     "title": "JBL Flip 6 Portable Bluetooth Speaker Camo New Sealed - New Electronics",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Poshmark",
+     "price": 80.0,
+     "title": "Flip 6 Portable Speaker | Color: Black/Blue | Size: Os | Evinyou's Closet",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 80.0,
+     "title": "JBL Flip 6 bluetooth speaker - Blue",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 80.0,
+     "title": "JBL Flip 6 Wireless Bluetooth Speaker | Portable Speaker",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 85.0,
+     "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker - Navy Blue",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 90.0,
+     "title": "Jbl Flip 6 Speaker (blue)",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 90.0,
+     "title": "JBL Flip 6 Bluetooth Speaker | Portable Speaker System",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Poshmark",
+     "price": 100.0,
+     "title": "Jbl Portable Audio & Video | Jbl Flip 6 | Color: Red | Size: Os | Planetsells's Closet",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 100.0,
+     "title": "Jbl Flip 6 Portable Speaker System - Blue",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 100.0,
+     "title": "JBL Flip 6 Bluetooth Speaker | Waterproof | 12 Hours Playtime | Portable Speaker System",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 105.99,
+     "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker, Blue - Bonus:",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Best Buy",
+     "price": 114.95,
+     "title": "JBL - FLIP6 Portable Waterproof Speaker - Teal",
+     "reason": "not the same item: other colour (teal)",
+     "group": "Different item"
+    },
+    {
+     "source": "JBL",
+     "price": 114.95,
+     "title": "JBL Flip 6 Portable Waterproof Speaker - Teal",
+     "reason": "not the same item: other colour (teal)",
+     "group": "Different item"
+    },
+    {
+     "source": "Newegg.com - Onecall (Authorized Dealer)",
+     "price": 114.95,
+     "title": "JBL Flip 6 Portable Bluetooth Speaker Bundle with divvi! Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 114.95,
+     "title": "Jbl Flip 6 Blue Portable Bluetooth Speaker and Divvi Case Kit",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 114.95,
+     "title": "JBL Flip 6 IP67 Waterproof Portable Wireless Bluetooth Speaker with Exclusive Protective H",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Xtremeinn.com",
+     "price": 114.99,
+     "title": "JBL Flip 6 Portable IP67 Waterproof Bluetooth Speaker Black",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Mercari",
+     "price": 116.0,
+     "title": "JBL JLB Flip 6 - Electronics",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 119.0,
+     "title": "JBL Flip 6 Waterproof Wireless Bluetooth Speaker - Blue | Portable Speaker System | 4000 m",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Shop - Shop app",
+     "price": 121.0,
+     "title": "FormFit JBL Flip 6 Portable Waterproof Bluetooth Speaker - IP67, 12H Battery - Blue, Brand",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "eBay",
+     "price": 121.93,
+     "title": "Jbl Flip 6 Waterproof Portable Bluetooth Speaker, Squad Camo, Wireless",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay - verizon",
+     "price": 125.91,
+     "title": "Jbl Charge 6 Waterproof Bluetooth Speaker Jblcharge6bluam | Blue -",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 126.0,
+     "title": "JBL Flip 6 - Portable Bluetooth Speaker, Malakas na Tunog at Malalim na Bass Blue",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "wafuu.com",
+     "price": 126.0,
+     "title": "JBL Flip 6 - Portable Bluetooth Speaker, Malakas na Tunog at Malalim na Bass White",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Shein",
+     "price": 129.95,
+     "title": "JBL JBL Flip 6 Portable Waterproof Bluetooth Speaker Grey,",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - Web Offers",
+     "price": 129.95,
+     "title": "JBL Flip 6 Waterproof Portable Speaker with gSport Carbon Fiber Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "OSU Student Union",
+     "price": 129.99,
+     "title": "JBL FLIP 6 WIRELESS SPEAKER Camo",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "promolocker.com",
+     "price": 134.95,
+     "title": "JBL Flip 6 Portable Waterproof Speaker",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay - with_us",
+     "price": 141.86,
+     "title": "JBL Flip 6 Bluetooth Waterproof Portable Speaker IP67 12hour 7Colors | 550g | Wireless | C",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "aheadpremiums.com",
+     "price": 142.44,
+     "title": "JBL Flip 6 Portable IP67 Waterproof Bluetooth Speaker Black",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "eBay",
+     "price": 150.0,
+     "title": "Samsung Galaxy Z Flip6 - 256gb - Blue (t-mobile) - As Is",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay - onecall",
+     "price": 157.45,
+     "title": "Jbl Charge 6 + Bundle with divvi! Protective Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "eBay - gorillacellular",
+     "price": 160.0,
+     "title": "Samsung Galaxy Z Flip6 - 256 Gb - Blue (unlocked)",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 165.0,
+     "title": "Samsung Galaxy Z Flip6 - 256 Gb - Blue (unlocked)- Main Screen Doesn't",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Walmart - Datavision Computer Video",
+     "price": 166.95,
+     "title": "Jbl Charge 6 Portable Bluetooth Speaker - Blue + 13-Month Axiom Care, Size: 6 in",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "eBay - techronics-store",
+     "price": 169.95,
+     "title": "JBL Flip 6 Portable Bluetooth Portable Speaker System -BLUE",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "FlexShopper",
+     "price": 171.25,
+     "title": "JBL Flip 6 Portable Bluetooth Speaker, Powerful Sound and deep bass",
+     "reason": "not an allowlisted store",
+     "group": "Unknown store"
+    },
+    {
+     "source": "Walmart - Datavision Computer Video",
+     "price": 171.95,
+     "title": "Jbl Charge 6 Portable Bluetooth Speaker - Blue + 27-Month Axiom Care, Size: 6 in",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "Newegg.com - DrakeMount FortunaTech Parts",
+     "price": 172.49,
+     "title": "Flip 6 (Teal) + Bundle with divvi! Protective Hardshell Case",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "eBay - focuscamera",
+     "price": 188.99,
+     "title": "JBL Charge 6 Portable Bluetooth Speaker Waterproof",
+     "reason": "\"refurbished\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Walmart - OneCall (Authorized Dealer)",
+     "price": 209.95,
+     "title": "JBL Charge 6 + Bundle with USB-C Braided Cable",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    },
+    {
+     "source": "eBay - wirelesssdepot",
+     "price": 298.65,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741u1 256gb Blue Unlocked W106459",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Swappa",
+     "price": 309.0,
+     "title": "Samsung Galaxy Z Flip6 - Blue - 256 GB - Unlocked",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay - wirelesssdepot",
+     "price": 331.98,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741u1 256gb Blue Unlocked W107307",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 349.99,
+     "title": "Samsung Galaxy Z Flip6 - 256 Gb - Blue (unlocked)",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 355.0,
+     "title": "Samsung Galaxy Z Flip6 - 256 Gb - Blue (at&t Locked)",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 374.55,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741u1 256gb Blue Unlocked Clean Esn",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 375.53,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741u1 256gb Blue Unlocked Phone Clean Esn",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay - hohenz0",
+     "price": 376.52,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741u1 256gb Blue Factory Unlocked Clean",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay - hohenz0",
+     "price": 376.61,
+     "title": "Samsung Galaxy Z Flip6 Sm-f741b 256gb Blue Gsm Unlocked Phone Clean",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay",
+     "price": 437.5,
+     "title": "Blue Samsung Z Flip 6 (512) Phone",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "Swappa",
+     "price": 593.0,
+     "title": "Samsung Galaxy Z Flip6 - Blue - 256 GB - Unlocked",
+     "reason": "\"used\" in its condition",
+     "group": "Used or refurbished"
+    },
+    {
+     "source": "eBay - kickmobiles-ltd",
+     "price": 2189.0,
+     "title": "Samsung Galaxy Z Flip6",
+     "reason": "marketplace seller, not the retailer",
+     "group": "Marketplace seller"
+    }
+   ],
+   "also_checked": [],
+   "offers_seen": 77
+  }
+ },
+ "note": "Recorded from a real full-mode check (agents, Google Shopping via SerpApi, Nemotron wording). Replayed as is with SAMPLE_MODE=true."
+}

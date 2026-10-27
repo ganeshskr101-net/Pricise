@@ -107,7 +107,7 @@ After the run, the findings are stored like the non-orchestrator path does (`stu
 
 ## Known limits
 
-- One `best_price` finding per run, so no runner-up (a per-candidate mode is a note for Josh in `docs/notes_for_team.md`).
+- One `best_price` finding per run, so no runner-up.
 - Variant and warranty are assumed equal (not in the data).
 - The adapter calls `price._identify` and `repo._catalog_listings` (private names); the contract test fails if they change.
 - No labelled look-alike pages exist, so the bench's exact-match line is "n/a (0 labelled pages)".

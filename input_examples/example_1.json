@@ -1,0 +1,63 @@
+{
+ "url": "https://www.amazon.com/dp/B09GJZKQ3K",
+ "page": {
+  "url": "https://www.amazon.com/dp/B09GJZKQ3K",
+  "host": "www.amazon.com",
+  "title": "Amazon.com: JBL Flip 6 - Portable Waterproof Speaker - Blue | Louder, more powerful sound, IP67 waterproof and dustproof, 12 Hours of Playtime, Bold design : Electronics",
+  "https": true,
+  "product": {
+   "name": "JBL Flip 6 - Portable Waterproof Speaker - Blue",
+   "price": 114.95,
+   "currency": "USD",
+   "was_price": 129.95,
+   "brand": "JBL",
+   "model": null,
+   "sku": "B09GJZKQ3K",
+   "image": null,
+   "source": "buy-box"
+  },
+  "signals": [
+   {
+    "type": "claimed_discount",
+    "selector": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(2) > span",
+    "text": "List Price: $129.95 The List Price is the suggested retail price of a new product as provided by a m",
+    "amount": 129.95,
+    "detail": null
+   },
+   {
+    "type": "claimed_discount",
+    "selector": "#corePriceDisplay_desktop_feature_div > div > div:nth-of-type(1)",
+    "text": "$114.95 with 12 percent savings $7.18 per ounce",
+    "amount": null,
+    "detail": null
+   },
+   {
+    "type": "store_info",
+    "selector": null,
+    "text": "returns link: yes \u00b7 contact link: yes",
+    "amount": null,
+    "detail": {
+     "returns": true,
+     "contact": true
+    }
+   },
+   {
+    "type": "seller",
+    "selector": null,
+    "text": "Sold by Huppins, ships from Amazon",
+    "amount": null,
+    "detail": {
+     "sold_by": "Huppins",
+     "ships_from": "Amazon"
+    }
+   },
+   {
+    "type": "page_text",
+    "selector": null,
+    "text": "JBL Flip 6 - Portable Waterproof Speaker - Blue\nShips from Amazon Amazon Ships from Amazon Sold by Huppins Huppins Sold by Huppins Returns FREE 30-day refund/replacement FREE 30-day refund/replacement Quick refund Usually issued within 24 hours. See exceptions FREE return At least one free return option available. Convenient dropoff At any of our 50,000 US locations. See return policy Support Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout See more\nShips from Amazon Amazon Ships from Amazon Sold by Huppins Huppins Sold by Huppins Returns FREE 30-day refund/replacement FREE 30-day refund/replacement Quick refund Usually issued within 24 hours. See exceptions FREE return At least one free return option available. Convenient dropoff At any of our 50,000 US locations. See return policy Support Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout\nSupport Product support included What's Product Support? In the event your product doesn't work as expected or you need help using it, Amazon offers free product support options such as live phone/chat with an Amazon associate, manufacturer contact information, step-by-step troubleshooting guides, and help videos. By solving product issues, we help the planet by extending the life of products. Availability of support options differ by product and country. Learn more Payment Secure transaction Your transaction is secure We work hard to protect your security and privacy. Our payment security system encrypts your information during transmission. We don\u2019t share your credit card details with third-party sellers, and we don\u2019t sell your information to others. Learn more Gift options Available at checkout Available at checkout This item is a gift. Change At checkout, you can add a custom message, a gift receipt for easy returns and have the item gift-wrapped Add gift options at checkout\nBrand JBL Speaker Maximum Output Power 30 watts Frequency Response 20000 KHz Connectivity Technology Bluetooth Audio Output Mode Stereo\nAbout this item Louder, more powerful sound The beat goes on with the JBL Flip 6 2-way speaker system, engineered to deliver loud, crystal clear,",
+    "amount": null,
+    "detail": null
+   }
+  ]
+ }
+}

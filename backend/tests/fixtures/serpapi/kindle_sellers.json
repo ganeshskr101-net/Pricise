@@ -1,0 +1,45 @@
+{
+ "_note": "Trimmed SerpApi google_immersive_product 'stores' for the Kindle Paperwhite Signature Edition 32GB (27 Oct 2026); links replaced by placeholders on each store's domain. Used by tests; no live call in tests.",
+ "stores": [
+  {
+   "name": "Best Buy",
+   "title": "Amazon - Kindle Paperwhite Signature Edition (32 GB) - 2024 - Metallic Black",
+   "price": "$249.99",
+   "extracted_price": 249.99,
+   "shipping": "Free",
+   "details_and_offers": [
+    "In stock online",
+    "Free delivery by Nov 3",
+    "15-day returns"
+   ],
+   "tag": "Best price",
+   "link": "https://www.bestbuy.com/product/test-0"
+  },
+  {
+   "name": "Target",
+   "title": "Amazon Kindle Paperwhite Signature Edition (2024) - Metallic Black",
+   "price": "$249.99",
+   "extracted_price": 249.99,
+   "shipping": "Free",
+   "details_and_offers": [
+    "In stock online",
+    "Free delivery between Thu - Mon",
+    "30-day returns"
+   ],
+   "link": "https://www.target.com/product/test-1"
+  },
+  {
+   "name": "PC Richard & Son",
+   "title": "Amazon Kindle Paperwhite Signature Edition 7 in. eReader (2024 Release) with Wifi-Only, 32 GB Storage | B0C8RR4WN3 | P.C. Richard & Son",
+   "price": "$249.99",
+   "extracted_price": 249.99,
+   "shipping": "Free",
+   "details_and_offers": [
+    "In stock online",
+    "Free delivery between Oct 29\u2009\u2013\u2009Nov 4",
+    "Free 30-day returns"
+   ],
+   "link": "https://www.pcrichard.com/product/test-2"
+  }
+ ]
+}

@@ -220,13 +220,26 @@ def test_second_stream_replays_without_rerunning():
 
 # trace
 
-def test_trace_file_written(tmp_path):
+ULTRA = "nvidia/nemotron-3-ultra-550b-a55b"
+
+
+@pytest.mark.parametrize("deep", [False, True])
+def test_trace_file_written(tmp_path, monkeypatch, deep):
+    """"model" stays the proposing agent's (its evidence came from the hidden browser); when the deep lane words the
+    Skeptic's decision, that model is recorded as decided_by_model. The deep lane is stubbed: no live call, whatever .env says."""
+    from backend.agents import skeptic
+    from backend.llm import meterless
+
+    monkeypatch.setattr(meterless, "configured", lambda lane="fast": deep)
+    monkeypatch.setattr(meterless, "model_name", lambda lane="fast": ULTRA)
+    monkeypatch.setattr(skeptic, "challenge_reason", lambda before, result: "The timer reset on every fresh visit.")
     a = agent((0, make("fake_timer", "proposed", agent="deal", model="hidden browser")))
     run(chk("abc123"), [a, agent((0, RuntimeError("x")), name="trust")], recheck(RESETS))
     trace = json.loads((tmp_path / "abc123.json").read_text(encoding="utf-8"))
     rows = {r["type"]: r for r in trace["findings"]}
     timer = rows["fake_timer"]
     assert (timer["proposed_by"], timer["challenged_by"], timer["model"]) == ("deal", "skeptic", "hidden browser")
+    assert timer["decided_by_model"] == (ULTRA if deep else None)
     assert (timer["rounds"], timer["final_status"]) == (1, "confirmed")
     assert timer["statuses"] == ["proposed", "challenged", "confirmed"]
     assert timer["evidence"][0]["ref"] == "/traces/x/visit1.png"
@@ -281,7 +294,8 @@ def _hook_check(monkeypatch, trust_mode):
     monkeypatch.setenv("AGENT_ORCH", "on")
     monkeypatch.setenv("AGENT_TRUST", trust_mode)
     client = TestClient(stub_server.app)
-    page = PageFacts(url="https://shop.example/item", host="shop.example")
+    # a product (a price): a bare page with nothing to check now ends as "Not a product page" before any agent
+    page = PageFacts(url="https://shop.example/item", host="shop.example", product={"name": "Item", "price": 10.0})
     cid = client.post("/check", json={"url": page.url, "page": page.model_dump()}).json()["check_id"]
     return cid, _sse(client, cid)
 

@@ -1,7 +1,7 @@
 // Pricise side panel: reads the current page, asks the local backend to check it, and fills in live as findings stream in.
 // Layout follows docs/mockups/ui-v2/panel.html: verdict block, three question sections, "Checked by", chat, footer.
 import { api, money, esc } from '../shared/api.js';
-import { chatErrorText, compareLinks, followCheck, getSettings, isCompareUrl, money2, PENDING, saveSettings, summarize, TRICK_TYPES } from '../shared/check.js';
+import { chatErrorText, chatSuggestions, compareLinks, followCheck, getSettings, isCompareUrl, money2, PENDING, rowKey, saveSettings, summarize, todayize, TRICK_TYPES } from '../shared/check.js';
 import { ICONS } from '../shared/icons.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -122,7 +122,9 @@ function marksFromFindings() {
   for (const f of state.findings) {
     for (const e of f.evidence || []) {
       if (e.kind === 'selector' && e.label != null) {
-        const tone = f.status === 'confirmed' || TRICK_TYPES.has(f.type) ? 'bad' : 'caution';
+        // Red only for tricks; a discount that checked out (real vs launch price, or by price history) is outlined grey.
+        const tone = f.type === 'claimed_discount' && f.status === 'confirmed' ? 'neutral'
+          : f.status === 'confirmed' || TRICK_TYPES.has(f.type) ? 'bad' : 'caution';
         marks.push({ selector: e.ref, label: e.label, tone, placement: e.placement });
       }
     }
@@ -154,7 +156,7 @@ function render() {
     actions: card ? [
       addon && !state.unticked ? `<button class="btn primary" data-act="untick">Untick ${esc(addonAmt)} add-on</button>` : '',
       state.unticked ? `<button class="btn" disabled>${ICONS.check}Add-on unticked</button>` : '',
-      `<button class="btn" data-act="evidence" data-view="">All evidence</button>`,
+      `<button class="btn" data-act="evidence" data-view="overview">All evidence</button>`,
     ].join('') : '',
   }));
   parts.push(sectionHtml({
@@ -194,10 +196,17 @@ function verdictHtml(card) {
     if (amt) total = Math.round((total - amt) * 100) / 100;
   }
   const struck = s.listed != null && total != null && total > s.listed + 0.005 ? `<small>${money(s.listed)}</small>` : '';
+  // The highlighted row: a credible store at least $1 cheaper ("Cheaper at Best Buy · $229.99 (save $20) · Go"), or the Store
+  // Lab safer choice. A real page that is already the best price gets a small "Best price: this page" note instead.
+  const a1 = s.safer?.cheaper
+    ? `Cheaper at ${esc(s.safer.store)} · ${money2(s.safer.total)}${s.safer.save ? ` (save ${money(s.safer.save)})` : ''}`
+    : s.safer ? `${esc(s.safer.store)} · ${money2(s.safer.total)}` : '';
+  const a2 = s.safer?.caveat ? s.safer.note : s.safer?.cheaper ? 'Same item, new · trusted store' : s.safer?.note || '';
   const alt = s.safer ? `
     <div class="alt"><div class="ic">${ICONS.shield}</div>
-      <div class="tx"><div class="a1">${esc(s.safer.store)} · ${money2(s.safer.total)}</div><div class="a2">${esc(s.safer.note)}</div></div>
-      ${s.safer.url ? `<button class="go" data-act="go" data-url="${esc(s.safer.url)}">View${ICONS.chevron}</button>` : ''}</div>` : '';
+      <div class="tx"><div class="a1">${a1}</div><div class="a2">${esc(a2)}</div></div>
+      ${s.safer.url ? `<button class="go" data-act="${s.safer.cheaper ? 'open' : 'go'}" data-url="${esc(s.safer.url)}">${s.safer.cheaper ? 'Go' : 'View'}${ICONS.chevron}</button>` : ''}</div>`
+    : s.bestHere ? '<div class="bp-note">Best price: this page</div>' : '';
   const tone = s.tone === 'bad' ? 'bad' : card.tone; // confirmed tricks are red here too, matching the quick card
   return `<section class="verdict ${esc(tone)}"><div class="lbl">Verdict</div>
     <div class="vt">${esc(card.title)}</div><div class="vs">${esc(verdictReason(card, s))}</div>
@@ -223,8 +232,8 @@ function sectionHtml({ id, title, verdict, live, actions = '' }) {
     : '<span class="st pending">Checking…</span>';
   let rows;
   if (verdict) {
-    rows = verdict.reasons.map((r) => `<li><span class="m ${esc(r.tone)}"></span><span class="tx">${esc(r.text)}</span>
-      ${r.proof ? `<a href="#" class="pf" data-act="evidence" data-view="${esc(r.proof)}">${proofLabel(r.proof)}</a>` : ''}</li>`).join('');
+    rows = verdict.reasons.map((r) => `<li><span class="m ${esc(r.tone)}"></span><span class="tx">${esc(todayize(r.text))}</span>
+      ${r.proof ? `<a href="#" class="pf" data-act="evidence" data-view="${esc(r.proof)}" data-row="${esc(rowKey(r.text))}">${proofLabel(r.proof)}</a>` : ''}</li>`).join('');
   } else if (live.length) {
     rows = live.join('');
   } else {
@@ -237,11 +246,17 @@ function sectionHtml({ id, title, verdict, live, actions = '' }) {
 
 function liveRow(f) {
   if (f.model === PENDING) return `<li class="live"><span class="m"></span><span class="tx">${esc(f.summary)}</span></li>`;
+  if (f.type === 'offers_filtered') { // "Rejected 39 offers by rule: ...": one line here, the list on the evidence page
+    return `<li class="live"><span class="m unknown"></span><span class="tx">${esc(f.summary)}</span>
+      <a href="#" class="pf" data-act="evidence" data-view="stores">List</a></li>`;
+  }
+  const bySkeptic = f.challenged_by === 'skeptic' && f.agent !== 'skeptic';  // the Skeptic's decision on another agent's finding
   const tone = f.status === 'rejected' ? 'caution' : f.status === 'unverified' ? 'unknown'
-    : f.agent === 'page' ? 'unknown' : f.status === 'confirmed' && f.agent === 'skeptic' ? 'good'
+    : f.agent === 'page' ? 'unknown' : f.status === 'confirmed' && (f.agent === 'skeptic' || bySkeptic) ? 'good'
     : TRICK_TYPES.has(f.type) || f.agent === 'trust' ? 'bad' : 'caution';
-  const tag = f.status === 'rejected' ? 'Skipped' : f.status === 'proposed' ? 'Checking' : '';
-  return `<li class="live"><span class="m ${tone}"></span><span class="tx">${tag ? `<span class="tag">${tag}</span>` : ''}${esc(f.summary)}</span></li>`;
+  const tag = bySkeptic && f.status === 'rejected' ? 'Rejected' : bySkeptic && f.status === 'confirmed' ? 'Approved'
+    : f.status === 'rejected' ? 'Skipped' : f.status === 'proposed' || f.status === 'challenged' ? 'Checking' : '';
+  return `<li class="live"><span class="m ${tone}"></span><span class="tx">${tag ? `<span class="tag">${tag}</span>` : ''}${esc(todayize(f.summary))}</span></li>`;
 }
 
 function proofLabel(view) {
@@ -292,7 +307,7 @@ function renderError(err) {
 // ------------------------------------------------------------------ ask about this page
 // Answers come from POST /chat, which only uses this check's stored results. The thread lives outside <main>, so live
 // re-renders of the check don't wipe it; it resets when the panel moves to another page or re-checks.
-const SUGGESTIONS = ['Is this discount real?', "What's the real total?", 'Is there a cheaper safe option?'];
+// Chips follow the page (chatSuggestions in shared/check.js): a question its product text can answer, then deal and price.
 
 $('#ask-form').addEventListener('submit', (e) => { e.preventDefault(); ask($('#ask-input').value); });
 $('#ask-input').addEventListener('input', updateAsk);
@@ -308,7 +323,8 @@ function updateAsk() {
 
 function renderThread() {
   const chips = $('#ask-chips');
-  chips.innerHTML = state?.chat.length ? '' : SUGGESTIONS.map((q) => `<button class="chip" type="button">${esc(q)}</button>`).join('');
+  chips.innerHTML = state?.chat.length ? '' : chatSuggestions(state?.page, state?.card)
+    .map((q) => `<button class="chip" type="button">${esc(q)}</button>`).join('');
   chips.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => ask(b.textContent)));
   const seen = state?.chatShown || 0; // only messages added since the last draw get the fade-in
   $('#ask-thread').innerHTML = (state?.chat || []).map((m, i) => {
@@ -373,8 +389,13 @@ async function onAction(e) {
   const el = e.currentTarget;
   const act = el.dataset.act;
   if (act === 'evidence') {
-    const url = chrome.runtime.getURL(`evidence/index.html?check=${state.checkId}${el.dataset.view ? '#' + el.dataset.view : ''}`);
+    // The evidence page opens on that tab and highlights the row behind this exact line (see evidence/sections.js resolve()).
+    const q = new URLSearchParams({ check: state.checkId, tab: el.dataset.view || 'overview', ...(el.dataset.row ? { row: el.dataset.row } : {}) });
+    const url = chrome.runtime.getURL(`evidence/index.html?${q}`);
     chrome.tabs.create({ url });
+  } else if (act === 'open') {
+    // A cheaper credible store's listing: a new tab next to this one (the shopper keeps this page).
+    if (/^https:\/\//.test(el.dataset.url)) chrome.tabs.create({ url: el.dataset.url, index: state.tab.index + 1 });
   } else if (act === 'compare') {
     if (isCompareUrl(el.dataset.url)) chrome.tabs.create({ url: el.dataset.url, index: state.tab.index + 1 });
   } else if (act === 'go') {

@@ -96,7 +96,7 @@ def test_zetaris_sql_is_the_evidence(monkeypatch):
              "currency": "USD", "condition": "new", "safe": "unknown", "url": "https://www.bestbuy.com/site/x/1.p",
              "seen_at": str(time.time() - DAY - 60)}]
     seen = []
-    monkeypatch.setattr(repo.zetaris, "run_sql", lambda sql, limit=1000: seen.append(sql) or rows)
+    monkeypatch.setattr(repo.zetaris, "run_sql", lambda sql, limit=1000, **kw: seen.append(sql) or rows)
     res = _real()
     [f] = [f for f in res.findings if f.type == "seen_elsewhere"]
     [ev] = [e for e in f.evidence if e.kind == "sql"]

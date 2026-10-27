@@ -117,5 +117,9 @@ CREATE TABLE IF NOT EXISTS shopping_offers (
     total         numeric(10,2),
     shipping_note text,
     condition     text,
-    link          text
+    link          text,
+    token         text,                    -- SerpApi's lookup token for this product's sellers list (not read by Zetaris)
+    multi         boolean                  -- Google lists several stores for this product
 );
+ALTER TABLE shopping_offers ADD COLUMN IF NOT EXISTS token text;
+ALTER TABLE shopping_offers ADD COLUMN IF NOT EXISTS multi boolean;

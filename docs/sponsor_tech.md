@@ -60,5 +60,5 @@ requests refused). The Python clients fall back to local behaviour when the side
 - **The bench measures Deal Agent findings and Trust verdicts, not the card headline.** Trick detection and the main
   false-alarm line count confirmed findings; scam detection reads the card's "Shop safe?" status (`card.safe`). A second
   line, **shopper-visible false alarms**, counts clean pages whose card shows at least one trick, because today the card
-  can disagree with the findings (`docs/notes_for_team.md`, Shriganesh, card bugs 1-3).
+  can disagree with the findings.
 - All store data is synthetic. Real store pages are read only, and anything Pricise can't check there is "unverified".

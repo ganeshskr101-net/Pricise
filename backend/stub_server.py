@@ -34,7 +34,7 @@ from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse, StreamingResponse
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -50,12 +50,14 @@ from backend.contracts import (
     WishlistItem,
 )
 
-from backend.env import load_dotenv
+from backend.env import apply_sample_mode, load_dotenv, sample_mode
 
 load_dotenv()  # before anything reads settings; shell variables still win, no .env is fine
+apply_sample_mode()  # SAMPLE_MODE=true: every agent stub, fixture data, no Zetaris / Nightshift / SerpApi / RDAP calls
 
 from backend.agents import chat as chat_agent  # noqa: E402
 from backend.agents import price as price_agent  # noqa: E402
+from backend import agent_trace  # noqa: E402
 from backend.data import repo, zetaris  # noqa: E402
 from backend.data.pg import PgError  # noqa: E402
 from backend.data.zetaris import ZetarisError  # noqa: E402
@@ -105,7 +107,7 @@ def _f(check_id: str, agent: str, type_: str, status: str, summary: str, evidenc
     return Finding(
         check_id=check_id, agent=agent, type=type_, status=status, summary=summary,
         evidence=[Evidence(**e) for e in (evidence or [])], ts=time.time(),
-        model=kw.pop("model", "stub (no model call)"), **kw,
+        model=kw.pop("model", "stub (no model call)" if sample_mode() else "extension (no model call)"), **kw,
     )
 
 
@@ -129,6 +131,7 @@ async def _real_trust(cid: str, chk: dict, page: PageFacts, findings: list[Findi
     """AGENT_TRUST=real: the Trust Agent's findings take the place of the scripted trust rows (same spot in the stream)."""
     from backend.agents import trust
     tv = await trust.assess_store(chk["url"], cid, page)
+    chk["evidence_data"]["store_checks"] = tv.get("checks")  # the evidence page's "Store checks" table
     at = next((i for i, f in enumerate(findings) if f.agent == "trust"), len(findings))
     rest = [f for f in findings if f.agent != "trust"]
     at = min(at, len(rest))
@@ -259,6 +262,9 @@ def real_findings(cid: str, page: PageFacts) -> list[Finding]:
             seen_sel.add(s.selector)
         sel = [{"kind": "selector", "ref": s.selector, "label": _label(s)}] if s.selector else []
         if s.type == "claimed_discount":
+            from backend.tools.discount import CARD_OFFER_RE
+            if CARD_OFFER_RE.search(s.text or ""):
+                continue  # a store card's signup offer: not this item's price or a discount
             out.append(_f(cid, "deal", "claimed_discount", "unverified",
                           f"The page claims a reduced price ({s.text.strip()[:80]}). Price history not checked yet, so this is unverified.",
                           sel, confidence=0.4))
@@ -310,15 +316,18 @@ def _label(s) -> str:
 
 def real_card(cid: str, page: PageFacts, findings: list[Finding], elapsed: float) -> FinalCard:
     tricks = [f for f in findings if f.type in TRICK_TYPES and f.status == "confirmed"]  # proposed: "check these" below
-    soft, seen_types = [], set()
+    soft, good, seen_types = [], [], set()
     for f in findings:  # one line per kind of claim, so the card stays short
-        if f.type in TRICK_TYPES and f.status == "proposed":
+        if f.type == "claimed_discount" and f.status == "confirmed":
+            good.append(f)  # the discount checks out (price history, or the list price is the launch price)
+        elif f.type in TRICK_TYPES and f.status == "proposed":
             soft.append(f)
-        elif f.type in {"claimed_discount", "countdown", "scarcity"} and f.type not in seen_types:
+        elif f.type in {"claimed_discount", "inflated_discount", "countdown", "scarcity"} and f.type not in seen_types:
             seen_types.add(f.type)
             soft.append(f)
     honest_reasons = [Reason(text=f.summary, tone="bad" if f in tricks else "caution",
                              proof="fees" if f.type == "drip_fees" else None) for f in tricks + soft][:4]
+    honest_reasons += [Reason(text=f.summary, tone="good") for f in good][:max(0, 4 - len(honest_reasons))]
     if not honest_reasons:
         honest_reasons = [Reason(text="No timers, pre-ticked add-ons or extra fees found on this page", tone="good")]
     n = len(tricks)
@@ -376,15 +385,25 @@ def health() -> dict:
     from backend.llm import meterless
     from backend.tools import rdap
 
-    return {"ok": True, "mode": "stub", "agent_deal": _deal_mode(), "agent_trust": _trust_mode(),
+    return {"ok": True, "mode": "sample" if sample_mode() else "full", "agent_deal": _deal_mode(), "agent_trust": _trust_mode(),
             "agent_price": _price_mode(), "agent_orch": "on" if os.environ.get("AGENT_ORCH", "off").lower() == "on" else "off",
             "data_source": "zetaris" if zetaris.use_zetaris() else "fixture", "trust_rdap": "on" if rdap.enabled() else "off",
             "nemotron": {"fast": meterless.configured("fast"), "deep": meterless.configured("deep")}, "checks": len(CHECKS)}
 
 
 @app.get("/")
-def root():
-    return RedirectResponse("/storelab/audiodealz/")
+def root() -> dict:
+    return {"name": "Pricise backend", "health": "/health", "mode": "sample" if sample_mode() else "full"}
+
+
+@app.get("/checks/recent")
+def recent_checks() -> dict:
+    """The newest checks first (for scripts/record_run.py): id, url, whether it finished and is a real page."""
+    from backend.tools.common import is_storelab
+
+    rows = sorted(CHECKS.values(), key=lambda c: -c["started"])[:20]
+    return {"checks": [{"check_id": c["check_id"], "url": c["url"], "finished": c.get("final_card") is not None,
+                        "real": not is_storelab(c["url"]) and not c.get("replay"), "started": c["started"]} for c in rows]}
 
 
 @app.post("/check")
@@ -393,10 +412,64 @@ def start_check(req: CheckRequest, fresh: bool = False) -> dict:
     cid = uuid.uuid4().hex[:12]
     page = req.page or PageFacts(url=req.url)
     demo = _is_demo(req.url)
+    skip = req.page is not None and not demo and not_a_product_page(req.url, page)
     CHECKS[cid] = {"check_id": cid, "url": req.url, "demo": demo, "page": page.model_dump(), "started": time.time(),
-                   "findings": [], "final_card": None, "fresh": fresh,
+                   "findings": [], "final_card": None, "fresh": fresh, "not_product": skip,
                    "evidence_data": demo_evidence() if demo else real_evidence(page)}
+    if sample_mode() and not demo:  # a recorded real run of this page replaces the scripted stub
+        from backend import recordings
+
+        rec = recordings.match(req.url)
+        if rec:
+            CHECKS[cid].update(replay=rec["file"], page=rec["page"], evidence_data=rec.get("evidence_data") or {},
+                               not_product=False)
     return {"check_id": cid}
+
+
+async def _replay(chk: dict):
+    """SAMPLE_MODE=true and a recording of this page: its findings and card as they streamed in the real run, re-stamped
+    with this check's id, and the card says it was recorded. No agent, search or model call."""
+    from backend import recordings
+
+    rec = next((r for r in recordings.load_all() if r["file"] == chk["replay"]), None)
+    cid, chk["findings"] = chk["check_id"], []
+    for ev in (rec or {}).get("events", []):
+        if ev["kind"] == "finding":
+            f = Finding(**{**ev["finding"], "check_id": cid, "ts": time.time()})
+            chk["findings"].append(f.model_dump())
+            agent_trace.finding(chk, f)
+            yield f"data: {json.dumps({'kind': 'finding', 'finding': f.model_dump()})}\n\n"
+            await asyncio.sleep(0.12)
+        else:
+            card = FinalCard(**{**ev["card"], "check_id": cid})
+            card.subtitle = f"{card.subtitle} · {recordings.label(rec)}"
+            chk["final_card"] = card.model_dump()
+            agent_trace.verdict(chk, chk["final_card"])
+            yield f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
+
+
+PRODUCT_SIGNALS = {"claimed_discount", "countdown", "resetting_timer", "prechecked_addon", "drip_fees", "price_history"}
+
+
+def not_a_product_page(url: str, page: PageFacts) -> bool:
+    """A real page with nothing to check: no price, and its name is only the site's name ("Amazon.com" on a block or
+    interstitial page), or nothing about it is a product (no SKU, model, brand or product signal). Store Lab pages never."""
+    from backend.tools.common import is_storelab
+
+    p = page.product
+    if is_storelab(url) or p.price is not None:
+        return False
+    if p.sku or p.model or p.brand or any(s.type in PRODUCT_SIGNALS for s in page.signals):
+        return False  # something about it is a product (a pre-ticked add-on, a fee, a discount claim...)
+    return True  # no price, no product identity, no product signal: a title alone ("Amazon.com", an article) isn't one
+
+
+def not_product_card(cid: str) -> FinalCard:
+    """The only result for a page that isn't a product: no agents ran, no online search, no model call."""
+    none = Verdict(status="unknown", headline="Not checked", reasons=[])
+    return FinalCard(check_id=cid, title="Not a product page", subtitle="Pricise checks product pages; there is nothing to "
+                     "check here", tone="unknown", safe=none, honest=none,
+                     best_price=BestPrice(status="unknown", headline="Not checked"), tricks=0, alt={"kind": "not_product"})
 
 
 @app.get("/check/{cid}")
@@ -411,6 +484,18 @@ async def check_events(cid: str):
     if cid not in CHECKS:
         raise HTTPException(404, "unknown check")
     chk = CHECKS[cid]
+    if chk.get("replay"):
+        return StreamingResponse(_replay(chk), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
+    if chk.get("not_product"):  # before any agent, online search or model call (both paths)
+        card = not_product_card(cid)
+        chk["final_card"] = card.model_dump()
+        agent_trace.verdict(chk, chk["final_card"])
+        body = f"data: {json.dumps({'kind': 'final_card', 'card': card.model_dump()})}\n\n"
+
+        async def once():
+            yield body
+
+        return StreamingResponse(once(), media_type="text/event-stream", headers={"Cache-Control": "no-cache"})
     if os.environ.get("AGENT_ORCH", "off").lower() == "on":  # opt-in: backend/orchestrator.py runs the check
         from backend.orchestrator_stub import sse_stream
         return StreamingResponse(sse_stream(chk), media_type="text/event-stream",
@@ -429,6 +514,7 @@ async def check_events(cid: str):
                 if kind == "finding":
                     item.ts = time.time()
                     chk["findings"].append(item.model_dump())
+                    agent_trace.finding(chk, item)
                     yield f"data: {json.dumps({'kind': 'finding', 'finding': item.model_dump()})}\n\n"
                 else:
                     item = _with_trust(item, tv)
@@ -441,6 +527,7 @@ async def check_events(cid: str):
             f.ts = time.time()
             streamed.append(f)
             chk["findings"].append(f.model_dump())
+            agent_trace.finding(chk, f)
             yield f"data: {json.dumps({'kind': 'finding', 'finding': f.model_dump()})}\n\n"
         findings = streamed
         await asyncio.sleep(delay)
@@ -483,7 +570,9 @@ async def _save_observation(chk: dict) -> None:
 
 async def _store_findings(chk: dict) -> None:
     """DATA_SOURCE=zetaris: keep the finished check's findings in the Pricise Postgres. Best effort: never breaks a check.
-    Every mode: a real store page's price becomes a price observation (Postgres with zetaris, memory with fixture)."""
+    Every mode: a real store page's price becomes a price observation (Postgres with zetaris, memory with fixture).
+    Also the trace's last step (logs/<check_id>.jsonl): the verdict the shopper sees."""
+    agent_trace.verdict(chk, chk.get("final_card"))
     await _save_observation(chk)
     if not zetaris.use_zetaris():
         return
@@ -524,6 +613,7 @@ async def _with_price(cid: str, chk: dict, page: PageFacts, findings: list[Findi
     res = await task
     PRICE[cid] = res
     chk["evidence_data"]["stores"] = res.stores
+    chk["evidence_data"]["online"] = res.online
     chk["evidence_data"]["stores_sql"] = res.sql
     async for f in _paced(res.findings, delay):
         yield f
@@ -688,10 +778,23 @@ def _wishlist_items() -> tuple[list[WishlistItem], str]:
     return WISHLIST, "memory"
 
 
+SEEDED_WISHLIST = {"sony", "kindle", "shoes", "fryer"}  # the Store Lab demo's watched items (made-up stores)
+
+
+def storelab_demo() -> bool:
+    """STORELAB_DEMO=on shows the Store Lab wishlist demo (seeded items, demo clock, its stats). Off by default: the
+    product demo uses real retailer pages only; Store Lab stays for tests."""
+    return os.environ.get("STORELAB_DEMO", "off").strip().lower() == "on"
+
+
 @app.get("/wishlist")
 def get_wishlist() -> dict:
     items, source = _wishlist_items()
-    return {"day": CLOCK["day"], "items": [i.model_dump() for i in items], "stats": _stats(CLOCK["day"]), "source": source}
+    demo = storelab_demo()
+    if not demo:
+        items = [i for i in items if i.id not in SEEDED_WISHLIST]
+    return {"day": CLOCK["day"], "items": [i.model_dump() for i in items], "stats": _stats(CLOCK["day"]) if demo else None,
+            "source": source, "demo_clock": demo}
 
 
 @app.post("/wishlist")

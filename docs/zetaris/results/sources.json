@@ -1,0 +1,369 @@
+{
+ "pg_observations_latest": {
+  "sql": "SELECT host, name, price, condition, safe, from_unixtime(seen_at) AS seen FROM pricise_pg.price_observations ORDER BY seen_at DESC LIMIT 5",
+  "seconds": 1.3,
+  "rows": [
+   {
+    "host": "amazon.com",
+    "name": "Amazon Kindle Paperwhite Signature Edition 32GB (2024 model) \u2013 Auto-adjusting front light, wireless charging, and weeks of battery life \u2013 Metallic Black",
+    "price": "249.990000000000000000",
+    "condition": "new",
+    "safe": "good",
+    "seen": "2026-10-27 06:06:49"
+   },
+   {
+    "host": "amazon.com",
+    "name": "Apple AirPods Pro 3 Wireless Earbuds with Active Noise Cancellation",
+    "price": "199.990000000000000000",
+    "condition": "new",
+    "safe": "good",
+    "seen": "2026-10-27 05:43:42"
+   },
+   {
+    "host": "amazon.com",
+    "name": "Chat history",
+    "price": "199.990000000000000000",
+    "condition": "new",
+    "safe": "good",
+    "seen": "2026-10-27 05:43:29"
+   },
+   {
+    "host": "ebay.com",
+    "name": "5 results for Amazon Kindle Paperwhite Signature Edition 32GB (2024 model)",
+    "price": "149.990000000000000000",
+    "condition": "new",
+    "safe": "good",
+    "seen": "2026-10-27 05:40:00"
+   },
+   {
+    "host": "walmart.com",
+    "name": "Amazon Kindle Paperwhite Signature Edition 32GB (2024 model) - Walmart.com",
+    "price": "18.000000000000000000",
+    "condition": "new",
+    "safe": "good",
+    "seen": "2026-10-27 05:39:46"
+   }
+  ]
+ },
+ "pg_offers_by_query": {
+  "sql": "SELECT query_key, count(*) AS offers, from_unixtime(max(fetched_at)) AS newest FROM pricise_pg.shopping_offers GROUP BY query_key ORDER BY newest DESC LIMIT 10",
+  "seconds": 0.5,
+  "rows": [
+   {
+    "query_key": "appleairpodspro3wirelessearbudswithactivesellers",
+    "offers": "3",
+    "newest": "2026-10-27 05:43:42"
+   },
+   {
+    "query_key": "appleairpodspro3wirelessearbudswithactive",
+    "offers": "40",
+    "newest": "2026-10-27 05:43:41"
+   },
+   {
+    "query_key": "appleairpodspro2wirelessearbudssellers",
+    "offers": "1",
+    "newest": "2026-10-27 05:35:41"
+   },
+   {
+    "query_key": "appleairpodspro2wirelessearbuds",
+    "offers": "40",
+    "newest": "2026-10-27 05:35:40"
+   },
+   {
+    "query_key": "amazonkindlepaperwhitesignatureedition32gbsellers",
+    "offers": "3",
+    "newest": "2026-10-27 05:27:54"
+   },
+   {
+    "query_key": "amazonkindlepaperwhitesignatureedition32gb",
+    "offers": "80",
+    "newest": "2026-10-27 04:56:50"
+   },
+   {
+    "query_key": "thisstoreisunavailable",
+    "offers": "2",
+    "newest": "2026-10-27 04:52:14"
+   },
+   {
+    "query_key": "searchresults",
+    "offers": "40",
+    "newest": "2026-10-27 04:52:11"
+   },
+   {
+    "query_key": "amazonb0c8rr4wn3",
+    "offers": "40",
+    "newest": "2026-10-27 04:51:08"
+   },
+   {
+    "query_key": "factoryamazonkindlepaperwhitesignatureedition",
+    "offers": "40",
+    "newest": "2026-10-27 04:50:56"
+   }
+  ]
+ },
+ "pg_findings_by_agent": {
+  "sql": "SELECT agent, status, count(*) AS n FROM pricise_pg.findings GROUP BY agent, status ORDER BY agent, status",
+  "seconds": 0.2,
+  "rows": [
+   {
+    "agent": "deal",
+    "status": "confirmed",
+    "n": "51"
+   },
+   {
+    "agent": "deal",
+    "status": "proposed",
+    "n": "21"
+   },
+   {
+    "agent": "deal",
+    "status": "unverified",
+    "n": "19"
+   },
+   {
+    "agent": "page",
+    "status": "confirmed",
+    "n": "54"
+   },
+   {
+    "agent": "price",
+    "status": "challenged",
+    "n": "41"
+   },
+   {
+    "agent": "price",
+    "status": "confirmed",
+    "n": "62"
+   },
+   {
+    "agent": "price",
+    "status": "proposed",
+    "n": "24"
+   },
+   {
+    "agent": "price",
+    "status": "rejected",
+    "n": "45"
+   },
+   {
+    "agent": "price",
+    "status": "unverified",
+    "n": "78"
+   },
+   {
+    "agent": "trust",
+    "status": "confirmed",
+    "n": "2"
+   },
+   {
+    "agent": "trust",
+    "status": "proposed",
+    "n": "69"
+   },
+   {
+    "agent": "trust",
+    "status": "unverified",
+    "n": "39"
+   }
+  ]
+ },
+ "pg_stores_by_kind": {
+  "sql": "SELECT kind, count(*) AS n FROM pricise_pg.stores GROUP BY kind",
+  "seconds": 0.2,
+  "rows": [
+   {
+    "kind": "storelab",
+    "n": "10"
+   },
+   {
+    "kind": "bench",
+    "n": "1"
+   }
+  ]
+ },
+ "rdap_registration_dates": {
+  "sql": "SELECT lower(`ldhName`) AS domain, substr(e.`eventDate`, 1, 10) AS registered FROM pricise_rest.rdap_woot LATERAL VIEW explode(events) AS e WHERE e.`eventAction` = 'registration' UNION ALL SELECT lower(`ldhName`), substr(e.`eventDate`, 1, 10) FROM pricise_rest.rdap_walmart LATERAL VIEW explode(events) AS e WHERE e.`eventAction` = 'registration' UNION ALL SELECT lower(`ldhName`), substr(e.`eventDate`, 1, 10) FROM pricise_rest.rdap_amazon LATERAL VIEW explode(events) AS e WHERE e.`eventAction` = 'registration'",
+  "seconds": 0.5,
+  "rows": [
+   {
+    "domain": "woot.com",
+    "registered": "2000-01-12"
+   },
+   {
+    "domain": "walmart.com",
+    "registered": "1995-02-23"
+   },
+   {
+    "domain": "amazon.com",
+    "registered": "1994-11-01"
+   }
+  ]
+ },
+ "rdap_woot_events": {
+  "sql": "SELECT e.`eventAction` AS action, e.`eventDate` AS at FROM pricise_rest.rdap_woot LATERAL VIEW explode(events) AS e",
+  "seconds": 0.2,
+  "rows": [
+   {
+    "action": "registration",
+    "at": "2000-01-12T21:41:49Z"
+   },
+   {
+    "action": "expiration",
+    "at": "2027-01-12T21:41:49Z"
+   },
+   {
+    "action": "last changed",
+    "at": "2025-10-31T17:06:07Z"
+   },
+   {
+    "action": "last update of RDAP database",
+    "at": "2026-10-27T08:01:43Z"
+   }
+  ]
+ },
+ "rdap_bestbuy_status": {
+  "sql": "SELECT lower(`ldhName`) AS domain, s AS status FROM pricise_rest.rdap_bestbuy LATERAL VIEW explode(status) AS s",
+  "seconds": 0.3,
+  "rows": [
+   {
+    "domain": "bestbuy.com",
+    "status": "client delete prohibited"
+   },
+   {
+    "domain": "bestbuy.com",
+    "status": "client transfer prohibited"
+   },
+   {
+    "domain": "bestbuy.com",
+    "status": "client update prohibited"
+   },
+   {
+    "domain": "bestbuy.com",
+    "status": "server delete prohibited"
+   },
+   {
+    "domain": "bestbuy.com",
+    "status": "server transfer prohibited"
+   },
+   {
+    "domain": "bestbuy.com",
+    "status": "server update prohibited"
+   }
+  ]
+ },
+ "serp_cheapest": {
+  "sql": "SELECT r.position, r.source, r.extracted_price AS price, r.second_hand_condition AS cond, substr(r.title, 1, 60) AS title FROM pricise_rest.serp_jbl_flip6 LATERAL VIEW explode(shopping_results) AS r ORDER BY r.extracted_price LIMIT 10",
+  "seconds": 1.7,
+  "rows": [
+   {
+    "position": "8",
+    "source": "eBay - littlefoote",
+    "price": "34.99",
+    "cond": "pre-owned",
+    "title": "Jbl Flip 6 Portable Speaker System - Blue W/case. Not Workin"
+   },
+   {
+    "position": "29",
+    "source": "eBay",
+    "price": "49.99",
+    "cond": "pre-owned",
+    "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Camo"
+   },
+   {
+    "position": "33",
+    "source": "PayMore University City",
+    "price": "56.99",
+    "cond": "pre-owned",
+    "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Camo JBLFLI"
+   },
+   {
+    "position": "40",
+    "source": "Mercari",
+    "price": "59.0",
+    "cond": null,
+    "title": "JBL BRAND NEW Flip 6 Bluetooth Speaker Blue - New Electronic"
+   },
+   {
+    "position": "6",
+    "source": "eBay - bayoumy",
+    "price": "69.99",
+    "cond": "pre-owned",
+    "title": "Flip 6 Portable Waterproof Speaker - Blue | Bluetooth"
+   },
+   {
+    "position": "17",
+    "source": "eBay",
+    "price": "70.0",
+    "cond": null,
+    "title": "JBL Flip 6 Portable Bluetooth Wireless Speaker, Blue"
+   },
+   {
+    "position": "37",
+    "source": "Mercari",
+    "price": "70.0",
+    "cond": "pre-owned",
+    "title": "JBL Flip6 Wireless Portable Bluetooth Speaker Waterproof & D"
+   },
+   {
+    "position": "38",
+    "source": "Poshmark",
+    "price": "70.0",
+    "cond": null,
+    "title": "Jbl Portable Audio & Video | Jbl Flip 6 Waterproof Portable "
+   },
+   {
+    "position": "2",
+    "source": "eBay - da-kar",
+    "price": "74.99",
+    "cond": "pre-owned",
+    "title": "Jbl Flip 6 Portable Waterproof Bluetooth Speaker Blue"
+   },
+   {
+    "position": "26",
+    "source": "Artblossom",
+    "price": "75.0",
+    "cond": null,
+    "title": "JBL Flip 6"
+   }
+  ]
+ },
+ "serp_by_condition": {
+  "sql": "SELECT coalesce(r.second_hand_condition, 'new (not stated)') AS cond, count(*) AS offers, min(r.extracted_price) AS lowest FROM pricise_rest.serp_jbl_flip6 LATERAL VIEW explode(shopping_results) AS r GROUP BY coalesce(r.second_hand_condition, 'new (not stated)')",
+  "seconds": 0.6,
+  "rows": [
+   {
+    "cond": "new (not stated)",
+    "offers": "28",
+    "lowest": "59.0"
+   },
+   {
+    "cond": "pre-owned",
+    "offers": "11",
+    "lowest": "34.99"
+   },
+   {
+    "cond": "refurbished",
+    "offers": "1",
+    "lowest": "188.99"
+   }
+  ]
+ },
+ "serp_woot_and_walmart": {
+  "sql": "SELECT r.source, r.extracted_price AS price, r.extracted_old_price AS was, substr(r.title, 1, 60) AS title FROM pricise_rest.serp_jbl_flip6 LATERAL VIEW explode(shopping_results) AS r WHERE r.source IN ('Woot', 'Walmart')",
+  "seconds": 0.2,
+  "rows": [
+   {
+    "source": "Walmart",
+    "price": "114.95",
+    "was": "130",
+    "title": "JBL FLIP 6 Bluetooth Portable Waterproof Speaker"
+   },
+   {
+    "source": "Woot",
+    "price": "79.95",
+    "was": null,
+    "title": "(NEW) JBL Flip 6 Portable IP67 Waterproof Speaker"
+   }
+  ]
+ }
+}

@@ -110,7 +110,8 @@ def test_explain_falls_back_to_the_rule_reason_without_naming_a_model(monkeypatc
 
 # ----------------------------------------------------------------------------- chat: SOURCES never shown
 
-CHECK = {"findings": [{"type": "drip_fees"}, {"type": "prechecked_addon"}, {"type": "fake_discount"}]}
+CHECK = {"findings": [{"type": "drip_fees", "summary": "$37.01 in fees at checkout. Real total: $191.00."},
+                      {"type": "prechecked_addon", "summary": "A $4.99 add-on is ticked."}, {"type": "fake_discount", "summary": ""}]}
 
 
 @pytest.mark.parametrize("reply", [

@@ -1,0 +1,521 @@
+{
+ "check_id": "6a33bf209adc",
+ "url": "https://www.amazon.com/All-new-Amazon-Kindle-Paperwhite-glare-free/dp/B0CFPJYX7P/ref=sr_1_1?crid=2GID3286CN480&dib=eyJ2IjoiMSJ9.19PtVsvYIrlN6GTWsPbozqeX6nw_9RofLZlNTwtyoGb5F4cikX4KVyIww5heUkTz5zYdlcw1Mei9WYlcBtB9VfUchymNrfdn4wB1RKfHYGc957iqNu2Et-jo9e9GE6JOv2GyNpSm66a-Yh6e8bOZQDIC9kReMc28TpzBcQddbdjoo2l1PPJQDRypuY2mFEM7htysxexrwcL-eYCIM66b3-y0S8EXOCKffjhmdVURP01BrltX6zkPXnDIYt_zrs34dgAecTZUEA6dPr5ZryhCgwFxi0Fv8IccmLxRaSIDbEM.wGJ7UXf-nwwacQuOIZN0OaoB5F82nX2cJHY75GU3ATs&dib_tag=se&keywords=kindle&qid=1793112313&s=electronics&sprefix=Kindle%2Celectronics%2C176&sr=1-1&th=1",
+ "recorded_at": "2026-10-27",
+ "final_card": {
+  "check_id": "6a33bf209adc",
+  "title": "Check before you buy",
+  "subtitle": "0 tricks \u00b7 1 claim to check",
+  "tone": "caution",
+  "safe": {
+   "status": "good",
+   "headline": "Looks safe",
+   "reasons": [
+    {
+     "text": "Secure connection (HTTPS)",
+     "tone": "good",
+     "proof": "whois"
+    },
+    {
+     "text": "Domain registered 32 years ago",
+     "tone": "good",
+     "proof": "whois"
+    },
+    {
+     "text": "Returns policy link on the page",
+     "tone": "good",
+     "proof": "whois"
+    },
+    {
+     "text": "Contact or customer service link on the page",
+     "tone": "good",
+     "proof": "whois"
+    },
+    {
+     "text": "Sold by Amazon and shipped by Amazon",
+     "tone": "unknown",
+     "proof": "whois"
+    }
+   ]
+  },
+  "honest": {
+   "status": "caution",
+   "headline": "Check these",
+   "reasons": [
+    {
+     "text": "Pressure message: \"Only 13 left in stock - order soon.\". Stock claims can't be verified from the page.",
+     "tone": "caution",
+     "proof": null
+    }
+   ]
+  },
+  "best_price": {
+   "status": "good",
+   "headline": "As good as it gets",
+   "reasons": [
+    {
+     "text": "Credible stores: Best Buy $199.99; this page $199.99",
+     "tone": "good",
+     "proof": "stores"
+    }
+   ],
+   "store": null,
+   "total": null,
+   "url": null
+  },
+  "tricks": 0,
+  "elapsed_s": 11.6,
+  "alt": {
+   "kind": "this_page"
+  }
+ },
+ "findings": [
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "deal",
+   "type": "scarcity",
+   "status": "proposed",
+   "summary": "Pressure message: \"Only 13 left in stock - order soon.\". Stock claims can't be verified from the page.",
+   "evidence": [
+    {
+     "kind": "selector",
+     "ref": "body > div:nth-of-type(2) > div > ol > li:nth-of-type(3) > span > div > div:nth-of-type(2) > div",
+     "label": "Pressure message",
+     "placement": null
+    }
+   ],
+   "confidence": 0.5,
+   "model": "rules (no model)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112321.407818
+  },
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "page",
+   "type": "product",
+   "status": "confirmed",
+   "summary": "Read the page: Amazon Kindle Paperwhite 16GB (2024 model) \u2013 7\" glare-free display and weeks of battery life \u2013 Black, $199.99.",
+   "evidence": [
+    {
+     "kind": "text",
+     "ref": "buy-box",
+     "label": null,
+     "placement": null
+    }
+   ],
+   "confidence": 0.9,
+   "model": "extension (no model call)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112321.552587
+  },
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "trust",
+   "type": "seller",
+   "status": "unverified",
+   "summary": "Sold by Amazon and shipped by Amazon.",
+   "evidence": [
+    {
+     "kind": "text",
+     "ref": "page: Sold by Amazon.com, ships from Amazon",
+     "label": null,
+     "placement": null
+    }
+   ],
+   "confidence": 0.5,
+   "model": "rules (no model)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112321.647116
+  },
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "trust",
+   "type": "store_records",
+   "status": "unverified",
+   "summary": "Company record and reviews for www.amazon.com aren't checked (no data source for real stores yet).",
+   "evidence": [],
+   "confidence": 0.2,
+   "model": "rules (no model)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112321.6471412
+  },
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "price",
+   "type": "offers_filtered",
+   "status": "confirmed",
+   "summary": "Rejected 42 offers by rule: 23 used or refurbished, 8 not from a credible store, 6 marketplace sellers, 5 a different item.",
+   "evidence": [
+    {
+     "kind": "log",
+     "ref": "google_shopping:Amazon Kindle Paperwhite 16GB Black",
+     "label": "Rejected offers, by reason",
+     "placement": null
+    }
+   ],
+   "confidence": 0.9,
+   "model": "rules (no model)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112332.8068328
+  },
+  {
+   "check_id": "6a33bf209adc",
+   "agent": "price",
+   "type": "lowest_price",
+   "status": "confirmed",
+   "summary": "Same price at Best Buy, this page is as good as it gets. Also checked: Walmart (not found); Target (not found).",
+   "evidence": [
+    {
+     "kind": "url",
+     "ref": "https://www.bestbuy.com/site/searchpage.jsp?st=Amazon%20Kindle%20Paperwhite%2016GB%20Black",
+     "label": "Best Buy $199.99",
+     "placement": null
+    },
+    {
+     "kind": "log",
+     "ref": "google_shopping:Amazon Kindle Paperwhite 16GB Black",
+     "label": "40 offers (serpapi); 1 credible stores, 42 dropped",
+     "placement": null
+    }
+   ],
+   "confidence": 0.75,
+   "model": "rules (no model)",
+   "challenged_by": null,
+   "rounds": 0,
+   "ts": 1793112332.806894
+  }
+ ],
+ "online": {
+  "query": "Amazon Kindle Paperwhite 16GB Black",
+  "source": "serpapi",
+  "sellers_source": "serpapi",
+  "sql": null,
+  "shown": [
+   {
+    "store": "Best Buy",
+    "price": 199.99,
+    "shipping": "free shipping",
+    "total": 199.99,
+    "condition": "new",
+    "title": "Amazon Kindle Paperwhite 16GB, Now thinner and lighter",
+    "url": "https://www.bestbuy.com/site/searchpage.jsp?st=Amazon%20Kindle%20Paperwhite%2016GB%20Black",
+    "seller": null,
+    "low": false,
+    "fetched_at": null
+   }
+  ],
+  "fetched": [
+   {
+    "what": "Google Shopping (live search)",
+    "at": 1793112332.806307
+   }
+  ],
+  "usl_fallback": "no rows for this product in safe_price",
+  "dropped": [
+   {
+    "source": "Best Buy",
+    "price": 199.99,
+    "title": "Amazon Kindle Paperwhite",
+    "reason": "not the same item: other model",
+    "group": "Different item"
+   },
+   {
+    "source": "Unclaimed Baggage",
+    "price": 95.99,
+    "title": "Kindle Paperwhite 6 16GB Black E-Reader",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Unclaimed Baggage",
+    "price": 69.99,
+    "title": "Kindle Paperwhite 5 16GB Black E-Reader",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay",
+    "price": 72.99,
+    "title": "Amazon Kindle Paperwhite 11th Gen 16gb Wi-fi 6.8\" Black Unregisterable",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay - dealzeez",
+    "price": 74.89,
+    "title": "Amazon Kindle Paperwhite 11th Gen. 16gb Black - Unregisterable",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Pawn America",
+    "price": 99.99,
+    "title": "Amazon Kindle Paperwhite 11th Gen 16GB Wi-Fi 6.8\" Reading Tablet - Black",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay",
+    "price": 73.49,
+    "title": "Amazon Kindle Paperwhite 11th Gen 16gb Wi-fi 6.8\" Unregisterable",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Best Buy",
+    "price": 149.99,
+    "title": "Amazon Kindle 16GB, Now Thinner, Lighter, and Faster",
+    "reason": "not the same item: other model",
+    "group": "Different item"
+   },
+   {
+    "source": "guycharrison.com",
+    "price": 103.9,
+    "title": "Amazon Kindle Paperwhite \u7b2c12\u4e16\u4ee3 16GB \u30d6\u30e9\u30c3\u30af",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay - diaz_electronics",
+    "price": 64.99,
+    "title": "Amazon Kindle Paperwhite Pq94wif 10th Gen Black Handheld Waterproof",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Jos\u00e9 Ferreira Andrade Lda",
+    "price": 92.4,
+    "title": "Kindle Paperwhite 16GB (11th Generation) with Cover",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Best Buy",
+    "price": 244.95,
+    "title": "Amazon 7 inch Kindle Paperwhite (16 GB) 2024 Metallic Tablet Essentials Starter Kit 5 Piec",
+    "reason": "not the same item: other edition (essentials)",
+    "group": "Different item"
+   },
+   {
+    "source": "eBay",
+    "price": 95.0,
+    "title": "Amazon Certified Refurbished Kindle Paperwhite E-reader",
+    "reason": "\"Refurbished\" in its title",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Stadium",
+    "price": 259.19,
+    "title": "Amazon Kindle Paperwhite Zertifiziert Und General\u00fcberholt \u2013 Mit Werbung",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "Best Buy",
+    "price": 259.95,
+    "title": "Amazon - 7 inch Kindle Paperwhite (16 GB) - 2024 - Tablet Essentials Starter Kit 5 Piece (",
+    "reason": "not the same item: other edition (essentials)",
+    "group": "Different item"
+   },
+   {
+    "source": "eBay - minipcsnmore",
+    "price": 136.98,
+    "title": "Amazon Kindle Paperwhite e-ink 10th Gen 16GB, Wi-Fi, 6\" Black Waterproof",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "EPI - elite promo",
+    "price": 320.95,
+    "title": "Amazon Kindle Paperwhite 16 GB - Direct Print",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "eBay",
+    "price": 92.99,
+    "title": "Amazon Kindle 16GB",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Best Buy",
+    "price": 229.99,
+    "title": "Amazon Kids Kindle Paperwhite",
+    "reason": "not the same item: other edition (kids)",
+    "group": "Different item"
+   },
+   {
+    "source": "eBay - palladium-rugs",
+    "price": 220.0,
+    "title": "2024 Amazon Kindle Paperwhite 16gb Black (12th Gen, Brand Sealed)",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "Jos\u00e9 Ferreira Andrade Lda",
+    "price": 118.8,
+    "title": "\u3010Excellent Condition\u301112th Generation Kindle Paperwhite 16GB Ad-Free",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay - minipcsnmore",
+    "price": 149.98,
+    "title": "Amazon Kindle Paperwhite 11th Gen 16gb, Wi-fi, 6.8\" - Black",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "hgspot.hr",
+    "price": 255.22,
+    "title": "Like-new Amazon Kindle Paperwhite 16GB \u2013 20% faster, with New 7\" glare-free display and we",
+    "reason": "\"Like-new\" in its title",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay",
+    "price": 39.0,
+    "title": "Amazon Kindle Paperwhite 6\" Built-in Light E-reader - Ey21 \u2013 Black",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "ShopSimon",
+    "price": 229.99,
+    "title": "Amazon Kindle Paperwhite 16GB",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay - pham0901",
+    "price": 150.0,
+    "title": "Amazon Kindle Paperwhite E-reader",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "Poshmark",
+    "price": 99.0,
+    "title": "Amazon Kindle Tablets & Accessories | Paperwhite Kindle E-Reader 10th Generation Waterproo",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay - yacoub_j",
+    "price": 140.0,
+    "title": "Amazon Kindle Paperwhite 12th Generation Black 16 Gb",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Reebelo USA",
+    "price": 228.49,
+    "title": "Amazon Kindle",
+    "reason": "\"refurbished\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay - thelivingstone",
+    "price": 186.71,
+    "title": "Amazon Kindle Paperwhite 12th Generation - 16gb - 7\u201d - Black",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "BJ's Wholesale Club",
+    "price": 399.99,
+    "title": "Amazon Kindle Scribe",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay",
+    "price": 69.99,
+    "title": "Amazon Kindle Paperwhite 10th Gen Pq94wif",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Glocalzone",
+    "price": 200.84,
+    "title": "All-new Kindle Paperwhite \u2013 Now Waterproof with more than 2x the Storage",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay",
+    "price": 43.0,
+    "title": "Stunning Amazon Kindle Paperwhite EY21 Black E-Reader",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay - haznpapo3_7",
+    "price": 39.99,
+    "title": "Amazon Kindle Paperwhite 5th Gen Ey21 Black Tablet Bundle W/case -",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Poshmark",
+    "price": 85.0,
+    "title": "Amazon Kindle Tablets & Accessories | Amazon Kindle Paperwhite | Color: Black | Size: Os |",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "eBay",
+    "price": 119.99,
+    "title": "Kindle Paperwhite 6.8\" 11th gen",
+    "reason": "\"refurbished\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "Grooves-Inc.com",
+    "price": 177.28,
+    "title": "Amazon Kindle 16gb",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay",
+    "price": 120.0,
+    "title": "Amazon Kindle Paperwhite Series Kindle Ebook Reader 7 In Black Wi\u2010fi",
+    "reason": "\"pre-owned\" in its condition",
+    "group": "Used or refurbished"
+   },
+   {
+    "source": "ShopSimon",
+    "price": 229.99,
+    "title": "Amazon 7 inch Kindle Paperwhite with Glare-Free Display - 16GB - Black",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   },
+   {
+    "source": "eBay - kirbycooks",
+    "price": 300.19,
+    "title": "Amazon Kindle Paperwhite 16gb (2024 Model) \u2013 7\" Glare-free Display And",
+    "reason": "marketplace seller, not the retailer",
+    "group": "Marketplace seller"
+   },
+   {
+    "source": "Techinn.com",
+    "price": 188.99,
+    "title": "Amazon Kindle Paperwhite (2024) 7 16 Gb Ebook Clear 1277264",
+    "reason": "not an allowlisted store",
+    "group": "Unknown store"
+   }
+  ],
+  "also_checked": [
+   "Walmart (not found)",
+   "Target (not found)"
+  ],
+  "offers_seen": 40
+ }
+}

@@ -67,31 +67,41 @@ def _request(sql: str, limit: int) -> urllib.request.Request:
                  "X-Request-ID": str(uuid.uuid4())})
 
 
+KEY_IN_URL = re.compile(r"(api_key=)[^&\s\"']+", re.I)
+
+
+def redact(text: str) -> str:
+    """A REST table's endpoint can carry an API key (api_key=...), and Zetaris repeats the endpoint in its errors."""
+    return KEY_IN_URL.sub(r"\1***", text or "")
+
+
 def _http_error(e: urllib.error.HTTPError) -> ZetarisError:
-    detail = " ".join(e.read(300).decode(errors="replace").split())
+    detail = redact(" ".join(e.read(300).decode(errors="replace").split()))
     hint = {400: "bad request: check ZETARIS_ORG_ID and the SQL (Lightning SQL, one statement, no trailing ';')",
             401: "unauthorised: ZETARIS_API_KEY is wrong or expired (create a new one in the Zetaris GUI)",
             403: "forbidden: this key's user lacks the privilege for that statement"}.get(e.code, "request failed")
     return ZetarisError(f"Zetaris HTTP {e.code}, {hint}. {detail}".strip())
 
 
-def run_sql(sql: str, limit: int = DEFAULT_LIMIT) -> list[dict[str, str]]:
-    """Run one Lightning SQL statement and return its rows as dicts keyed by column name. Raises ZetarisError."""
+def run_sql(sql: str, limit: int = DEFAULT_LIMIT, timeout: float = TIMEOUT_S, keep_semicolons: bool = False
+            ) -> list[dict[str, str]]:
+    """Run one Lightning SQL statement and return its rows as dicts keyed by column name. Raises ZetarisError.
+    timeout: 8 s for the product; setup scripts (scripts/zetaris_usl.py) allow longer for CREATE / ACTIVATE."""
     if not configured():
         raise ZetarisError("Zetaris not configured: set ZETARIS_REST_URL, ZETARIS_ORG_ID and ZETARIS_API_KEY in .env")
-    sql = sql.strip().rstrip(";").strip()
+    sql = sql.strip() if keep_semicolons else sql.strip().rstrip(";").strip()  # COMPILE USL DDL keeps its ");" endings
     try:
-        with urllib.request.urlopen(_request(sql, limit), timeout=TIMEOUT_S) as r:
+        with urllib.request.urlopen(_request(sql, limit), timeout=timeout) as r:
             out = json.loads(r.read().decode() or "null")
     except urllib.error.HTTPError as e:
         raise _http_error(e) from None
     except TimeoutError:
-        raise ZetarisError(f"Zetaris did not answer within {TIMEOUT_S}s") from None
+        raise ZetarisError(f"Zetaris did not answer within {timeout:g}s") from None
     except (urllib.error.URLError, OSError) as e:
         raise ZetarisError(f"Cannot reach Zetaris at {_env('ZETARIS_REST_URL')}: {getattr(e, 'reason', e)}") from None
     except json.JSONDecodeError:
         raise ZetarisError("Zetaris replied with something that is not JSON") from None
     if not isinstance(out, dict) or not isinstance(out.get("data", []), list):
-        raise ZetarisError("Unexpected Zetaris reply shape (expected headers + data)")
+        raise ZetarisError(redact(f"Unexpected Zetaris reply shape (expected headers + data): {str(out)[:200]}"))
     headers = out.get("headers") or []
     return [dict(zip(headers, row)) for row in out.get("data") or []]

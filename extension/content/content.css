@@ -1,8 +1,10 @@
 .pricise-mark { outline: 3px dashed #c5221f !important; outline-offset: 4px !important; border-radius: 4px; }
 .pricise-mark--caution { outline-color: #b06000 !important; }
+.pricise-mark--neutral { outline-color: #71827e !important; outline-style: solid !important; }  /* --ink-3: checked, not a trick */
 .pricise-label {
   position: absolute; z-index: 2147483646; pointer-events: none;
   background: #c5221f; color: #fff; font: 700 12px/1 Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
   padding: 5px 8px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0, 0, 0, .2); white-space: nowrap; letter-spacing: .1px;
 }
 .pricise-label--caution { background: #b06000; }
+.pricise-label--neutral { background: #71827e; }

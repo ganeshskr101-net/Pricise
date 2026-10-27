@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import time
 from typing import AsyncIterator, Awaitable, Callable, Optional
 
@@ -39,6 +40,7 @@ TOOL_TYPE = {"addons": "prechecked_addon", "discount": "claimed_discount", "time
 TOOL_WHAT = {"addons": "pre-ticked add-ons", "discount": "the discount against price history", "timer": "whether the countdown resets",
              "runahead": "late checkout fees", "scarcity": "pressure messages"}
 TYPE_TOOL = {"prechecked_addon": "addons", "fake_discount": "discount", "claimed_discount": "discount",
+             "inflated_discount": "discount",
              "resetting_timer": "timer", "countdown": "timer", "drip_fees": "runahead", "scarcity": "scarcity"}
 
 RUNS: dict[str, dict] = {}      # check_id -> {"url", "page", "rounds"} so the Skeptic can ask for a rerun
@@ -91,11 +93,20 @@ def _tools(check_id: str, url: str, page: PageFacts, fresh: bool = False) -> dic
     lab = is_storelab(url)
     return {
         "addons": (lambda: sync(check_addons, check_id, page), TOOL_TIMEOUT_S),
-        "discount": (lambda: sync(check_discount, check_id, url, page), TOOL_TIMEOUT_S),
+        "discount": (lambda: asyncio.to_thread(check_discount, check_id, url, page), discount_timeout()),  # may search (cached)
         "scarcity": (lambda: sync(check_scarcity, check_id, page), TOOL_TIMEOUT_S),
         "timer": (lambda: _timer(check_id, url, page, fresh), timeout_s() if lab else TOOL_TIMEOUT_S),
         "runahead": (lambda: check_runahead(check_id, url, page), TOOL_TIMEOUT_S),
     }
+
+
+def discount_timeout() -> float:
+    """The discount check reads the same safe_price as the Price Agent (repo.usl_offers: one shared read, up to its 15 s),
+    so with the USL on it gets that limit plus 2 s to compare; otherwise the usual 8 s."""
+    from backend.data import repo, zetaris
+
+    usl = os.environ.get("PRICISE_USL", "on").strip().lower() != "off" and zetaris.use_zetaris()
+    return repo.USL_TIMEOUT_S + 2.0 if usl else TOOL_TIMEOUT_S
 
 
 def _why(err: BaseException, timeout: float) -> str:

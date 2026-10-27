@@ -35,14 +35,23 @@ def store_key(url: str, page: PageFacts) -> str:
     return (page.host or urlparse(url).netloc).lower()
 
 
+# A store credit card's signup offer ("Get $50 off instantly: pay $64.95 upon approval for Amazon Visa") is not this item's
+# price and not a discount on it. The extension already skips these; this guard keeps any that slip through out.
+CARD_OFFER_RE = re.compile(r"upon approval|\bvisa\b|mastercard|credit card|card ?member|store card|apply now", re.I)
+
+
+def discount_claims(page: PageFacts) -> list:
+    return [s for s in page.signals if s.type == "claimed_discount" and not CARD_OFFER_RE.search(s.text or "")]
+
+
 def claimed_was(page: PageFacts) -> tuple[Optional[float], Optional[int]]:
     """The was-price the page claims (from discount signals or the product), plus a claimed % if shown."""
     price = page.product.price
-    amounts = [s.amount for s in page.signals if s.type == "claimed_discount" and s.amount and (price is None or s.amount > price)]
+    amounts = [s.amount for s in discount_claims(page) if s.amount and (price is None or s.amount > price)]
     was = max(amounts) if amounts else page.product.was_price
     pct = None
-    for s in page.signals:
-        m = PCT_RE.search(s.text) if s.type == "claimed_discount" else None
+    for s in discount_claims(page):
+        m = PCT_RE.search(s.text)
         if m:
             pct = int(m.group(1))
             break
@@ -82,7 +91,7 @@ def _history(url: str, page: PageFacts):
 
 def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
     out = ToolResult()
-    claims = [s for s in page.signals if s.type == "claimed_discount"]
+    claims = discount_claims(page)
     was, pct = claimed_was(page)
     price = page.product.price
     if not claims and was is None:
@@ -96,7 +105,16 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
 
     host, ident, rows = _history(url, page)
     source = getattr(rows, "source", "")
-    if rows and source in ("page", "observations") and len(rows) < MIN_SPAN_DAYS:
+    short = bool(rows) and source in ("page", "observations") and len(rows) < MIN_SPAN_DAYS
+    if (short or not rows) and not is_storelab(url) and price is not None and was is not None:
+        what = ("the page's own price history" if source == "page" else "Pricise's saved prices for this page") if rows else ""
+        history = (f"Only {len(rows)} days of {what}, too few to judge it." if rows
+                   else "Pricise has no saved price history for this item.")
+        market = market_check(check_id, page, price, was, claim_text, sel, history)
+        if market is not None:
+            out.findings.append(market)
+            return out
+    if short:
         what = "the page's own price history" if source == "page" else "the prices seen here before"
         out.findings.append(finding(check_id, "claimed_discount", "unverified",
                                     f"The page claims a reduced price ({claim_text}). Only {len(rows)} days of {what}, too "
@@ -145,3 +163,82 @@ def check_discount(check_id: str, url: str, page: PageFacts) -> ToolResult:
                    f"and the usual price is {money(typical)}.")
         out.findings.append(finding(check_id, "claimed_discount", "confirmed", summary, [rows_ev], confidence=0.8))
     return out
+
+
+INFLATED = 0.90  # every credible store at or under 90% of a list price: the list price looks inflated
+
+
+def _join(items: list[str]) -> str:
+    return items[0] if len(items) == 1 else ", ".join(items[:-1]) + " and " + items[-1] if items else ""
+
+
+def market_check(check_id: str, page: PageFacts, price: float, was: float, claim_text: str, sel: list[str],
+                 history: str):
+    """A real page's "List Price" / "Was" claim against (a) the manufacturer's launch price (backend/data/msrp.py) and
+    (b) what credible stores charge now (the Price Agent's Google Shopping search, shared through its 6 h cache):
+      - list price = MSRP          -> claimed_discount, confirmed: real against MSRP, then whether others charge the same or less
+      - credible stores all at or under 90% of a non-MSRP list price -> inflated_discount, PROPOSED (never "fake" without
+        price-history proof)
+      - otherwise                  -> claimed_discount, unverified, with the reason.
+    None when the search is off or failed and no MSRP is known (the caller says "unverified" as before)."""
+    from backend.data import msrp
+    from backend.data.trusted_retailers import display_name
+    from backend.tools import rdap, shopping
+
+    p = page.product
+    launch = msrp.lookup(p.brand, p.name)
+    query = shopping.query_for(p)
+    # The same offers the Price Agent compares: the USL's safe_price first (Zetaris), else the search; then the sellers list
+    from backend.data import catalog, repo
+
+    offers, _ = repo.usl_offers(catalog.key(query)) if query else (None, None)
+    source = "zetaris usl" if offers else ""
+    if offers is None:
+        offers, source = shopping.search(query) if query else (None, "off")
+    stores: dict[str, float] = {}
+    if offers is not None:
+        mine = rdap.registrable(page.host or "")
+        kept, _, _ = shopping.classify_offers(p, offers, price, mine)
+        if len({o["domain"] for o in kept}) < 3:  # the Price Agent's own rule: the same sellers lookup, shared via the cache
+            extra, _ = shopping.sellers_for(query, p, None if source == "zetaris usl" else offers)
+            if extra:
+                kept, _, _ = shopping.classify_offers(p, offers + extra, price, mine)
+        for o in kept:  # the lowest new, full-price offer per credible store
+            name = display_name(o["domain"])
+            stores[name] = min(stores.get(name, o["total"]), o["total"])
+    if launch is None and not stores:
+        return None
+    sel_ev = [{"kind": "selector", "ref": r, "label": "Discount claim" if i == 0 else ""} for i, r in enumerate(sel)]
+    ev = sel_ev + ([{"kind": "log", "ref": f"google_shopping:{query}", "label": f"{len(stores)} credible stores ({source})"}]
+                   if stores else [])
+    same = sorted(n for n, t in stores.items() if _same(t, price))
+    lower = sorted(((t, n) for n, t in stores.items() if t < price and not _same(t, price)))
+    higher = sorted(((t, n) for n, t in stores.items() if t > price and not _same(t, price)))
+    now = ""
+    if stores:  # every credible store in the comparison: lower, the same, higher
+        parts = ([f"{n} {money(t)} lower" for t, n in lower] + [f"{n} {money(price)} same" for n in same]
+                 + [f"{n} {money(t)} higher" for t, n in higher])
+        when = repo.fetched_text(repo.USL_FETCHED.get(catalog.key(query)) or []) if source == "zetaris usl" else ""
+        now = f" Credible stores: {', '.join(parts)} (prices from {when})." if when else f" Credible stores now: {', '.join(parts)}."
+    if launch and _same(was, launch[0]):
+        verdict = ("others charge the same or less" if (same or lower) and not higher else
+                   "credible stores charge from " + f"{money(min(stores.values()))} to {money(max(stores.values()))}"
+                   if stores else "no credible store had it new to compare")
+        sel_ev = [{"kind": "selector", "ref": r, "label": "Discount: real vs launch price" if i == 0 else ""}
+                  for i, r in enumerate(sel)]  # the panel outlines a confirmed claimed_discount grey, never red
+        ev = sel_ev + ev[len(sel):]
+        out = finding(check_id, "claimed_discount", "confirmed",
+                      f"The {money(was)} list price matches {p.brand or 'the maker'}'s launch price (MSRP), so the discount is "
+                      f"real against MSRP; {verdict}.{now}",
+                      ev + [{"kind": "text", "ref": f"msrp: {money(launch[0])} ({launch[1]})", "label": "MSRP"}], confidence=0.8)
+        return out
+    prices = list(stores.values())
+    if len(prices) >= 2 and max(prices) <= INFLATED * was:
+        return finding(check_id, "inflated_discount", "proposed",
+                       f"Discount claim looks inflated: every credible store charges {money(min(prices))} to "
+                       f"{money(max(prices))}, well below the {money(was)} list price.{now} {history} Not called fake: "
+                       "that needs price history.", ev, confidence=0.6)
+    why = ("the list price isn't a launch price we know, and credible stores don't all sell well below it" if prices
+           else "no credible store had this item new to compare")
+    return finding(check_id, "claimed_discount", "unverified",
+                   f"The page claims a reduced price ({claim_text}). {history} Unverified: {why}.{now}", ev, confidence=0.4)

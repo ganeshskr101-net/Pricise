@@ -9,6 +9,7 @@ next_status(). Timer frames from backend.tools.timer_test.sample_timer() go thro
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import statistics
@@ -28,8 +29,10 @@ PRICE_TOLERANCE = 0.01  # a sale price within 1% of the normal price is the norm
 RESET_TOLERANCE_S = 1.5  # same slack as timer_test.restarted()
 SAFE_VERDICTS = ("safe", "caution")
 MATCH_FAILS = {"model": "different model", "variant": "different variant", "condition": "refurbished",
-               "warranty": "different warranty"}
-TYPE_LABEL = {"fake_discount": "this discount", "claimed_discount": "this discount", "resetting_timer": "this countdown timer",
+               "warranty": "different warranty", "seller": "not sold by the retailer or the brand's official store",
+               "full_price": "not a full one-time price"}
+OFFER_ONLY = {"seller", "full_price"}  # checked only when the proposal carries them (online offers on real pages)
+TYPE_LABEL = {"fake_discount": "this discount", "claimed_discount": "this discount", "inflated_discount": "this discount", "resetting_timer": "this countdown timer",
               "countdown": "this countdown timer", "drip_fees": "the checkout fees", "prechecked_addon": "the pre-ticked add-on",
               "scarcity": "this pressure message", "best_price": "the best price", "domain_age": "the store's age"}
 _THINK_RE = re.compile(r"<think>.*?(?:</think>|$)", re.DOTALL | re.IGNORECASE)
@@ -41,6 +44,8 @@ class RuleResult:
     passed: bool
     status: Status
     reason: str
+    caveat: str = ""  # an approval's condition the shopper should know (e.g. a retailer-only warranty), shown with it
+    decided_by: str = "rules"  # "rules", a Nemotron model name, "rules (model unavailable)", "rules (hard rule overrides ...)"
 
 
 def _fail(status: Status, reason: str) -> RuleResult:
@@ -89,16 +94,24 @@ def check_timer(finding: Finding, visits: Sequence[Mapping[str, bool]]) -> RuleR
 
 # Rule 3 ------------------------------------------------------------------------------------------------------------
 
-def check_best_price(finding: Finding, match: Mapping[str, bool], trust_verdict: Optional[str]) -> RuleResult:
-    """Pass only if model, variant, condition and warranty all match AND the store is "safe" or "caution"."""
-    fails = [why for key, why in MATCH_FAILS.items() if not match.get(key, False)]
+def check_best_price(finding: Finding, match: Mapping[str, bool], trust_verdict: Optional[str],
+                     labels: Optional[Mapping[str, str]] = None, caveats: Sequence[str] = ()) -> RuleResult:
+    """Pass only if model, variant, condition and warranty all match AND the store is "safe" or "caution".
+    Online offers also carry seller (the retailer or the brand's official store) and full_price (not monthly/installment).
+    labels: clearer fail texts for this proposal ({"condition": "open box, not new"}). caveats: what a pass comes with
+    (a retailer-only warranty, an unusually low price): they never decide, they are shown next to the approval.
+    A failed condition or full_price can never pass, whatever else holds."""
+    labels = labels or {}
+    fails = [labels.get(key, why) for key, why in MATCH_FAILS.items()
+             if (key in match or key not in OFFER_ONLY) and not match.get(key, False)]
     if trust_verdict == "unsafe":
         fails.append("store flagged unsafe")
     elif trust_verdict not in SAFE_VERDICTS:
         fails.append("store safety not checked")
     if fails:
-        return _fail("rejected", ", ".join(fails))
-    return RuleResult(True, "confirmed", f"same product and store is {trust_verdict}")
+        return _fail("rejected", ", ".join(dict.fromkeys(fails)))
+    extra = "; ".join(c for c in caveats if c)
+    return RuleResult(True, "confirmed", f"same product and store is {trust_verdict}", extra)
 
 
 # Rule 4 ------------------------------------------------------------------------------------------------------------
@@ -181,7 +194,8 @@ def challenge_reason(finding: Finding, result: RuleResult) -> str:
     """
     prompt = ("In one short plain-English sentence for a shopper, explain this check result. Do not add facts.\n"
               f"Finding type: {finding.type}\nFinding: {finding.summary}\n"
-              f"Result: {result.status}\nRule reason: {result.reason}")
+              f"Result: {result.status}\nRule reason: {result.reason}"
+              + (f"\nCaveat: {result.caveat}" if result.caveat else ""))
     try:
         text, _ = meterless.deep([{"role": "user", "content": prompt}], timeout=_REASON_TIMEOUT_S,
                                  temperature=0, max_tokens=200)
@@ -189,3 +203,90 @@ def challenge_reason(finding: Finding, result: RuleResult) -> str:
         log.info("skeptic challenge_reason fell back (%s)", type(err).__name__)
         return result.reason
     return _clean_reply(text) or result.reason
+
+
+# Unusually low offers: the deep lane decides, the hard rules validate -------------------------------------------------
+
+_REVIEW_TIMEOUT_S = 20.0
+REVIEW_PROMPT = (
+    "You are the Skeptic in a shopping assistant. A credible store offers the item on this page for an unusually low price. "
+    "Decide whether a shopper can safely be pointed to this offer. Use only the facts given; never invent store policies or "
+    "prices. Reply with JSON only, exactly: "
+    '{"decision": "approve" or "reject", "reasons": ["short reason", ...], "caveats": ["what the shopper should check", ...]}')
+
+
+def review_low_offer(context: Mapping[str, Any]) -> Optional[dict]:
+    """The deep lane's decision on one unusually low offer: {"decision", "reasons", "caveats", "model"}, or None when the
+    model isn't configured, fails, or returns anything but that JSON. context: the offer, the page's product, the credible
+    stores' prices and the store checks. Offer titles come from Google Shopping, so they go in as untrusted text."""
+    if not meterless.configured("deep"):
+        return None
+    facts = json.dumps(context, ensure_ascii=False)[:3000]
+    messages = [{"role": "system", "content": meterless.trusted_prefix(REVIEW_PROMPT)},
+                {"role": "user", "content": meterless.untrusted(facts)}]
+    try:
+        text, model = meterless.deep(messages, timeout=_REVIEW_TIMEOUT_S, temperature=0, max_tokens=300)
+    except Exception as err:  # unavailable: the rules decide
+        log.info("skeptic review fell back (%s)", type(err).__name__)
+        return None
+    return parse_review(_clean_reply(text), model or meterless.model_name("deep"))
+
+
+def parse_review(text: str, model: str) -> Optional[dict]:
+    m = re.search(r"\{.*\}", text or "", re.DOTALL)
+    try:
+        out = json.loads(m.group(0)) if m else None
+    except ValueError:
+        return None
+    if not isinstance(out, dict) or out.get("decision") not in ("approve", "reject"):
+        return None
+    lines = lambda k: [" ".join(str(x).split())[:160] for x in (out.get(k) or []) if str(x).strip()][:3]  # noqa: E731
+    if not isinstance(out.get("reasons", []), list) or not isinstance(out.get("caveats", []), list):
+        return None
+    return {"decision": out["decision"], "reasons": lines("reasons"), "caveats": lines("caveats"), "model": model}
+
+
+def decide_low_offer(finding: Finding, match: Mapping[str, bool], trust_verdict: Optional[str],
+                     labels: Optional[Mapping[str, str]], caveats: Sequence[str], review: Optional[dict]) -> RuleResult:
+    """An unusually low offer: the hard rules first (used/open box/refurbished, marketplace seller, installment, different
+    model or colour, store safety; under 50% never gets here). A hard-rule failure always rejects, whatever the model said,
+    and says so when the model had approved. Otherwise the deep lane's decision stands, with its reasons and caveats; without
+    a usable answer the rules decide and say "decided by rules (model unavailable)"."""
+    rule = check_best_price(finding, match, trust_verdict, labels, caveats)
+    if not rule.passed:
+        if review and review["decision"] == "approve":
+            return RuleResult(False, "rejected", f"{rule.reason} ({review['model']} approved it, but a hard rule failed, so "
+                                                 "the rule decides)", decided_by="rules (hard rule overrides the model)")
+        return rule
+    if review is None:
+        return RuleResult(True, "confirmed", f"{rule.reason}; decided by rules (model unavailable)", rule.caveat,
+                          decided_by="rules (model unavailable)")
+    why = "; ".join(review["reasons"]) or ("approved" if review["decision"] == "approve" else "rejected")
+    if review["decision"] == "reject":
+        return RuleResult(False, "rejected", why, decided_by=review["model"])
+    extra = "; ".join(merge_caveats(caveats, review["caveats"]))
+    return RuleResult(True, "confirmed", why, extra, decided_by=review["model"])
+
+
+CAVEAT_TOPICS = {"warranty": r"warrant", "colour": r"colou?r", "condition": r"\bnew\b|sealed|open box|refurb",
+                 "price": r"price|cheap|low"}
+STORE_CHECK_RE = re.compile(r"return|refund|contact|customer service|https|domain|registered|scam|legit|trust|verif",
+                            re.I)  # the Trust Agent's store checks: shown with their own proof, never second-guessed here
+
+
+def _topic(text: str) -> str:
+    low = text.lower()
+    return next((t for t, rx in CAVEAT_TOPICS.items() if re.search(rx, low)), low.strip(" .")[:40])
+
+
+def merge_caveats(rule: Sequence[str], model: Sequence[str]) -> list[str]:
+    """The rules' caveats first, then the model's on a topic not covered yet (one warranty caveat, one colour caveat...).
+    A model caveat about the store checks (returns, contact, HTTPS, domain age, "not verified") is dropped: the Trust
+    Agent's checks decide those and show their proof, so a caveat must never contradict them."""
+    out, seen = [], set()
+    for c in [*(c for c in rule if c), *(c for c in model if c and not STORE_CHECK_RE.search(c))]:
+        t = _topic(c)
+        if t not in seen:
+            seen.add(t)
+            out.append(c.strip().rstrip("."))
+    return out

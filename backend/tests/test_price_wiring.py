@@ -217,7 +217,8 @@ def test_seeded_verdicts_when_trust_is_stub():
 def test_ref_round_trip():
     f = bp("c", "Store H", "store-h", 254.99)
     assert rechecker.parse_ref(f) == {"store": LAB.format("store-h"), "price": 254.99, "ref": f.evidence[1].ref,
-                                      "match": {"model": True, "variant": True, "condition": True, "warranty": True}}
+                                      "match": {"model": True, "variant": True, "condition": True, "warranty": True},
+                                      "offer": {}}  # a Store Lab listing: no online-offer fields
     assert rechecker.parse_ref(f.model_copy(update={"evidence": f.evidence[:1]})) is None
 
 

@@ -31,5 +31,5 @@ if [ ! -f .env ]; then
   echo "Created .env from .env.example (stub mode, no keys needed)."
 fi
 echo
-echo "Setup done. Start the backend:  scripts/run.sh        (real Deal Agent: scripts/run.sh --real)"
+echo "Setup done. Start the backend:  scripts/run.sh        (sample mode; full mode: SAMPLE_MODE=false in .env or scripts/run.sh --real)"
 echo "Run the tests:                  scripts/test.sh"

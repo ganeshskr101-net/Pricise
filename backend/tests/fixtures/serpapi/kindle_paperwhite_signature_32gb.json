@@ -1,0 +1,388 @@
+{
+ "_note": "Trimmed SerpApi google_shopping response for 'Amazon Kindle Paperwhite Signature Edition 32GB' (27 Oct 2026), fields Pricise reads only; product_link replaced by placeholders. Used by tests; no live search in tests.",
+ "shopping_results": [
+  {
+   "position": 1,
+   "title": "Amazon Kindle Paperwhite Signature Edition (32 GB) 2024 Metallic Black",
+   "source": "Best Buy",
+   "price": "$36.99",
+   "extracted_price": 36.99,
+   "product_link": "https://www.google.com/shopping/product/kindle-0"
+  },
+  {
+   "position": 2,
+   "title": "Amazon Kindle Paperwhite Signature Edition",
+   "source": "Best Buy",
+   "price": "$249.99",
+   "extracted_price": 249.99,
+   "delivery": "Free delivery by Thu",
+   "product_link": "https://www.google.com/shopping/product/kindle-1"
+  },
+  {
+   "position": 3,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32GB New 7\u2032\u2032 aluminum Design",
+   "source": "Best Buy",
+   "price": "$249.99",
+   "extracted_price": 249.99,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-2"
+  },
+  {
+   "position": 4,
+   "title": "Like-New Amazon Kindle Paperwhite Signature Edition With a 6.8\" display, wireless charging, and auto-adjusting front light \u2013 With Lockscreen",
+   "source": "PayMore West Long Branch",
+   "price": "$99.99",
+   "extracted_price": 99.99,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-3"
+  },
+  {
+   "position": 5,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32 GB Black",
+   "source": "eBay - purpletechnado",
+   "price": "$219.98",
+   "extracted_price": 219.98,
+   "old_price": "Usually $230",
+   "delivery": "Free delivery by Mon",
+   "extensions": [
+    "LOW PRICE"
+   ],
+   "tag": "LOW PRICE",
+   "product_link": "https://www.google.com/shopping/product/kindle-4"
+  },
+  {
+   "position": 6,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32GB",
+   "source": "RELYmedia",
+   "price": "$199.99",
+   "extracted_price": 199.99,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-5"
+  },
+  {
+   "position": 7,
+   "title": "Amazon Kindle Paperwhite Signature Edition 11th Gen 32gb Black",
+   "source": "eBay",
+   "price": "$102.99",
+   "extracted_price": 102.99,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-6"
+  },
+  {
+   "position": 8,
+   "title": "Amazon International Version \u2013 Kindle Paperwhite Signature Edition \u2013 With a 6.8\" display, wireless charging, and auto-adjusting front light \u2013",
+   "source": "EnergyEarth",
+   "price": "$219.99",
+   "extracted_price": 219.99,
+   "product_link": "https://www.google.com/shopping/product/kindle-7"
+  },
+  {
+   "position": 9,
+   "title": "Amazon Kindle Paperwhite Signature (12th Generation) 7in, 32gb, [grade",
+   "source": "eBay - devicerealm",
+   "price": "$139.99",
+   "extracted_price": 139.99,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-8"
+  },
+  {
+   "position": 10,
+   "title": "Amazon Kindle Paperwhite Signature Edition 7-Inch 32GB Wi-Fi E-Reader",
+   "source": "mcgrocer.com",
+   "price": "$438.85",
+   "extracted_price": 438.85,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-9"
+  },
+  {
+   "position": 11,
+   "title": "Kindle 6.8 Paperwhite Signature Edition 32gb M2l4ek 11th Gen Works",
+   "source": "eBay - pagele0",
+   "price": "$119.99",
+   "extracted_price": 119.99,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-10"
+  },
+  {
+   "position": 12,
+   "title": "Like-New Amazon Kindle Paperwhite Signature Edition 32GB \u2013 20% faster with auto-adjusting front light, wireless charging, and weeks of",
+   "source": "eBay - greatbuy",
+   "price": "$219.85",
+   "extracted_price": 219.85,
+   "product_link": "https://www.google.com/shopping/product/kindle-11"
+  },
+  {
+   "position": 13,
+   "title": "Amazon Kindle Colorsoft Signature Edition 32GB New aluminum Design",
+   "source": "Best Buy",
+   "price": "$319.99",
+   "extracted_price": 319.99,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-12"
+  },
+  {
+   "position": 14,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32gb 7\" 12th Gen - Metallic",
+   "source": "eBay",
+   "price": "$199.96",
+   "extracted_price": 199.96,
+   "product_link": "https://www.google.com/shopping/product/kindle-13"
+  },
+  {
+   "position": 15,
+   "title": "Amazon Metallic Jade (Signature Edition) Amazon Kindle Paperwhite Signature Edition Gen 12 Glare-Free Screen (32GB),",
+   "source": "Shein",
+   "price": "$229.99",
+   "extracted_price": 229.99,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-14"
+  },
+  {
+   "position": 16,
+   "title": "Amazon Kindle Paperwhite Signature Edition 12th Gen 32gb Metallic",
+   "source": "eBay",
+   "price": "$199.99",
+   "extracted_price": 199.99,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-15"
+  },
+  {
+   "position": 17,
+   "title": "Amazon Kindle Tablets & Accessories | Amazon Kindle Paperwhite Signature Edition 32gb (2024 Model) Metallic Jade | Color: Blue | Size: 5\u201d X 7\u201d X 0.3\u201d",
+   "source": "Poshmark",
+   "price": "$150.00",
+   "extracted_price": 150.0,
+   "extensions": [
+    "40% OFF"
+   ],
+   "tag": "40% OFF",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-16"
+  },
+  {
+   "position": 18,
+   "title": "Amazon Kindle Paperwhite Signature Edition 11th Gen E-reader M2l4ek",
+   "source": "eBay",
+   "price": "$104.99",
+   "extracted_price": 104.99,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-17"
+  },
+  {
+   "position": 19,
+   "title": "Kindle Paperwhite Signature Edition 32GB in Metallic Black - Refurbished 1 Year Warranty - $89 / Custom License Plate - $39",
+   "source": "MagicCars.com",
+   "price": "$744.99",
+   "extracted_price": 744.99,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-18"
+  },
+  {
+   "position": 20,
+   "title": "Kindle Paperwhite Signature Edition (32 Gb)fastest Kindle, Wireless",
+   "source": "eBay",
+   "price": "$239.00",
+   "extracted_price": 239.0,
+   "product_link": "https://www.google.com/shopping/product/kindle-19"
+  },
+  {
+   "position": 21,
+   "title": "Amazon Kindle Paperwhite 32 GB (Newest Model) - Direct Print",
+   "source": "EPI - elite promo",
+   "price": "$310.95",
+   "extracted_price": 310.95,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-20"
+  },
+  {
+   "position": 22,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32gb - Pink With Cover -",
+   "source": "eBay",
+   "price": "$190.00",
+   "extracted_price": 190.0,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-21"
+  },
+  {
+   "position": 23,
+   "title": "Amazon Kindle Paperwhite 11th Gen E-Reader (2021) - 32GB - Black",
+   "source": "Reebelo USA",
+   "price": "$228.49",
+   "extracted_price": 228.49,
+   "delivery": "Free delivery by Thu",
+   "product_link": "https://www.google.com/shopping/product/kindle-22"
+  },
+  {
+   "position": 24,
+   "title": "Amazon Kindle Paperwhite Signature Ed 7in 32gb Wi\u2010fi Jade Factory",
+   "source": "eBay",
+   "price": "$210.00",
+   "extracted_price": 210.0,
+   "product_link": "https://www.google.com/shopping/product/kindle-23"
+  },
+  {
+   "position": 25,
+   "title": "Amazon Kindle Tablets & Accessories | Kindle Paperwhite Signature Edition | Color: Pink | Size: 7\" | Kat_Winkleman's Closet",
+   "source": "Poshmark",
+   "price": "$200.00",
+   "extracted_price": 200.0,
+   "extensions": [
+    "27% OFF"
+   ],
+   "tag": "27% OFF",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-24"
+  },
+  {
+   "position": 26,
+   "title": "Amazon Kindle Paperwhite Signature Edition Gen 12 Glare-free Screen",
+   "source": "eBay - virtual-depot",
+   "price": "$229.99",
+   "extracted_price": 229.99,
+   "delivery": "Free delivery",
+   "product_link": "https://www.google.com/shopping/product/kindle-25"
+  },
+  {
+   "position": 27,
+   "title": "Kindle Paperwhite Signature Edition 12th Gen - Black",
+   "source": "eBay",
+   "price": "$200.00",
+   "extracted_price": 200.0,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-26"
+  },
+  {
+   "position": 28,
+   "title": "Amazon Kindle Colorsoft Signature Edition 7 Colour eReader",
+   "source": "Grooves-Inc.com",
+   "price": "$251.05",
+   "extracted_price": 251.05,
+   "old_price": "$277",
+   "extensions": [
+    "9% OFF"
+   ],
+   "tag": "9% OFF",
+   "product_link": "https://www.google.com/shopping/product/kindle-27"
+  },
+  {
+   "position": 29,
+   "title": "Kindle PaperWhite Signature Ed, 11th Gen, 32GB Condition,",
+   "source": "eBay",
+   "price": "$114.99",
+   "extracted_price": 114.99,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-28"
+  },
+  {
+   "position": 30,
+   "title": "All-new Kindle Paperwhite \u2013 Now Waterproof with more than 2x the Storage",
+   "source": "Glocalzone",
+   "price": "$201.33",
+   "extracted_price": 201.33,
+   "product_link": "https://www.google.com/shopping/product/kindle-29"
+  },
+  {
+   "position": 31,
+   "title": "Amazon Kindle Paperwhite Signature Edition 12th Gen 32gb 7\" In Box",
+   "source": "eBay - shorespj",
+   "price": "$235.11",
+   "extracted_price": 235.11,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-30"
+  },
+  {
+   "position": 32,
+   "title": "Amazon Kindle Paperwhite",
+   "source": "SHI International",
+   "price": "$209.00",
+   "extracted_price": 209.0,
+   "delivery": "Free delivery by Fri",
+   "product_link": "https://www.google.com/shopping/product/kindle-31"
+  },
+  {
+   "position": 33,
+   "title": "Amazon Kindle Paperwhite Ed Gen 12 32gb Metallic Jade",
+   "source": "eBay",
+   "price": "$195.00",
+   "extracted_price": 195.0,
+   "product_link": "https://www.google.com/shopping/product/kindle-32"
+  },
+  {
+   "position": 34,
+   "title": "Amazon Kindle Paperwhite Signature Edition 32GB - Black",
+   "source": "Shop - Shop app",
+   "price": "$335.98",
+   "extracted_price": 335.98,
+   "old_price": "$430",
+   "delivery": "Free delivery",
+   "extensions": [
+    "21% OFF"
+   ],
+   "tag": "21% OFF",
+   "product_link": "https://www.google.com/shopping/product/kindle-33"
+  },
+  {
+   "position": 35,
+   "title": "Kindle Paperwhite Signature Edition 2024 12th Generation 7 Inch 32gb",
+   "source": "eBay - nakanoyama-jpshop",
+   "price": "$258.84",
+   "extracted_price": 258.84,
+   "product_link": "https://www.google.com/shopping/product/kindle-34"
+  },
+  {
+   "position": 36,
+   "title": "Kindle Paperwhite Signature 12th Gen With Offficial Fabric Cover",
+   "source": "eBay",
+   "price": "$154.99",
+   "extracted_price": 154.99,
+   "delivery": "Free delivery",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-35"
+  },
+  {
+   "position": 37,
+   "title": "Kindle Paperwhite 6 signature edition 12th gen jade",
+   "source": "mercari.com",
+   "price": "$165.00",
+   "extracted_price": 165.0,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-36"
+  },
+  {
+   "position": 38,
+   "title": "Amazon Kindle Paperwhite 32GB",
+   "source": "eBay - retail_king",
+   "price": "$133.90",
+   "extracted_price": 133.9,
+   "delivery": "Free delivery",
+   "extensions": [
+    "68% OFF"
+   ],
+   "tag": "68% OFF",
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-37"
+  },
+  {
+   "position": 39,
+   "title": "Amazon Kindle Paperwhite Digital Text Reader",
+   "source": "eBay",
+   "price": "$150.00",
+   "extracted_price": 150.0,
+   "product_link": "https://www.google.com/shopping/product/kindle-38"
+  },
+  {
+   "position": 40,
+   "title": "Amazon Kindle Tablets & Accessories | Kindle Paperwhite Signature Edition 32gb 11th Gen Bundle Cases Strap Like New | Color: Black/Green | Size: Os |",
+   "source": "Poshmark",
+   "price": "$240.00",
+   "extracted_price": 240.0,
+   "second_hand_condition": "pre-owned",
+   "product_link": "https://www.google.com/shopping/product/kindle-39"
+  }
+ ]
+}

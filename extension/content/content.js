@@ -16,7 +16,7 @@
   const ignored = (el) => { try { return !!el?.closest?.(IGNORE_SEL); } catch (_) { return false; } };
   // Payment-card and membership offers are not discounts on the item ("Prime Visa", reward points, "pay $0.00 at checkout",
   // Subscribe & Save, cash back): never read them as a discount claim.
-  const PROMO_RE = /prime visa|\bvisa\b|mastercard|credit card|card ?member|rewards?( points?| card| visa)?\b.*\bpoints?\b|\bpoints\b|pay \$?0(\.00)? (at|upon)|\$0\.00 (at checkout|upon approval)|subscribe ?(&|and) ?save|cash ?back|% back\b|gift card|apply now|upon approval/i;
+  const PROMO_RE = /prime visa|\bvisa\b|mastercard|credit card|card ?member|rewards?( points?| card| visa)?\b.*\bpoints?\b|\bpoints\b|pay \$?0(\.00)? (at|upon)|\$0\.00 (at checkout|upon approval)|subscribe ?(&|and) ?save|cash ?back|% back\b|gift card|apply now|upon approval|trade-?in|with activation/i;
 
   // ---------------------------------------------------------------- helpers
   function parseAmount(text) {
@@ -340,6 +340,36 @@
       detail: { points: points.slice(0, 400) } }] : [];
   }
 
+  // A short product summary for the chat (read only): title, "About this item" bullets, description and spec tables, up to
+  // ~4,000 characters. Reviews (and the names in them) are never included; cart sidebars are ignored like everywhere else.
+  const PAGE_TEXT_MAX = 4000;
+  const REVIEWS_SEL = '[id*=review i], [class*=review i], [data-hook*=review i], #customerReviews, [id*=rating i], [class*=rating i]';
+  const PAGE_TEXT_SEL = ['#productTitle', '#feature-bullets', '#productOverview_feature_div', '#productDescription',
+    '#productDetails_techSpec_section_1', '#productDetails_detailBullets_sections1', '#detailBullets_feature_div', '#aplus',
+    '[itemprop=description]', '.product-description', '.product__description', '[class*=product-description]',
+    '[class*=specifications]', '[class*=spec-table]', '[id*=specifications]', '[data-testid*=specifications]',
+    '[class*=product-details]', '[id*=product-details]', '[class*=features]'].join(',');
+  function pageText() {
+    const seen = new Set();
+    const parts = [];
+    const add = (s) => { const v = (s || '').replace(/\s+/g, ' ').trim(); if (v && !seen.has(v)) { seen.add(v); parts.push(v); } };
+    add(document.querySelector('#productTitle')?.textContent || document.querySelector('h1')?.innerText);
+    document.querySelectorAll(PAGE_TEXT_SEL).forEach((el) => {
+      if (ignored(el) || el.closest(REVIEWS_SEL) || [...seen].some((s) => s.length > 200 && s.includes((el.innerText || '').slice(0, 80)))) return;
+      const copy = el.cloneNode(true);
+      copy.querySelectorAll(`${REVIEWS_SEL}, script, style, [aria-hidden="true"]`).forEach((n) => n.remove());
+      add(copy.innerText || copy.textContent);
+    });
+    if (parts.join(' ').length < 200) {
+      // Little product text: the main area, without cart sidebars, reviews, navigation or screen-reader duplicates.
+      const copy = (document.querySelector('main, [role=main], #dp, #content') || document.body).cloneNode(true);
+      copy.querySelectorAll(`${IGNORE_SEL}, ${REVIEWS_SEL}, nav, header, footer, script, style, [aria-hidden="true"]`).forEach((n) => n.remove());
+      add((copy.textContent || '').slice(0, 3000));
+    }
+    const text = parts.join('\n').slice(0, PAGE_TEXT_MAX);
+    return text.length > 40 ? [{ type: 'page_text', text }] : [];
+  }
+
   // Links a careful shopper looks for: a returns/refund policy and a way to contact the store (for the Trust Agent).
   function storeInfo() {
     const links = [...document.querySelectorAll('a[href]')].filter((a) => !ignored(a));
@@ -350,8 +380,24 @@
       detail: { returns, contact } }];
   }
 
+  // Who sells and who ships, from the buy box when the page says so ("Sold by Huppins", "Ships from Amazon"). Read only.
+  function sellerInfo() {
+    const txt = (sel) => (document.querySelector(sel)?.textContent || '').replace(/\s+/g, ' ').trim();
+    let soldBy = txt('[offer-display-feature-name="desktop-merchant-info"] .offer-display-feature-text-message') || txt('#sellerProfileTriggerId');
+    let shipsFrom = txt('[offer-display-feature-name="desktop-fulfiller-info"] .offer-display-feature-text-message');
+    const merchant = txt('#merchant-info');
+    const both = merchant.match(/ships from and sold by\s+([^.]+)/i);
+    if (both) { soldBy = soldBy || both[1].trim(); shipsFrom = shipsFrom || both[1].trim(); }
+    if (!soldBy) soldBy = (merchant.match(/sold by\s+(.+?)(?:\s+and\s+(?:fulfilled|shipped)\b|\.|$)/i) || [])[1] || '';
+    if (!shipsFrom && /fulfilled by amazon|shipped by amazon/i.test(merchant)) shipsFrom = 'Amazon';
+    soldBy = soldBy.slice(0, 80); shipsFrom = shipsFrom.slice(0, 80);
+    if (!soldBy) return [];
+    return [{ type: 'seller', text: `Sold by ${soldBy}${shipsFrom ? `, ships from ${shipsFrom}` : ''}`,
+      detail: { sold_by: soldBy, ships_from: shipsFrom || null } }];
+  }
+
   async function readPage() {
-    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo(), ...pageHistory()];
+    const signals = [...claimedDiscounts(), ...(await countdowns()), ...precheckedAddons(), ...scarcity(), ...dripFees(), ...storeInfo(), ...sellerInfo(), ...pageHistory(), ...pageText()];
     return { url: location.href, host: location.host, title: document.title, https: location.protocol === 'https:' || location.hostname === 'localhost', product: readProduct(), signals };
   }
 
@@ -481,6 +527,14 @@
     checkedUrl = url;
     const page = await readPage();
     if (location.href !== url) return; // moved on while reading
+    // A product URL that served something else (a block or interstitial page titled just "Amazon.com"): no price and no
+    // product name. Nothing to check, no card. The backend makes the same call for any other caller.
+    const site = location.hostname.replace(/^www\./, '');
+    const name = (page.product.name || '').trim().toLowerCase().replace(/^www\./, '');
+    if (page.product.price == null && (!name || name === site || name === site.split('.')[0])) {
+      console.debug('[Pricise] product page: no (no price and only the site name: not a product page after all)');
+      return;
+    }
     chrome.runtime.sendMessage({ type: 'pricise:auto-check', page }).catch(() => {});
   }
   autoCheck().catch(() => {});
@@ -511,7 +565,7 @@
   // ---------------------------------------------------------------- outlines on the page
   let marks = [];
   function clearMarks() {
-    document.querySelectorAll('.pricise-mark').forEach((el) => el.classList.remove('pricise-mark', 'pricise-mark--caution'));
+    document.querySelectorAll('.pricise-mark').forEach((el) => el.classList.remove('pricise-mark', 'pricise-mark--caution', 'pricise-mark--neutral'));
     document.querySelectorAll('.pricise-label').forEach((el) => el.remove());
     marks = [];
   }
@@ -538,11 +592,11 @@
       try { el = document.querySelector(selector); } catch (_) { return; }
       if (!el || marks.some((m) => m.el === el)) return;
       el.classList.add('pricise-mark');
-      if (tone === 'caution') el.classList.add('pricise-mark--caution');
+      if (tone === 'caution' || tone === 'neutral') el.classList.add(`pricise-mark--${tone}`);
       let tag = null;
       if (label) {
         tag = document.createElement('div');
-        tag.className = 'pricise-label' + (tone === 'caution' ? ' pricise-label--caution' : '');
+        tag.className = 'pricise-label' + (tone === 'caution' || tone === 'neutral' ? ` pricise-label--${tone}` : '');
         tag.textContent = label;
         document.body.appendChild(tag);
       }

@@ -55,11 +55,12 @@ def test_amazon_buy_box_layout(site):
     assert (p["name"], p["price"], p["was_price"], p["sku"]) == ("Acme AAA Batteries, 32 Pack", 15.99, 19.99, "B0TESTAAA1")
     claims = [s for s in facts["signals"] if s["type"] == "claimed_discount"]
     assert claims and all("19.99" in s["text"] or "20%" in s["text"] for s in claims)
-    text = " ".join(s["text"] for s in facts["signals"])
+    text = " ".join(s["text"] for s in facts["signals"] if s["type"] != "page_text")  # the chat's product text quotes the page
     for promo in ("Visa", "Subscribe", "points", "$0.00", "gift card"):
         assert promo not in text
-    for cart in ("Subtotal", "42.17", "59.99", "Service fee"):  # the cart flyout
-        assert cart not in text
+    every = " ".join(s["text"] for s in facts["signals"])
+    for cart in ("Subtotal", "42.17", "59.99", "Service fee"):  # the cart flyout: never read, not even as product text
+        assert cart not in every
     assert not [s for s in facts["signals"] if s["type"] == "drip_fees"]
     [info] = [s for s in facts["signals"] if s["type"] == "store_info"]
     assert info["detail"] == {"returns": True, "contact": True}

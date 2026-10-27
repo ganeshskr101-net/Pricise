@@ -9,6 +9,7 @@ __pycache__/
 
 # Generated at run time
 traces/
+logs/
 bench/out/
 bench/results.json
 

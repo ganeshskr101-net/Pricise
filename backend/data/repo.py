@@ -10,7 +10,9 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
+import threading
 from typing import Optional
 from urllib.parse import urlsplit, urlunsplit
 
@@ -201,6 +203,7 @@ def other_observations(model_key: str, condition: str, host: str) -> tuple[list[
 
 OFFER_COLS = ("source", "domain", "title", "price", "shipping", "total", "shipping_note", "condition", "link")
 OFFERS_MEMORY: dict[str, tuple[float, list[dict]]] = {}
+TOKEN_COLS = ("token", "multi")  # Postgres columns Zetaris doesn't read: the sellers-lookup token and "several stores"
 
 
 def save_offers(query_key: str, offers: list[dict], fetched_at: float) -> None:
@@ -208,11 +211,12 @@ def save_offers(query_key: str, offers: list[dict], fetched_at: float) -> None:
         OFFERS_MEMORY[query_key] = (fetched_at, offers)
         return
     rows = offers or [{"source": "", "price": 0}]  # marker: searched, nothing found
+    cols = (*OFFER_COLS, *TOKEN_COLS)  # the sellers-lookup token is kept too (read back by cached_tokens, Postgres only)
     try:
         with pg.connect() as conn, conn.cursor() as cur:
-            cur.executemany(f"INSERT INTO shopping_offers (query_key, fetched_at, {', '.join(OFFER_COLS)}) "
-                            f"VALUES (%s, %s, {', '.join(['%s'] * len(OFFER_COLS))})",
-                            [[query_key, fetched_at, *[o.get(c) for c in OFFER_COLS]] for o in rows])
+            cur.executemany(f"INSERT INTO shopping_offers (query_key, fetched_at, {', '.join(cols)}) "
+                            f"VALUES (%s, %s, {', '.join(['%s'] * len(cols))})",
+                            [[query_key, fetched_at, *[o.get(c) for c in cols]] for o in rows])
     except pg.PgError as e:
         log.warning("shopping offers not cached: %s", e)
 
@@ -256,6 +260,27 @@ def cached_offers(query_key: str, since: float) -> Optional[list[dict]]:
 
 
 
+def cached_tokens(query_key: str, since: float) -> list[dict]:
+    """The newest cached search's offers WITH their sellers-lookup tokens ({source, title, price, total, condition,
+    token, multi}), straight from Postgres (Zetaris doesn't read these columns). [] when there are none."""
+    if not zetaris.use_zetaris():
+        hit = OFFERS_MEMORY.get(query_key)
+        return [o for o in hit[1] if o.get("token")] if hit and hit[0] > since else []
+    try:
+        with pg.connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT source, title, price, total, condition, token, multi FROM shopping_offers WHERE query_key = %s "
+                        "AND token IS NOT NULL AND fetched_at = (SELECT max(fetched_at) FROM shopping_offers "
+                        "WHERE query_key = %s AND fetched_at > %s)", [query_key, query_key, since])
+            names = [d.name for d in cur.description]
+            rows = [dict(zip(names, r)) for r in cur.fetchall()]
+    except pg.PgError as e:
+        log.warning("cached sellers tokens not read: %s", e)
+        return []
+    for r in rows:
+        r["price"], r["total"], r["multi"] = _num(r["price"]), _num(r["total"]), bool(r["multi"])
+    return rows
+
+
 def own_observations(host: str, model_key: str, url: str = "") -> list[dict]:
     """Observations of this item on THIS host (same model, or the same page URL), oldest first. Direct read: the
     discount check runs in the Deal Agent's fast tools, so no Zetaris round trip here."""
@@ -271,3 +296,137 @@ def own_observations(host: str, model_key: str, url: str = "") -> list[dict]:
     except pg.PgError as e:
         log.warning("own observations not read: %s", e)
         return []
+
+
+# ----------------------------------------------------------------------------- the USL (docs/zetaris/USL.md)
+
+USL_TABLE = "lightning.metastore.pricise.pricise_usl.safe_price"
+USL_ERRORS: dict[str, str] = {}  # product key -> why the last USL read didn't give offers
+USL_TIMEOUT_S = 15  # Zetaris recomputes safe_price on every read (~5 s): no documented, configured way to precompute it
+USL_COLS = ("offer_source", "retailer", "store_domain", "seller", "title", "price", "item_condition", "full_price",
+            "warranty_note", "domain_age_days", "unusually_low", "is_safe", "origin")
+USL_FETCHED: dict[str, list[dict]] = {}  # product key -> when the last USL read's offers were fetched, oldest first
+# The Google Shopping search cached in Zetaris (pricise_usl.sql step 2): SerpApi stamps every response with its time (UTC)
+SNAPSHOT_SQL = "SELECT search_metadata.created_at AS created FROM pricise_rest.serp_jbl_flip6"
+SNAPSHOT_LABEL = "Google Shopping (Zetaris snapshot)"
+CACHE_LABEL = "Google Shopping (Pricise cache)"
+_SNAPSHOT_AT: list = []  # [read at, fetched at]: the snapshot only changes when its CACHE TABLE is re-run
+
+
+def usl_offers_sql(product_key: str) -> str:
+    return (f"SELECT {', '.join(USL_COLS)} FROM {USL_TABLE} WHERE product_key = {zetaris.lit(product_key)} "
+            "ORDER BY price, offer_source")
+
+
+USL_SHARE_S = 30  # the Price and Deal Agents of one check run in parallel: they share one safe_price read
+USL_MEMO: dict[str, tuple[float, tuple]] = {}  # product key -> (read at, (offers, sql))
+_USL_LOCKS: dict[str, threading.Lock] = {}
+_LOCKS_GUARD = threading.Lock()
+
+
+def usl_offers(product_key: str) -> tuple[Optional[list[dict]], Optional[str]]:
+    """safe_price for one product, read once per check: the Price and Deal Agents both ask (in parallel), the second
+    waits for the first's read and reuses it, success or failure, for USL_SHARE_S seconds. See _read_usl."""
+    import time
+
+    if os.environ.get("PRICISE_USL", "on").strip().lower() == "off" or not zetaris.use_zetaris():
+        return None, None
+    with _LOCKS_GUARD:
+        lock = _USL_LOCKS.setdefault(product_key, threading.Lock())
+    with lock:
+        hit = USL_MEMO.get(product_key)
+        if hit and time.time() - hit[0] < USL_SHARE_S:
+            return ([dict(o) for o in hit[1][0]] if hit[1][0] else None), hit[1][1]
+        out = _read_usl(product_key)
+        USL_MEMO[product_key] = (time.time(), out)
+        return ([dict(o) for o in out[0]] if out[0] else None), out[1]
+
+
+def _read_usl(product_key: str) -> tuple[Optional[list[dict]], Optional[str]]:
+    """Offers for one product from the USL's safe_price table (Google Shopping via SerpApi, joined with RDAP domain age and
+    Pricise's own prices, inside Zetaris), in the shape shopping.parse() gives. (None, sql) when it has no rows or
+    Zetaris can't answer: the caller falls back to today's search. PRICISE_USL=off skips it."""
+    sql = usl_offers_sql(product_key)
+    try:
+        rows = zetaris.run_sql(sql, timeout=USL_TIMEOUT_S)
+    except zetaris.ZetarisError as e:
+        log.warning("safe_price from the USL failed, using the search: %s", e)
+        USL_ERRORS[product_key] = zetaris.redact(str(e))[:160]  # the evidence page says why it fell back
+        return None, sql
+    USL_ERRORS.pop(product_key, None)
+    if not rows:
+        USL_ERRORS[product_key] = "no rows for this product in safe_price"
+    offers, seen = [], set()
+    for r in rows:
+        # safe_price has the live search (REST table) and the same search from Pricise's cache: one offer once
+        key = (r.get("offer_source"), r.get("title"), r.get("price"), r.get("item_condition"), r.get("full_price"))
+        if key in seen:
+            continue
+        seen.add(key)
+        price = float(r["price"]) if r.get("price") not in (None, "") else None
+        if not price or price <= 0:
+            continue
+        cond = (r.get("item_condition") or "new").strip().lower()
+        full = str(r.get("full_price")) != "0"
+        why = None if cond == "new" and full else (f'"{cond}" in its condition' if cond != "new" else '"monthly" in its price')
+        offers.append({"title": r.get("title") or "", "source": r.get("offer_source") or "", "domain": r.get("store_domain") or None,
+                       "price": round(price, 2), "shipping": None, "total": round(price, 2), "shipping_note": "shipping not shown",
+                       "condition": f"excluded: {why}" if why else "new", "link": None, "token": None,
+                       "usl": {k: r.get(k) for k in ("warranty_note", "domain_age_days", "unusually_low", "is_safe", "origin")}})
+    _stamp(product_key, offers)
+    return (offers or None), sql
+
+
+def _stamp(product_key: str, offers: list[dict]) -> None:
+    """Each USL offer's fetched_at (epoch) from its origin, and USL_FETCHED[product_key] for the evidence page and panel:
+    safe_price is a snapshot, not a live search, so every place that shows these prices says when they were fetched."""
+    origins = {(o.get("usl") or {}).get("origin") for o in offers}
+    at = {"serpapi_live": snapshot_fetched_at() if "serpapi_live" in origins else None,
+          "pricise_cache": cache_fetched_at(product_key) if "pricise_cache" in origins else None}
+    for o in offers:
+        o["fetched_at"] = at.get((o.get("usl") or {}).get("origin"))
+    stamps = [{"what": SNAPSHOT_LABEL, "at": at["serpapi_live"]}, {"what": CACHE_LABEL, "at": at["pricise_cache"]}]
+    USL_FETCHED[product_key] = sorted((x for x in stamps if x["at"]), key=lambda x: x["at"])
+
+
+def snapshot_fetched_at() -> Optional[float]:
+    """When SerpApi ran the search cached in Zetaris (its search_metadata.created_at). A read of the cached REST table:
+    no new search. Remembered for 10 minutes; None when Zetaris doesn't answer."""
+    import time
+    from datetime import datetime, timezone
+
+    if _SNAPSHOT_AT and time.time() - _SNAPSHOT_AT[0] < 600:
+        return _SNAPSHOT_AT[1]
+    try:
+        created = zetaris.run_sql(SNAPSHOT_SQL)[0]["created"]
+        at = datetime.strptime(created, "%Y-%m-%d %H:%M:%S UTC").replace(tzinfo=timezone.utc).timestamp()
+    except (zetaris.ZetarisError, LookupError, ValueError, TypeError) as e:
+        log.warning("snapshot time not read: %s", zetaris.redact(str(e))[:160])
+        return None
+    _SNAPSHOT_AT[:] = [time.time(), at]
+    return at
+
+
+def cache_fetched_at(product_key: str) -> Optional[float]:
+    """The newest cached search for this product (or its sellers list) in Pricise's own Postgres."""
+    try:
+        with pg.connect() as conn, conn.cursor() as cur:
+            cur.execute("SELECT max(fetched_at) FROM shopping_offers WHERE query_key IN (%s, %s)",
+                        [product_key, product_key + "sellers"])
+            row = cur.fetchone()
+    except pg.PgError as e:
+        log.warning("cache time not read: %s", e)
+        return None
+    return float(row[0]) if row and row[0] is not None else None
+
+
+def fetched_text(stamps: list[dict]) -> str:
+    """"Google Shopping (Zetaris snapshot), fetched 3:36 AM Oct 27": local time (the backend runs on the shopper's
+    machine). The panel and evidence page say "today" when the date is today."""
+    from datetime import datetime
+
+    def clock(at: float) -> str:
+        d = datetime.fromtimestamp(at)
+        return f"{d:%I}".lstrip("0") + f":{d:%M %p} {d:%b} {d.day}"
+
+    return "; ".join(f"{s['what']}, fetched {clock(s['at'])}" for s in stamps if s.get("at"))

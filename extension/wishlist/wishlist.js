@@ -15,9 +15,12 @@ async function load() {
     document.getElementById('rows').innerHTML = `<tr><td colspan="4" class="muted">Backend not running: start it with <code>python -m uvicorn backend.stub_server:app --port 8787</code></td></tr>`;
     return;
   }
-  renderDays(data.day);
+  // The demo clock and its stats belong to the Store Lab demo (STORELAB_DEMO=on); the real product shows watched items only.
+  document.querySelector('.clock').style.display = data.demo_clock ? '' : 'none';
+  document.getElementById('stats').closest('section').style.display = data.stats ? '' : 'none';
+  if (data.demo_clock) renderDays(data.day);
   renderRows(data.items);
-  renderStats(data.stats);
+  if (data.stats) renderStats(data.stats);
 }
 
 function renderDays(day) {

@@ -18,8 +18,8 @@ The Pricise Chrome extension (Manifest V3). Plain HTML, CSS and ES modules: no b
 **Load unpacked** and pick this folder. After a change: click the reload button on the Pricise card in `chrome://extensions`,
 refresh the shop tab, then close and reopen the side panel.
 
-**Test it:** there are no JS unit tests yet. Check by hand on `http://localhost:8787/storelab/audiodealz/` (red card, 3 tricks),
-`/storelab/generic-shop/` (red) and `/storelab/store-c/` (green), and on a search or news page (no card).
+**Test it:** there are no JS unit tests yet. Check by hand on https://www.amazon.com/dp/B09GJZKQ3K (JBL Flip 6: the card,
+the Skeptic's offer decisions in "Best safe price") and on a search or news page (no card). Pricise only reads the page.
 
 **Rules:** the extension holds no keys and only talks to `http://localhost:8787`. On real sites it never clicks or submits;
 the only page change is unticking an add-on when the user presses "Untick". UI colours come from `shared/tokens.css` only.

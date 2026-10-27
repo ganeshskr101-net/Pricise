@@ -72,7 +72,7 @@ export function upsertFinding(findings, f) {
   const at = findings.findIndex((x) => findingId(x) === id);
   return at < 0 ? [...findings, f] : findings.map((x, i) => (i === at ? f : x));
 }
-const SOFT_TYPES = new Set(['claimed_discount', 'countdown', 'scarcity', 'fake_discount']);
+const SOFT_TYPES = new Set(['claimed_discount', 'inflated_discount', 'countdown', 'scarcity', 'fake_discount']);
 const AMOUNT = String.raw`(\d{1,3}(?:,\d{3})*(?:\.\d+)?)`;
 const toNum = (s) => (s == null ? null : Number(String(s).replace(/,/g, '')));
 export const money2 = (v) => (v == null ? '—' : `$${Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`);
@@ -86,16 +86,31 @@ export function summarize(card, findings = [], page = null) {
   const risk = { bad: ['High', 'bad'], caution: ['Medium', 'caution'], good: ['Low', 'good'] }[card?.safe?.status] || ['Unknown', 'unknown'];
   const bp = card?.best_price;
   let safer = null;
-  if (card?.alt?.store) safer = { store: card.alt.store, total: card.alt.total, url: card.alt.url };
+  if (card?.alt?.store) safer = { store: card.alt.store, total: card.alt.total, url: card.alt.url, cheaper: card.alt.kind === 'cheaper', save: card.alt.save };
   else if (bp?.status === 'good' && bp.store && bp.total != null) safer = { store: bp.store, total: bp.total, url: bp.url };
   if (safer) {
     const detail = (bp?.reasons?.[0]?.text || '').replace(/^exact match:\s*/i, '');
-    safer.note = ['Trusted store', detail].filter(Boolean).join(' · ');
+    // An approval with a caveat (a retailer-only warranty) shows the caveat's first part next to the offer.
+    const caveat = (card?.alt?.caveat || '').split(/ \(|; /)[0];
+    safer.note = caveat ? `Skeptic approved · ${caveat}` : ['Trusted store', detail].filter(Boolean).join(' · ');
+    safer.caveat = Boolean(caveat);
   }
   const soft = findings.filter((f) => f.agent === 'deal' && f.model !== PENDING && SOFT_TYPES.has(f.type)
     && ['unverified', 'proposed'].includes(f.status));
   const tone = tricks > 0 ? 'bad' : soft.length ? 'caution' : 'good';
-  return { tone, tricks, realTotal, listed, storeRisk: risk[0], storeTone: risk[1], risky: card?.safe?.status === 'bad', safer, soft, confirmed };
+  const bestHere = card?.alt?.kind === 'this_page'; // a real store page that is already the best credible price
+  return { tone, tricks, realTotal, listed, storeRisk: risk[0], storeTone: risk[1], risky: card?.safe?.status === 'bad', safer, soft, confirmed, bestHere };
+}
+
+// The key that ties a line in the panel to its row on the evidence page: the first words of its text, normalised
+// ("Domain registered 6 days ago." and "Domain registered 6 days ago" give the same key).
+export const rowKey = (text) => String(text || '').toLowerCase().replace(/[^a-z0-9$.]+/g, ' ').replace(/\.(?!\d)/g, ' ')
+  .trim().split(/\s+/).slice(0, 8).join('-');
+
+// "Cheaper at Best Buy · $229.99 (save $20)" for a credible cheaper store; "Safer: Store C · $229" for a Store Lab alternative.
+export function saferLine(safer) {
+  if (safer.cheaper) return [['Cheaper at '], [`${safer.store} · ${money2(safer.total)}`, true], [safer.save ? ` (save ${money(safer.save)})` : '']];
+  return [['Safer: '], [`${safer.store} · ${money(safer.total)}`, true]];
 }
 
 // The quick card: title plus one or two detail lines. Lines are [text, bold] segments so the card can render them safely.
@@ -112,7 +127,7 @@ export function quickVerdict(card, findings = [], page = null) {
       const first = (card.honest?.reasons || []).find((r) => r.tone === 'bad')?.text || 'Tricks found on this page';
       lines.push([[first + (s.risky ? ' · risky store' : '')]]);
     }
-    if (s.safer) lines.push([['Safer: '], [`${s.safer.store} · ${money(s.safer.total)}`, true]]);
+    if (s.safer) lines.push(saferLine(s.safer));
     return { tone: 'bad', title, lines };
   }
   if (s.tone === 'caution') {
@@ -127,17 +142,31 @@ export function quickVerdict(card, findings = [], page = null) {
     }[f.type])))];
     const text = parts.join(' · ');
     lines.push([[text.charAt(0).toUpperCase() + text.slice(1)]]);
-    if (s.safer) lines.push([['Safer: '], [`${s.safer.store} · ${money(s.safer.total)}`, true]]);
+    if (s.safer) lines.push(saferLine(s.safer));
     return { tone: 'caution', title: 'Check before you buy', lines };
   }
   lines.push(s.listed != null ? [['Listed '], [money2(s.listed), true], [' · no extra fees found']] : [['No extra fees or pre-ticked add-ons found']]);
-  if (s.safer) lines.push([['Safer: '], [`${s.safer.store} · ${money(s.safer.total)}`, true]]);
+  if (s.safer) lines.push(saferLine(s.safer));
   return { tone: 'good', title: 'No tricks spotted', lines };
 }
 
 // ------------------------------------------------------------------ compare on other stores (user-initiated, no scraping)
 // Search links built only from the page's own product fields. The user clicks one; Pricise never loads these pages itself.
 // Same rules as backend/compare.py (the chat's links), so the card, the panel and the chat search for the same thing.
+// When prices were fetched: "3:36 AM today", or "3:36 AM Oct 27" on another day (epoch seconds, the viewer's local time).
+export function fetchedAt(epoch) {
+  const d = new Date(epoch * 1000);
+  const day = d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const time = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  return `${time} ${day === new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) ? 'today' : day}`;
+}
+
+// The backend writes "fetched 3:36 AM Oct 27" (backend/data/repo.fetched_text); say "today" when it is today.
+export function todayize(text) {
+  const today = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  return String(text ?? '').replace(/(fetched \d{1,2}:\d{2} [AP]M) ([A-Z][a-z]{2} \d{1,2})\b/g, (m, t, d) => (d === today ? `${t} today` : m));
+}
+
 export const COMPARE_SITES = [
   ['Google Shopping', 'https://www.google.com/search?tbm=shop&q='],
   ['Best Buy', 'https://www.bestbuy.com/site/searchpage.jsp?st='],
@@ -178,6 +207,20 @@ export function cardView({ card = null, findings = [], page = null, error = null
   if (tricks) lines.push([[`${tricks} trick${tricks === 1 ? '' : 's'} found so far`, true]]);
   else if (done.length) lines.push([[`${done.length} check${done.length === 1 ? '' : 's'} done so far`]]);
   return { tone: tricks ? 'bad' : 'unknown', state: 'checking', title: 'Checking this page…', lines };
+}
+
+// Chat suggestion chips for this page: one question the page itself can answer (from its product text), "Is this a good
+// deal?", and a price question. Three at most.
+const SPEC_CHIPS = [
+  [/waterproof|water[- ]resistant|ipx\d/i, 'Is this waterproof?'], [/battery/i, "What's the battery life?"],
+  [/\b(size|fit|fits)\b/i, 'How does the sizing run?'], [/compatib/i, 'What is it compatible with?'],
+  [/warranty/i, "What's the warranty?"], [/storage|\bgb\b/i, 'How much storage does it have?'],
+];
+export function chatSuggestions(page, card) {
+  const text = `${page?.product?.name || ''} ${(page?.signals || []).find((s) => s.type === 'page_text')?.text || ''}`;
+  const spec = SPEC_CHIPS.find(([re]) => re.test(text))?.[1] || 'What are the key features?';
+  const fees = (card?.tricks || 0) > 0 || /real total/i.test(card?.subtitle || '');
+  return [spec, 'Is this a good deal?', fees ? "What's the real total?" : 'Is there a cheaper safe option?'];
 }
 
 // Friendly text when a chat question fails (the API client aborts a chat call after 35 s).

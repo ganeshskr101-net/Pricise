@@ -1,0 +1,202 @@
+{
+ "usl_tables": {
+  "sql": "SHOW NAMESPACES OR TABLES IN lightning.metastore.pricise",
+  "seconds": 0.1,
+  "rows": [
+   {
+    "name": "pricise_usl",
+    "type": "usl",
+    "usl_id": "1020",
+    "count": "2",
+    "activated": null
+   }
+  ]
+ },
+ "cheapest_safe_offer": {
+  "sql": "SELECT retailer, price, item_condition, warranty_note, domain_age_days, credible_median, unusually_low FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE product_key = 'jblflip6blue' AND is_safe = 1 ORDER BY price LIMIT 3",
+  "seconds": 3.5,
+  "rows": [
+   {
+    "retailer": "Woot",
+    "price": "79.95",
+    "item_condition": "new",
+    "warranty_note": "90-day Woot warranty, not the JBL manufacturer warranty (usual Woot terms; check the listing)",
+    "domain_age_days": "9785",
+    "credible_median": "97.45",
+    "unusually_low": "0"
+   },
+   {
+    "retailer": "Walmart",
+    "price": "114.95",
+    "item_condition": "new",
+    "warranty_note": null,
+    "domain_age_days": "11569",
+    "credible_median": "97.45",
+    "unusually_low": "0"
+   }
+  ]
+ },
+ "retailers_by_domain_age": {
+  "sql": "SELECT store_domain, registered, age_days FROM lightning.metastore.pricise.pricise_usl.retailer_domain ORDER BY age_days DESC",
+  "seconds": 1.0,
+  "rows": [
+   {
+    "store_domain": "bestbuy.com",
+    "registered": "1994-03-03",
+    "age_days": "11926"
+   },
+   {
+    "store_domain": "amazon.com",
+    "registered": "1994-11-01",
+    "age_days": "11683"
+   },
+   {
+    "store_domain": "walmart.com",
+    "registered": "1995-02-23",
+    "age_days": "11569"
+   },
+   {
+    "store_domain": "jbl.com",
+    "registered": "1995-03-21",
+    "age_days": "11543"
+   },
+   {
+    "store_domain": "target.com",
+    "registered": "1997-01-02",
+    "age_days": "10890"
+   },
+   {
+    "store_domain": "woot.com",
+    "registered": "2000-01-12",
+    "age_days": "9785"
+   }
+  ]
+ },
+ "unusually_low_offers": {
+  "sql": "SELECT retailer, price, credible_median, round(price / credible_median, 2) AS share_of_median, warranty_note, is_safe FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE unusually_low = 1",
+  "seconds": 4.5,
+  "rows": []
+ },
+ "offers_by_origin_and_safety": {
+  "sql": "SELECT origin, is_safe, count(*) AS offers FROM lightning.metastore.pricise.pricise_usl.safe_price GROUP BY origin, is_safe ORDER BY origin, is_safe",
+  "seconds": 4.9,
+  "rows": [
+   {
+    "origin": "pricise_cache",
+    "is_safe": "0",
+    "offers": "316"
+   },
+   {
+    "origin": "pricise_cache",
+    "is_safe": "1",
+    "offers": "13"
+   },
+   {
+    "origin": "serpapi_live",
+    "is_safe": "0",
+    "offers": "38"
+   },
+   {
+    "origin": "serpapi_live",
+    "is_safe": "1",
+    "offers": "2"
+   }
+  ]
+ },
+ "observed_vs_offers": {
+  "sql": "SELECT retailer, price, observed_min, observed_median FROM lightning.metastore.pricise.pricise_usl.safe_price WHERE is_safe = 1 ORDER BY price",
+  "seconds": 4.1,
+  "rows": [
+   {
+    "retailer": "Walmart",
+    "price": "18.00",
+    "observed_min": "199.99",
+    "observed_median": "199.99"
+   },
+   {
+    "retailer": "Walmart",
+    "price": "19.99",
+    "observed_min": "199.99",
+    "observed_median": "199.99"
+   },
+   {
+    "retailer": "Woot",
+    "price": "79.95",
+    "observed_min": null,
+    "observed_median": null
+   },
+   {
+    "retailer": "Walmart",
+    "price": "114.95",
+    "observed_min": null,
+    "observed_median": null
+   },
+   {
+    "retailer": "Target",
+    "price": "199.99",
+    "observed_min": null,
+    "observed_median": null
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "215.49",
+    "observed_min": null,
+    "observed_median": null
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "239.00",
+    "observed_min": "199.99",
+    "observed_median": "199.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": null,
+    "observed_median": null
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": "199.99",
+    "observed_median": "199.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": "199.99",
+    "observed_median": "199.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": "18.00",
+    "observed_median": "249.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": "18.00",
+    "observed_median": "249.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "249.99",
+    "observed_min": "18.00",
+    "observed_median": "249.99"
+   },
+   {
+    "retailer": "Target",
+    "price": "249.99",
+    "observed_min": "18.00",
+    "observed_median": "249.99"
+   },
+   {
+    "retailer": "Best Buy",
+    "price": "319.99",
+    "observed_min": "18.00",
+    "observed_median": "249.99"
+   }
+  ]
+ }
+}

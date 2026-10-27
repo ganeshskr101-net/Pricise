@@ -12,6 +12,7 @@
 
   chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     if (msg?.type === 'pricise:quick-card') { (msg.data.update ? update : show)(msg.data); sendResponse({ ok: true }); }
+    if (msg?.type === 'pricise:quick-card-hide') { remove(); sendResponse({ ok: true }); }
   });
   // content.js calls this when a single-page site moves to another URL, so an old result never sits on a new product.
   // It lives in the extension's isolated world, so the page's own scripts can't call it.

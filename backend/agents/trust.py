@@ -46,6 +46,7 @@ class TrustVerdict(TypedDict):
     checked: bool             # False = the store checks did not run (store didn't answer, or no registry answer for a real site)
     elapsed_ms: int
     passed: NotRequired[list[str]]  # checks that ran and found nothing wrong (real sites list them; shown green)
+    checks: NotRequired[list[dict]]  # every check: {check, result, status: flag|ok|unchecked, evidence} (evidence page)
 
 
 _cache: dict[str, tuple[float, TrustVerdict]] = {}
@@ -132,9 +133,25 @@ async def _real_site(store_url: str, page: Optional[PageFacts], client: httpx.As
     else:
         signals.append(Signal("store_links", "weak", False, False, "Returns and contact links weren't read from this page.",
                               [], 0.2))
+    seller = next((s for s in (page.signals if page else []) if s.type == "seller"), None)
+    if seller is not None:  # who actually sells: information, not a warning sign by itself
+        signals.append(Signal("seller", "weak", False, False, seller_text(host, seller.detail or {}),
+                              [{"kind": "text", "ref": f"page: {seller.text[:100]}"}], 0.5))
     signals.append(Signal("store_records", "weak", False, False,
                           f"Company record and reviews for {host} aren't checked (no data source for real stores yet).", [], 0.2))
     return signals, created is not None
+
+
+def seller_text(host: str, d: dict) -> str:
+    """"Sold by Huppins, shipped by Amazon: a third-party seller on Amazon; the seller wasn't checked." Neutral wording:
+    a marketplace seller is not a red flag by itself, and Pricise doesn't claim it checked the seller."""
+    sold, ships = (d.get("sold_by") or "").strip().rstrip("."), (d.get("ships_from") or "").strip().rstrip(".")
+    site = host.removeprefix("www.").split(".")[0].capitalize()
+    by_site = lambda name: name.lower().replace(".com", "") == site.lower()  # noqa: E731
+    if by_site(sold):
+        return f"Sold by {site}" + (f", shipped by {ships}" if ships and not by_site(ships) else f" and shipped by {site}" if ships else "") + "."
+    shipped = f", shipped by {ships}" if ships else ""
+    return f"Sold by {sold}{shipped}: a third-party seller on {site}, not {site} itself; Pricise didn't check the seller."
 
 
 def real_reasons(signals: list[Signal]) -> list[str]:
@@ -203,6 +220,8 @@ async def assess_store(store_url: str, check_id: str, page: Optional[PageFacts] 
                           store_url=base, checked=checked, elapsed_ms=int((time.perf_counter() - t0) * 1000))
     if real:
         result["passed"] = [s.reason for s in signals if s.verified and not s.flagged]
+    result["checks"] = [{"check": s.name, "result": s.reason, "evidence": s.evidence,
+                         "status": "flag" if s.flagged else "ok" if s.verified else "unchecked"} for s in signals]
     log.info("trust %s -> %s in %d ms", base, verdict, result["elapsed_ms"])
     if checked:
         _cache[store_url] = (time.monotonic(), result)

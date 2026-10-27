@@ -152,6 +152,10 @@ async function showCard(tabId, c) {
   if (!tab || tab.url !== c.url) return; // the user has moved on
   // Every product page gets a card from the moment it is found: "Checking this page…", then red (tricks), amber (claims we
   // can't verify yet) or green (nothing found), or a plain error ("backend isn't running", "couldn't check").
+  if (c.card?.alt?.kind === 'not_product') { // not a product page after all: no card (remove a "Checking…" one)
+    await chrome.tabs.sendMessage(tabId, { type: 'pricise:quick-card-hide' }).catch(() => {});
+    return;
+  }
   const verdict = cardView(c);
   // update: a firmer verdict for the card already shown on this page view (the card decides whether to show it).
   const data = { ...verdict, checkId: c.checkId, host, update: c.cardSent, compare: compareLinks(c.page?.product),

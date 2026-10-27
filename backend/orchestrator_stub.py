@@ -59,6 +59,7 @@ def stub_agents(chk: dict, done: set[str]) -> list[orchestrator.Agent]:
 
         tv = await trust.assess_store(chk["url"], cid, page)
         chk["trust_verdict"] = tv  # for the card's "Shop safe?" section
+        chk["evidence_data"]["store_checks"] = tv.get("checks")  # the evidence page's "Store checks" table
         for f in tv["findings"]:
             yield f
 
@@ -82,6 +83,7 @@ def stub_agents(chk: dict, done: set[str]) -> list[orchestrator.Agent]:
                                        propose_lookalikes=True)
         s.PRICE[cid] = res  # for _apply_price, as stub_server's _with_price does
         chk["evidence_data"]["stores"], chk["evidence_data"]["stores_sql"] = res.stores, res.sql
+        chk["evidence_data"]["online"] = res.online
         for f in await asyncio.to_thread(rechecker.adapt, res, page, chk["url"]):
             yield f
 

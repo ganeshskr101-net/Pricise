@@ -66,6 +66,7 @@ class _Entry:
     proposed_by: str
     statuses: list[str]
     key: str = ""  # world_model.finding_key of the first version (AGENT_ORCH=on only)
+    proposed_model: Optional[str] = None  # the proposing agent's model (its evidence); a decision may replace finding.model
 
 
 _RUNS: dict[str, _Run] = {}
@@ -184,7 +185,7 @@ class _Work:
 
     async def _add(self, f: Finding) -> None:
         if self.world is None:
-            self.entries.append(_Entry(f, f.agent, [f.status]))
+            self.entries.append(_Entry(f, f.agent, [f.status], proposed_model=f.model))
             await self._emit_finding(f)
             return
         key = world_model.finding_key(f)
@@ -193,7 +194,7 @@ class _Work:
             return
         await self.world.record(key, f)
         self.by_key[key] = len(self.entries)
-        self.entries.append(_Entry(f, f.agent, [f.status], key))
+        self.entries.append(_Entry(f, f.agent, [f.status], key, f.model))
         await self._emit_finding(f)  # new to this stream: always shown once
 
     async def _update(self, i: int, f: Finding) -> None:
@@ -205,6 +206,9 @@ class _Work:
 
     async def _emit_finding(self, f: Finding) -> None:
         self.chk["findings"].append(f.model_dump())
+        from backend import agent_trace  # one JSONL line per agent step (logs/<check_id>.jsonl)
+
+        agent_trace.finding(self.chk, f)
         await self._emit({"kind": "finding", "finding": f})
 
     async def _card(self) -> None:
@@ -228,8 +232,10 @@ class _Work:
         if remote is None:
             return local
         try:
-            rows = [trace_row(_Entry(Finding.model_validate(r["finding"]), r["proposed_by"], list(r["statuses"])))
-                    for r in remote]
+            firsts = [e.proposed_model for e in self.entries]  # the sidecar keeps arrival order, as the entries do
+            rows = [trace_row(_Entry(Finding.model_validate(r["finding"]), r["proposed_by"], list(r["statuses"]),
+                                     proposed_model=firsts[i] if i < len(firsts) else None))
+                    for i, r in enumerate(remote)]
         except Exception as err:
             log.warning("orchestrator check=%s world model findings unreadable: %s", self.chk["check_id"], type(err).__name__)
             return local
@@ -250,9 +256,13 @@ class _Work:
 
 
 def trace_row(entry: _Entry) -> dict:
+    """"model" is what produced the evidence (the proposing agent's model, e.g. "hidden browser"); when the Skeptic's
+    deep lane then decided or worded the finding, that model is "decided_by_model" (None when nothing replaced it)."""
     f = entry.finding
+    first = entry.proposed_model if entry.proposed_model is not None else f.model
     return {"type": f.type, "summary": f.summary, "proposed_by": entry.proposed_by, "challenged_by": f.challenged_by,
-            "evidence": [e.model_dump() for e in f.evidence], "model": f.model, "rounds": f.rounds,
+            "evidence": [e.model_dump() for e in f.evidence], "model": first,
+            "decided_by_model": f.model if f.model != first else None, "rounds": f.rounds,
             "final_status": f.status, "statuses": entry.statuses}
 
 
@@ -313,8 +323,12 @@ def apply_rule(f: Finding, inputs: Optional[dict]) -> Optional[RuleResult]:
         return skeptic.check_timer(f, inputs["visits"])
     if f.type == "fake_discount" and "history_rows" in inputs:
         return skeptic.check_discount(f, inputs["history_rows"], inputs.get("sale_price"))
+    if f.type == "best_price" and inputs.get("low_review"):  # unusually low offer: the deep lane decides, rules validate
+        return skeptic.decide_low_offer(f, inputs["match"], inputs["trust_verdict"], inputs.get("labels"),
+                                        inputs.get("caveats") or (), inputs.get("review"))
     if f.type == "best_price" and {"match", "trust_verdict"} <= inputs.keys():
-        return skeptic.check_best_price(f, inputs["match"], inputs["trust_verdict"])
+        return skeptic.check_best_price(f, inputs["match"], inputs["trust_verdict"], inputs.get("labels"),
+                                        inputs.get("caveats") or ())
     return None
 
 
@@ -359,9 +373,14 @@ async def explain(before: Finding, result: RuleResult, decided: Finding) -> Find
     """With Nightshift configured, the deep lane words the Skeptic's reason for the shopper (skeptic.challenge_reason) and the
     finding names the model. The rule's status is never changed; on any model failure the rule's own reason is shown."""
     from backend.llm import meterless
+    from backend.rechecker import offer_summary
 
+    offer = offer_summary(before, result)  # an online offer: "Skeptic rejected Walmart $89.97: open box, not new"
+    by = result.decided_by
+    if offer and by != "rules":  # the deep lane decided (its own words), or the rules overrode / stood in for it
+        return decided.model_copy(update={"summary": offer, "model": by})
     if not meterless.configured("deep"):
-        return decided
+        return decided.model_copy(update={"summary": offer}) if offer else decided
     try:
         text = await asyncio.to_thread(skeptic.challenge_reason, before, result)
     except Exception as err:  # challenge_reason already falls back; this is belt and braces
@@ -369,7 +388,11 @@ async def explain(before: Finding, result: RuleResult, decided: Finding) -> Find
         text = result.reason
     worded = bool(text) and text != result.reason
     base = before.summary.split(SKEPTIC_SAYS)[0]
-    update: dict[str, Any] = {"summary": f"{base}{SKEPTIC_SAYS}{(text or result.reason).rstrip('.')}."}
+    if offer:  # the rule's own reason and caveat stay word for word; the model's sentence follows them
+        summary = offer + (f" {text.rstrip('.')}." if worded else "")
+    else:
+        summary = f"{base}{SKEPTIC_SAYS}{(text or result.reason).rstrip('.')}."
+    update: dict[str, Any] = {"summary": summary}
     if worded:
         update["model"] = meterless.model_name("deep")
     return decided.model_copy(update=update)

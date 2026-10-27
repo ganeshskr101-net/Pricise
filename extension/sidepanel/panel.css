@@ -116,3 +116,6 @@ main { display: flex; flex-direction: column; background: var(--surface); }
 .cmp { font-size: 12px; color: var(--ink-3); align-self: center; }
 .cmp a, .msg .links a { color: var(--brand-2); }
 .msg .links { display: block; margin-top: 6px; font-size: 12.5px; }
+
+/* Verdict block: a real store page that already has the best credible price. */
+.bp-note { margin-top: 10px; font-size: 12px; color: var(--good); font-weight: 600; }

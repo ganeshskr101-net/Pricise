@@ -45,6 +45,8 @@ class PriceResult:
     sql: Optional[str] = None
     source: str = ""
     trust: str = "seeded"            # where store safety came from: "trust agent" or "seeded" (catalog flags)
+    dropped: list[dict] = field(default_factory=list)  # online offers left out, each with its reason (logged too)
+    online: Optional[dict] = None    # the online comparison for the evidence page: query, shown, dropped (grouped), SQL
 
 
 @dataclass
@@ -100,7 +102,21 @@ def _ago(seen_at: float, now: Optional[float] = None) -> str:
     return "today" if days <= 0 else "yesterday" if days == 1 else f"{days} days ago"
 
 
-def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
+def offers_fetched(product_key: str, source: str) -> list[dict]:
+    """When the compared offers were fetched: the USL's snapshot (and Pricise cache) times, or now for a live search."""
+    from backend.data import repo
+
+    if source == "zetaris usl":
+        return list(repo.USL_FETCHED.get(product_key) or [])
+    return [{"what": "Google Shopping (live search)", "at": time.time()}] if source == "serpapi" else []
+
+
+def compared(res: PriceResult) -> bool:
+    """A comparison result exists: credible stores were shown, or a cheaper offer went to the Skeptic."""
+    return bool((res.online or {}).get("shown")) or any(f.type in ("best_price", "lowest_price") for f in res.findings)
+
+
+def _real_site(check_id: str, page: PageFacts, url: str = "", propose: bool = False) -> PriceResult:
     """Real store pages: no other store is loaded (no scraping). The only comparison is with prices the shopper saw on
     other real store pages Pricise checked (price observations, read through Zetaris), same model and condition."""
     p = page.product
@@ -117,11 +133,12 @@ def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
     if not rows:
         why = ("No other store prices seen yet for this model" if model_key
                else "This page shows no model number, so prices on other stores can't be matched")
-        res.findings.append(_f(check_id, "catalog_only", "unverified",
-                               f"{why}. Use Compare prices to search other stores.", confidence=0.0))
-        reasons.append(Reason(text=f"{why}; use Compare prices to search other stores", tone="unknown"))
         res.best_price = BestPrice(status="unknown", headline="Compare", reasons=reasons)  # the Compare prices links follow
-        _online(check_id, page, host, res)
+        _online(check_id, page, host, res, propose)
+        if not compared(res):  # only when nothing was compared: the online search had no result for this check
+            res.findings.insert(0, _f(check_id, "catalog_only", "unverified",
+                                      f"{why}. Use Compare prices to search other stores.", confidence=0.0))
+            res.best_price.reasons.append(Reason(text=f"{why}; use Compare prices to search other stores", tone="unknown"))
         return res
     o = rows[0]
     diff = (p.price - o["price"]) if p.price is not None else None
@@ -140,7 +157,7 @@ def _real_site(check_id: str, page: PageFacts, url: str = "") -> PriceResult:
                                reasons=reasons)
     res.stores = [{"store": r["host"], "total": r["price"], "status": "ok", "note": f"Seen {_ago(r['seen_at'])}"}
                   for r in rows[:5]]
-    _online(check_id, page, host, res)
+    _online(check_id, page, host, res, propose)
     return res
 
 
@@ -159,72 +176,255 @@ def _vet_domains(check_id: str, domains: list[str]) -> dict[str, dict]:
     return asyncio.run(all_())
 
 
-def _online(check_id: str, page: PageFacts, host: str, res: PriceResult) -> None:
-    """Search Google Shopping for this exact item (SerpApi, 6 h cache), keep the same item in new condition from OTHER
-    stores, vet the sellers with the Trust Agent, and report the cheapest trusted offer below this page's price, or that
-    this page is the lowest trusted price found. Read only; the stores' own sites are never loaded."""
+SHOW_MAX = 5
+ALSO_CHECK = ("bestbuy.com", "walmart.com", "target.com", "amazon.com")  # named in "Also checked" when they had no offer
+DROP_GROUPS = [("Under 50% (not a real price)", ("under 50%",)),  # first: its reason text mentions "monthly" too
+               ("Installment or monthly price", ("/mo", "per month", "monthly", "installment", "payment", "affirm", "klarna",
+                                                  "trade-in", "trade in", "activation")),
+               ("Used or refurbished", ("pre-owned", "used", "refurbished", "renewed", "like-new", "like new", "open box")),
+               ("Unknown store", ("not an allowlisted store",)), ("Marketplace seller", ("marketplace seller",)),
+               ("Different item", ("not the same item",)),
+               ("Failed store checks", ("trust agent",)), ("This page's own store", ("own store",))]
+
+
+GROUP_WORDS = {"Under 50% (not a real price)": "not a real price", "Installment or monthly price": "monthly prices",
+               "Used or refurbished": "used or refurbished", "Unknown store": "not from a credible store",
+               "Marketplace seller": "marketplace sellers", "Different item": "a different item",
+               "Failed store checks": "failed store checks", "Other": "other reasons"}
+
+
+def rejected_line(drops: list[dict]) -> str:
+    """"Rejected 39 offers: 21 not from a credible store, 12 used or refurbished, 6 marketplace sellers." (largest first)"""
+    counts: dict[str, int] = {}
+    for d in drops:
+        g = drop_group(d["reason"])
+        counts[g] = counts.get(g, 0) + 1
+    parts = [f"{n} {GROUP_WORDS.get(g, g.lower())}" for g, n in sorted(counts.items(), key=lambda kv: (-kv[1], kv[0]))]
+    return f"Rejected {len(drops)} offer{'s' if len(drops) != 1 else ''} by rule: {', '.join(parts)}."
+
+
+def also_checked(p, offers: list[dict], shown: set, mine: str, dropped: list[dict], blocked: list[dict]) -> list[str]:
+    """"Target (not found)" only when the search had no offer at all from that store; otherwise why its offers were left
+    out ("Best Buy (used or refurbished only)")."""
+    from backend.data.trusted_retailers import credible_domain, display_name
+
+    out = []
+    for d in ALSO_CHECK:
+        if d in shown or d == mine:
+            continue
+        theirs = [o for o in offers if credible_domain(o.get("source") or "", p.brand, p.name)[0] == d
+                  or (o.get("source") or "").lower().startswith(display_name(d).lower())]
+        if not theirs:
+            out.append(f"{display_name(d)} (not found)")
+            continue
+        names = {o.get("source") for o in theirs}
+        why = [drop_group(x["reason"]) for x in dropped if x.get("source") in names] + \
+              [drop_group(x["reason"]) for x in blocked if x.get("source") in names]
+        top = max(set(why), key=why.count) if why else "Other"
+        out.append(f"{display_name(d)} ({GROUP_WORDS.get(top, top.lower())} only)")
+    return out
+
+
+def drop_group(reason: str) -> str:
+    low = reason.lower()
+    return next((g for g, words in DROP_GROUPS if any(w in low for w in words)), "Other")
+
+
+def _online(check_id: str, page: PageFacts, host: str, res: PriceResult, propose: bool = False) -> None:
+    """Search Google Shopping for this exact item (SerpApi, 6 h cache) and keep only CREDIBLE offers: allowlisted retailers
+    or the brand's own or official store (backend/data/trusted_retailers.py), the same item (edition, storage, colour,
+    model name). With fewer than 3 stores, the sellers list of the best-matching product is added (same rules). The Trust
+    Agent checks each store. Shows 3-5 offers when there are. Read only.
+    Every offer at least $1 cheaper than this page goes to the Skeptic as a best_price proposal (propose=True, the
+    orchestrator) or is decided here with the Skeptic's rules (propose=False): new full-price offers (an unusually low one
+    is flagged for review, not dropped) can be approved, with a caveat when one applies (a retailer-only warranty, a colour
+    the listing doesn't name); open box, refurbished, used and monthly/installment offers at a credible store are proposed
+    too, and the Skeptic's rule can never approve them."""
+    from backend import rechecker
+    from backend.agents import skeptic
+    from backend.data import repo
+    from backend.data.trusted_retailers import display_name, listing_url
     from backend.tools import rdap, shopping
 
     p = page.product
     query = shopping.query_for(p)
-    offers, source = shopping.search(query) if query else (None, "off")
+    offers, usl_sql = repo.usl_offers(catalog.key(query)) if query else (None, None)  # the USL first, when Zetaris has it
+    source = "zetaris usl" if offers else ""
+    if offers is None:
+        offers, source = shopping.search(query) if query else (None, "off")
     if offers is None:
         if source == "off":
             return  # no SerpApi key: skip cleanly, the observations and Compare links stand on their own
-        why = "Online price search didn't answer"
-        res.findings.append(_f(check_id, "online_offers", "unverified", f"{why}. Use Compare prices to search other stores.",
-                               confidence=0.0))
+        res.findings.append(_f(check_id, "online_offers", "unverified",
+                               "Online price search didn't answer. Use Compare prices to search other stores.", confidence=0.0))
         return
     mine = rdap.registrable(host)
-    matched = [o for o in offers if o["domain"] and o["domain"] != mine and shopping.same_item(p, o)[0]]
-    if not matched and p.model and p.name:  # the model number found nothing the same: try the cleaned title once
-        q2 = shopping.clean_title(p.name, p.brand)
-        if q2 and catalog.key(q2) != catalog.key(query):
-            more, _ = shopping.search(q2)
-            matched = [o for o in more or [] if o["domain"] and o["domain"] != mine and shopping.same_item(p, o)[0]]
-    ev_search = {"kind": "log", "ref": f"google_shopping:{query}", "label": f"{len(offers)} offers ({source}), {len(matched)} the same item"}
-    if not matched:
+    kept, blocked, dropped = shopping.classify_offers(p, offers, p.price, mine)
+    sellers_source, seen_offers = None, offers
+    if len({o["domain"] for o in kept}) < 3:  # the sellers list: cached for 6 h, else looked up with the search's token
+        extra, sellers_source = shopping.sellers_for(query, p, None if source == "zetaris usl" else offers)
+        if extra:
+            kept, blocked, dropped = shopping.classify_offers(p, offers + extra, p.price, mine)
+            seen_offers = offers + extra
+    if kept:
+        tvs = _vet_domains(check_id, list(dict.fromkeys(o["domain"] for o in kept))[:SHOW_MAX + 2])
+        for o in [o for o in kept if not (tvs.get(o["domain"]) or {}).get("checked") or tvs[o["domain"]]["verdict"] != "safe"]:
+            kept.remove(o)
+            dropped.append({"source": o["source"], "price": o["price"], "title": o["title"][:90], "reason": "didn't pass the Trust Agent's checks"})
+            log.info("price: dropped offer %s $%s: didn't pass the Trust Agent's checks", o["source"], o["price"])
+    res.dropped = dropped + [{"source": o["source"], "price": o["price"], "title": o["title"][:90], "reason": o["reason"]}
+                             for o in blocked]
+    show = []  # one per store, cheapest first; a store's own product link beats a search link
+    for o in kept:
+        same = next((s for s in show if s["domain"] == o["domain"]), None)
+        direct = o.get("link") and "google.com" not in o["link"]
+        if same:
+            if direct and abs(same["total"] - o["total"]) < 0.005 and not same["direct"]:
+                same.update(url=o["link"], direct=True)
+            continue
+        if len(show) < SHOW_MAX:
+            show.append({**o, "store": display_name(o["domain"]), "direct": bool(direct),
+                         "url": o["link"] if direct else listing_url(o["domain"], query)})
+    shown = {s["domain"] for s in show}
+    also = also_checked(p, seen_offers, shown, mine, dropped, blocked) if len(show) < 3 else []  # search + sellers list
+    res.online = {"query": query, "source": source, "sellers_source": sellers_source,
+                  "sql": (usl_sql if source == "zetaris usl" else
+                          repo.offers_sql(catalog.key(query), time.time() - shopping.CACHE_S) if source == "cache" and zetaris_on() else None),
+                  "shown": [{"store": s["store"], "price": s["price"], "shipping": s["shipping_note"], "total": s["total"],
+                             "condition": "new", "title": s["title"], "url": s["url"], "seller": s.get("seller"),
+                             "low": s.get("low", False), "fetched_at": s.get("fetched_at")} for s in show],
+                  "fetched": offers_fetched(catalog.key(query), source),
+                  "usl_fallback": (repo.USL_ERRORS.get(catalog.key(query)) if usl_sql and source != "zetaris usl" else None),
+                  "dropped": [{**d, "group": drop_group(d["reason"])} for d in res.dropped], "also_checked": also,
+                  "offers_seen": len(offers)}
+    ev_search = {"kind": "log", "ref": f"google_shopping:{query}",
+                 "label": f"{len(offers)} offers ({source}); {len(show)} credible stores, {len(res.dropped)} dropped"}
+    if res.online["sql"]:
+        ev_search = {"kind": "sql", "ref": res.online["sql"], "label": ev_search["label"]}
+    also_text = f" Also checked: {'; '.join(also)}." if also else ""
+    rule_drops = [d for d in dropped if drop_group(d["reason"]) != "This page's own store"]
+    if rule_drops:  # one line for the panel; the full list, grouped, is on the evidence page
+        res.findings.append(_f(check_id, "offers_filtered", "confirmed", rejected_line(rule_drops),
+                               [{"kind": "log", "ref": f"google_shopping:{query}", "label": "Rejected offers, by reason"}],
+                               confidence=0.9))
+    price = p.price
+    cheaper = [s for s in show if price is not None and s["total"] <= price - 1]
+    cheaper += _blocked_cheaper(blocked, price, query)
+    if not show and not cheaper:
         res.findings.append(_f(check_id, "online_offers", "unverified",
-                               f"Google Shopping had no exact match for this item ({len(offers)} offers checked). "
+                               f"No trusted store had this exact item at a real price ({len(offers)} offers checked).{also_text} "
                                "Use Compare prices to search other stores.", [ev_search], confidence=0.0))
         return
-    matched.sort(key=lambda o: (o["total"], o["domain"]))
-    domains = list(dict.fromkeys(o["domain"] for o in matched))[:VET_MAX]
-    tvs = _vet_domains(check_id, domains)
-    trusted = [o for o in matched if o["domain"] in tvs and tvs[o["domain"]]["checked"] and tvs[o["domain"]]["verdict"] == "safe"]
-    rows = []
-    for o in matched[:8]:
-        tv = tvs.get(o["domain"])
-        ok = o in trusted
-        rows.append({"store": o["domain"], "total": o["total"], "status": "ok" if ok else ("rejected" if tv else "skipped"),
-                     "note": f"{o['source']} · {o['shipping_note']}" + ("" if ok else " · not checked" if not tv else " · didn't pass store checks")})
-    price = p.price
-    cheaper = [o for o in trusted if price is not None and o["total"] < price - 0.005]
-    if cheaper:
-        o = cheaper[0]
-        text = f"Same item for {money(o['total'])} at {o['domain']}, trusted store ({o['shipping_note']})."
-        res.findings.append(_f(check_id, "best_price", "confirmed", text,
-                               [{"kind": "url", "ref": o["link"] or f"https://{o['domain']}/"},
-                                {"kind": "price_row", "ref": f"offer:{o['domain']}", "label": f"{o['title'][:80]} · {money(o['total'])}"},
-                                ev_search], confidence=0.8))
-        res.best_price = BestPrice(status="good", headline=f"{o['domain']} · {money(o['total'])}", store=o["domain"],
-                                   total=o["total"], url=o["link"], reasons=[
-            Reason(text=f"Same item, new: {o['title'][:70]}", tone="good", proof="stores"),
-            Reason(text=f"{money(o['price'])} + {o['shipping_note']} at {o['source']}; this page: {money(price)}", tone="good", proof="stores"),
-            Reason(text=f"{o['domain']} passed the Trust Agent's checks (secure, long-registered domain)", tone="good")])
-        res.alt = {"store": o["domain"], "total": o["total"], "url": o["link"]}
-        rows[next(i for i, r in enumerate(rows) if r["store"] == o["domain"] and r["total"] == o["total"])]["status"] = "chosen"
-    elif trusted:
-        also = ", ".join(f"{o['domain']} {money(o['total'])}" for o in trusted[:3])
-        res.findings.append(_f(check_id, "lowest_price", "confirmed",
-                               f"This is the lowest trusted price we found. Also checked: {also}.", [ev_search], confidence=0.75))
-        res.best_price = BestPrice(status="good", headline="Lowest trusted price", reasons=[
-            Reason(text=f"This page {money(price)}; trusted stores: {also}", tone="good", proof="stores")])
-    else:
-        res.findings.append(_f(check_id, "online_offers", "unverified",
-                               f"Found the same item at {len(domains)} other store(s), but none passed the Trust Agent's checks.",
-                               [ev_search], confidence=0.0))
+    rows = [{"store": s["store"], "total": s["total"], "status": "ok",
+             "note": f"{s['shipping_note']} · {s['title'][:60]}" + (" · unusually low, for the Skeptic" if s.get("low") else "")}
+            for s in show]
+    listed = ", ".join(f"{s['store']} {money(s['total'])}" for s in show)
+    links = [{"kind": "url", "ref": s["url"], "label": f"{s['store']} {money(s['total'])}"} for s in show]
+    level = [s for s in show if s not in cheaper]  # same price as here or dearer: what this page is compared with
+    same = [s["store"] for s in level if price is not None and abs(s["total"] - price) < 1]
+    if level:
+        text = (f"Same price at {_and(same)}, this page is as good as it gets." if same
+                else "This is the lowest price among trusted stores. Also at: "
+                     + ", ".join(f"{s['store']} {money(s['total'])}" for s in level) + ".")
+        lowest = _f(check_id, "lowest_price", "confirmed", text + also_text, links + [ev_search], confidence=0.75)
+    # "As good as it gets" only when no cheaper offer is approved: a cheaper NEW offer may be, so with one the line waits
+    # for the Skeptic (in place below) or is left out (the orchestrator decides later); the same-price stores stay in
+    # the comparison either way. Open box, refurbished and monthly offers are never approved: they don't hold it back.
+    approvable = [o for o in cheaper if (o.get("kind") or "new") == "new"]
+    if level and not approvable:
+        res.findings.append(lowest)
+    res.best_price = BestPrice(status="good" if level else "unknown",
+                               headline="As good as it gets" if same else "Lowest trusted price" if level else "Compare",
+                               reasons=[Reason(text=f"Credible stores: {listed}; this page {money(price)}" if show
+                                               else "No credible store had this item new", tone="good" if show else "unknown",
+                                               proof="stores")])
+    res.alt = {"kind": "this_page"} if level else None
     res.stores = rows + res.stores
+    if not cheaper:
+        return
+    caveat_ctx = {"brand": p.brand, "colours": shopping._variant(p.name or "")["color"], "median": _median(show)}
+    props = [_offer_proposal(check_id, o, price, caveat_ctx, links, ev_search, rechecker) for o in cheaper[:MAX_PROPOSALS]]
+    if propose:
+        res.findings.extend(props)
+        return
+    decided = []
+    for f in props:  # no orchestrator here: the Skeptic decides in place, the same way it would there
+        ref = rechecker.parse_ref(f)
+        labels, caveats = rechecker.labels_for(ref["offer"]), rechecker.caveats_of(f)
+        if ref["offer"].get("low") == "1":  # unusually low: the deep lane decides, the hard rules validate
+            ctx = rechecker.review_context(f, ref, page.model_dump(), show, "safe", ["passed the Trust Agent's checks"])
+            result = skeptic.decide_low_offer(f, ref["match"], "safe", labels, caveats, skeptic.review_low_offer(ctx))
+        else:
+            result = skeptic.check_best_price(f, ref["match"], "safe", labels, caveats)  # stores here passed Trust already
+        decided.append(f.model_copy(update={"status": result.status, "challenged_by": "skeptic", "rounds": 1,
+                                            "summary": rechecker.offer_summary(f, result),
+                                            "model": result.decided_by if result.decided_by != "rules" else f.model}))
+        caveat_ctx.setdefault("rechecks", {})[ref["ref"]] = {"reason": result.reason, "caveat": result.caveat}
+    res.findings.extend(decided)
+    if level and approvable and not any(d.status == "confirmed" for d in decided):
+        res.findings.append(lowest)  # the Skeptic approved none of the cheaper offers: this page is as good as it gets
+    res.best_price, res.alt = rechecker.best_price_on_card({"page": page.model_dump(), "rechecks": caveat_ctx.get("rechecks")},
+                                                           decided, res.best_price, res.alt)
+
+
+MAX_PROPOSALS = 5  # cheaper offers sent to the Skeptic per page (each may cost one deep-lane wording call)
+
+
+def _median(show: list[dict]) -> Optional[float]:
+    import statistics
+
+    return statistics.median(s["total"] for s in show) if len(show) >= 2 else None
+
+
+def _blocked_cheaper(blocked: list[dict], price: Optional[float], query: str) -> list[dict]:
+    """Open box, refurbished, used or monthly offers at a credible store, cheaper than this page: one per store and kind."""
+    from backend.data.trusted_retailers import display_name, listing_url
+
+    out, seen = [], set()
+    for o in sorted(blocked, key=lambda o: o["total"]):
+        if price is None or o["total"] > price - 1 or (o["domain"], o["kind"], o.get("other_model")) in seen:
+            continue
+        seen.add((o["domain"], o["kind"], o.get("other_model")))
+        direct = o.get("link") and "google.com" not in o["link"]
+        out.append({**o, "store": display_name(o["domain"]), "url": o["link"] if direct else listing_url(o["domain"], query)})
+    return out
+
+
+def _caveats(o: dict, ctx: dict) -> list[str]:
+    from backend.data.trusted_retailers import warranty_note
+    from backend.tools import shopping
+
+    out = []
+    note = warranty_note(o["domain"], ctx.get("brand"))
+    if note:
+        out.append(note)
+    if ctx.get("colours") and not shopping._variant(o.get("title") or "")["color"]:
+        out.append(f"colour not named in the listing: choose {'/'.join(sorted(c.capitalize() for c in ctx['colours']))}")
+    return out
+
+
+def _offer_proposal(check_id: str, o: dict, price: Optional[float], ctx: dict, links: list[dict], ev_search: dict,
+                    rechecker) -> Finding:
+    kind = o.get("kind") or "new"
+    seller = f", sold by {o['seller']} (the brand's official store on {o['store']})" if o.get("seller") else ""
+    what = (f"new{seller}" + (", unusually low price" if o.get("low") else "")) if kind == "new" else kind
+    if o.get("other_model"):
+        what = f"{o['other_model'][0]}, {what}"
+    save = f" (save {money(price - o['total'])})" if price else ""
+    ref = rechecker.offer_ref(o["url"], {**o, "save": round(price - o["total"], 2) if price else None},
+                              model=not o.get("other_model"), variant=True)
+    ev = [{"kind": "url", "ref": o["url"], "label": f"{o['store']} {money(o['total'])}"},
+          {"kind": "price_row", "ref": ref, "label": "Exact match"}]
+    ev += [{"kind": "text", "ref": f"{rechecker.CAVEAT} {c}", "label": "Caveat"} for c in (_caveats(o, ctx) if kind == "new" else [])]
+    return _f(check_id, "best_price", "proposed",
+              f"{o['store']} {money(o['total'])}: {what}, cheaper than here{save}. Proposed for the Skeptic to check.",
+              ev + [e for e in links if e["ref"] != o["url"]][:3] + [ev_search], confidence=0.6)
+
+
+def zetaris_on() -> bool:
+    from backend.data import zetaris
+
+    return zetaris.use_zetaris()
 
 
 def _load(day: int) -> tuple[list[dict], Optional[str], str]:
@@ -317,7 +517,7 @@ async def assess_async(check_id: str, url: str, page: PageFacts, day: int = 1, u
     """The Price Agent's findings and "Best safe price" verdict for one page on demo `day` (1..9). Never raises.
     use_trust=True asks the Trust Agent about every candidate store (AGENT_TRUST=real); False uses the seeded flags."""
     if not is_storelab(url):
-        return await asyncio.to_thread(_real_site, check_id, page, url)
+        return await asyncio.to_thread(_real_site, check_id, page, url, propose_lookalikes)
     try:
         rows, sql, source = await asyncio.to_thread(_load, day)
         rows = [{**r, "url": _at_origin(r["url"], url)} for r in rows]

@@ -1,27 +1,32 @@
 #!/usr/bin/env bash
 # Starts the Pricise backend on http://localhost:8787 (the port the extension calls).
 # Usage: scripts/run.sh [--real | --stub] [--reload]
-#   (default) everything real: AGENT_DEAL/TRUST/PRICE=real, AGENT_ORCH=on, DATA_SOURCE=zetaris (falls back to the fixture
+#   SAMPLE_MODE=true (in .env or the shell; the .env.example default): sample mode, every agent stub, fixture data, no
+#             Zetaris / Nightshift / SerpApi calls. Set SAMPLE_MODE=false in .env for full mode.
+#   (full mode) everything real: AGENT_DEAL/TRUST/PRICE=real, AGENT_ORCH=on, DATA_SOURCE=zetaris (falls back to the fixture
 #             data if Zetaris doesn't answer). A switch already set in your shell wins; these defaults beat .env.
-#   --real    same as the default (kept for old notes)
+#   --real    full mode even when .env says SAMPLE_MODE=true
 #   --stub    the scripted demo: every agent stub, AGENT_ORCH=off, DATA_SOURCE=fixture
 #   --reload  restart automatically when backend code changes
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
 EXTRA=()
-MODE=real
+SAMPLE="${SAMPLE_MODE:-$(grep -E '^SAMPLE_MODE=' .env 2>/dev/null | tail -1 | cut -d= -f2 | tr -d '"'"'"' ')}"
+case "$(echo "$SAMPLE" | tr 'A-Z' 'a-z')" in true|1|yes|on) MODE=sample ;; *) MODE=real ;; esac
 for arg in "$@"; do
   case "$arg" in
-    --real) MODE=real ;;
+    --real) MODE=real; export SAMPLE_MODE=false ;;
     --stub) MODE=stub ;;
     --reload) EXTRA+=(--reload) ;;
-    -h|--help) sed -n '2,8p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,11p' "$0"; exit 0 ;;
     *) echo "Unknown option: $arg (try --help)"; exit 2 ;;
   esac
 done
 [ -x .venv/bin/python ] || { echo "Run scripts/setup.sh first."; exit 1; }
-if [ "$MODE" = stub ]; then
+if [ "$MODE" = sample ]; then
+  export SAMPLE_MODE=true AGENT_DEAL=stub AGENT_TRUST=stub AGENT_PRICE=stub AGENT_ORCH=off DATA_SOURCE=fixture
+elif [ "$MODE" = stub ]; then
   export AGENT_DEAL=stub AGENT_TRUST=stub AGENT_PRICE=stub AGENT_ORCH=off DATA_SOURCE=fixture
 else
   export AGENT_DEAL="${AGENT_DEAL:-real}" AGENT_TRUST="${AGENT_TRUST:-real}" AGENT_PRICE="${AGENT_PRICE:-real}" \
@@ -47,7 +52,7 @@ else
   echo "Engine sidecar not started (needs Node 20+ and scripts/setup.sh); the backend works without it."
 fi
 
-echo "Pricise backend on http://localhost:8787"
+echo "Pricise backend on http://localhost:8787  ($MODE mode)"
 echo "  AGENT_DEAL=$AGENT_DEAL AGENT_TRUST=$AGENT_TRUST AGENT_PRICE=$AGENT_PRICE AGENT_ORCH=$AGENT_ORCH DATA_SOURCE=$DATA_SOURCE"
 echo "  (check: curl -s localhost:8787/health)"
 .venv/bin/python -m uvicorn backend.stub_server:app --port 8787 ${EXTRA[@]+"${EXTRA[@]}"}

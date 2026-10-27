@@ -62,22 +62,38 @@ def test_query_uses_brand_and_model_else_a_clean_title():
                                           brand="SWIFTVEST")) == "SWIFTVEST Running Phone Holder Vest with Bottle"
 
 
-# ----------------------------------------------------------------------------- the Price Agent on a real page
+# ----------------------------------------------------------------------------- the Price Agent on a real page (Kindle)
+
+KINDLE_RAW = json.loads((FIX / "serpapi" / "kindle_paperwhite_signature_32gb.json").read_text())["shopping_results"]
+KINDLE_URL = "https://www.amazon.com/dp/B0C8RR4WN3"
+KINDLE = PageProduct(name="Amazon Kindle Paperwhite Signature Edition 32GB (2024 model) – Auto-adjusting front light, "
+                          "wireless charging, and weeks of battery life – Metallic Black", brand="Amazon Kindle", price=249.99)
+# Synthetic offers added to the real response for the cases it lacks (clearly not from SerpApi).
+MONTHLY = {"title": "Amazon Kindle Paperwhite Signature Edition 32GB Metallic Black", "source": "Best Buy",
+           "price": "$36.00/mo", "extracted_price": 36.0, "product_link": "https://example.test/monthly"}
+UNKNOWN = {"title": "Amazon Kindle Paperwhite Signature Edition 32GB Metallic Black", "source": "Gadget Galaxy Outlet",
+           "price": "$199.00", "extracted_price": 199.0, "product_link": "https://example.test/unknown"}
+MARKET = {"title": "Amazon Kindle Paperwhite Signature Edition 32GB", "source": "Walmart - QuickShip Deals",
+          "price": "$209.00", "extracted_price": 209.0, "product_link": "https://example.test/market"}
+REGULAR_16 = {"title": "Amazon Kindle Paperwhite 16GB (2024) Black", "source": "Target", "price": "$159.99",
+              "extracted_price": 159.99, "product_link": "https://example.test/regular"}
+TARGET = {"title": "Amazon Kindle Paperwhite Signature Edition 32GB - Metallic Black", "source": "Target", "price": "$239.99",
+          "extracted_price": 239.99, "delivery": "Free delivery", "product_link": "https://example.test/target"}
 
 
 @pytest.fixture
 def online(monkeypatch):
-    """SerpApi on with the saved response; Trust answers per domain (default safe). Counts searches and vets."""
-    calls = {"search": 0, "vetted": []}
+    """SerpApi on with a saved response (set calls["raw"]); Trust answers per domain (default safe)."""
+    calls = {"search": 0, "vetted": [], "raw": list(KINDLE_RAW)}
     verdicts = {}
 
     def fake_search(query):
         calls["search"] += 1
-        return list(OFFERS)
+        return shopping.parse(calls["raw"])
 
     def fake_vet(check_id, domains):
         calls["vetted"].append(list(domains))
-        return {d: {"verdict": verdicts.get(d, "safe"), "checked": verdicts.get(d) != "unchecked", "reasons": []} for d in domains}
+        return {d: {"verdict": verdicts.get(d, "safe"), "checked": True, "reasons": []} for d in domains}
 
     monkeypatch.setenv("SERPAPI_KEY", "test-key-not-real")
     monkeypatch.setattr(shopping, "_search_serpapi", fake_search)
@@ -85,60 +101,97 @@ def online(monkeypatch):
     return calls, verdicts
 
 
-def _real(price_=26.99):
-    page = PageFacts(url=URL, host="www.amazon.com", product={**PRODUCT.model_dump(), "price": price_})
-    return price.assess("c1", URL, page)
+def _kindle(price_=249.99):
+    page = PageFacts(url=KINDLE_URL, host="www.amazon.com", product={**KINDLE.model_dump(), "price": price_})
+    return price.assess("c1", KINDLE_URL, page)
 
 
-def test_cheapest_trusted_offer_below_this_page(online):
+def test_monthly_price_is_rejected_and_unknown_and_marketplace_stores_never_show(online):
     calls, _ = online
-    res = _real(26.99)
+    calls["raw"] = [MONTHLY, UNKNOWN, MARKET, *KINDLE_RAW]
+    res = _kindle()
+    shown = " ".join(f.summary for f in res.findings) + json.dumps(res.stores) + json.dumps(res.best_price.model_dump())
+    for never in ("Gadget Galaxy", "QuickShip", "$36.99", "eBay", "Poshmark", "mcgrocer"):
+        assert never not in shown
+    # a monthly price at a credible store is shown only as the Skeptic's rejection, with its reason; never as a price
+    [monthly] = [f for f in res.findings if f.type == "best_price"]
+    assert (monthly.status, monthly.challenged_by) == ("rejected", "skeptic")
+    assert monthly.summary == "Skeptic rejected Best Buy $36: a monthly or installment price, not the full price."
+    assert res.alt == {"kind": "this_page"} and res.best_price.headline == "As good as it gets"
+    reasons = {(d["source"], d["price"]): d["reason"] for d in res.dropped}
+    assert reasons[("Best Buy", 36.0)] == '"/mo" in its price'
+    assert reasons[("Best Buy", 36.99)].startswith("under 50% of this page's $249.99")  # the real $36.99 one
+    assert reasons[("Gadget Galaxy Outlet", 199.0)] == "not an allowlisted store"
+    assert reasons[("Walmart - QuickShip Deals", 209.0)] == "marketplace seller, not the retailer"
+
+
+def test_same_price_at_a_trusted_store_says_so(online):
+    res = _kindle(249.99)
+    [f] = [f for f in res.findings if f.type == "lowest_price"]
+    assert f.summary == ("Same price at Best Buy, this page is as good as it gets. "
+                         "Also checked: Walmart (not found); Target (not found).")  # fewer than 3 stores: say who else
+    assert res.best_price.headline == "As good as it gets" and res.alt == {"kind": "this_page"}  # "Best price: this page"
+    assert [s["store"] for s in res.stores] == ["Best Buy"]                      # one per store, never an unknown one
+    assert [e.ref for e in f.evidence if e.kind == "url"][0].startswith("https://www.bestbuy.com/site/searchpage.jsp?st=")
+
+
+def test_signature_32gb_never_matches_the_regular_16gb():
+    assert not shopping.same_item(KINDLE, REGULAR_16)[0]
+    assert shopping.same_item(KINDLE, TARGET)[0]
+    colorsoft = next(r for r in KINDLE_RAW if "Colorsoft" in r["title"] and r["source"] == "Best Buy")
+    assert shopping.same_item(KINDLE, colorsoft) == (False, "other edition (colorsoft)")
+
+
+def test_one_to_three_offers_and_cheaper_only_by_a_dollar(online):
+    calls, _ = online
+    calls["raw"] = [TARGET, REGULAR_16, *KINDLE_RAW]
+    res = _kindle(249.99)
     [best] = [f for f in res.findings if f.type == "best_price"]
-    assert best.status == "confirmed" and best.summary == "Same item for $22.99 at ebay.com, trusted store (free shipping)."
-    assert res.best_price.store == "ebay.com" and res.best_price.total == 22.99 and res.alt["store"] == "ebay.com"
-    assert res.alt["url"].startswith("https://www.google.com/shopping/")
-    assert calls["search"] == 1 and "amazon.com" not in calls["vetted"][0]  # this page's own store is never an offer
-
-
-def test_untrusted_seller_never_wins(online):
-    _, verdicts = online
-    verdicts["ebay.com"] = "unsafe"
-    res = _real(26.99)
-    assert not [f for f in res.findings if f.type == "best_price"]  # mcgrocer.com is the next same item at $45.89
+    assert best.summary == ("Skeptic approved Target $239.99, $10 less than here: same item, new, full price, sold by "
+                            "Target; store checks passed.")
+    assert (best.status, best.challenged_by) == ("confirmed", "skeptic")
+    assert [s["store"] for s in res.stores] == ["Target", "Best Buy"] and res.alt["store"] == "Target"
+    res = _kindle(240.50)  # Target only $0.51 less: not "cheaper"
+    assert not [f for f in res.findings if f.type == "best_price"]
     [low] = [f for f in res.findings if f.type == "lowest_price"]
-    assert low.summary == "This is the lowest trusted price we found. Also checked: mcgrocer.com $45.89."
-    assert any(r["store"] == "ebay.com" and r["status"] == "rejected" for r in res.stores)
-
-
-def test_this_page_is_the_lowest_trusted_price(online):
-    res = _real(19.99)
+    assert low.summary.startswith("Same price at Target, this page is as good as it gets.")
+    res = _kindle(229.99)  # every credible store is dearer
     [low] = [f for f in res.findings if f.type == "lowest_price"]
-    assert low.summary.startswith("This is the lowest trusted price we found. Also checked: ebay.com $22.99")
-    assert res.best_price.headline == "Lowest trusted price" and res.alt is None
+    assert low.summary.startswith("This is the lowest price among trusted stores. Also at: Target $239.99, Best Buy $249.99.")
+
+
+def test_a_store_that_fails_trust_is_left_out(online):
+    calls, verdicts = online
+    calls["raw"] = [TARGET, *KINDLE_RAW]
+    verdicts["target.com"] = "unsafe"
+    res = _kindle(249.99)
+    assert "Target" not in json.dumps(res.stores) and ("Target", 239.99) in {(d["source"], d["price"]) for d in res.dropped}
 
 
 def test_cache_for_six_hours(online):
     calls, _ = online
-    _real()
-    _real()
+    _kindle()
+    _kindle()
     assert calls["search"] == 1  # the second check reads the cached offers
 
 
 def test_no_key_or_failure_skips_cleanly(monkeypatch):
     monkeypatch.setattr(shopping, "configured", lambda: False)
     monkeypatch.setattr(shopping, "_search_serpapi", lambda q: pytest.fail("no search without a key"))
-    assert not [f for f in _real().findings if f.type == "online_offers"]  # no key: skipped cleanly, no extra row
+    assert not [f for f in _kindle().findings if f.type == "online_offers"]  # no key: skipped cleanly, no extra row
     monkeypatch.setattr(shopping, "configured", lambda: True)
     monkeypatch.setattr(shopping, "_search_serpapi", lambda q: None)
-    [f] = [f for f in _real().findings if f.type == "online_offers"]
+    [f] = [f for f in _kindle().findings if f.type == "online_offers"]
     assert f.summary.startswith("Online price search didn't answer")
 
 
-def test_chat_cheaper_uses_the_online_offer(online):
-    res = _real(26.99)
-    check = {"findings": [f.model_dump() for f in res.findings], "page": {"product": PRODUCT.model_dump()}, "final_card": {}}
+def test_chat_cheaper_uses_the_same_list(online):
+    calls, _ = online
+    calls["raw"] = [TARGET, UNKNOWN, *KINDLE_RAW]
+    res = _kindle(249.99)
+    check = {"findings": [f.model_dump() for f in res.findings], "page": {"product": KINDLE.model_dump()}, "final_card": {}}
     answer = chat.answer(check, "Where can I get this cheaper?")
-    assert answer.answer.startswith("Same item for $22.99 at ebay.com, trusted store") and answer.links
+    assert answer.answer.startswith("Skeptic approved Target $239.99") and "Gadget" not in answer.answer
 
 
 # ----------------------------------------------------------------------------- pages: Amazon list prices, price history

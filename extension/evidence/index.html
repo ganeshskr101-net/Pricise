@@ -20,9 +20,22 @@
     td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
     tr.total td { font-weight: 800; font-size: 15px; border-bottom: 0; }
     .late { color: var(--bad); font-weight: 700; }
-    .trace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; max-height: 360px; overflow: auto; }
+    .trace { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; }  /* grows with its rows: the page scrolls */
+    .trace .src { font-size: 12px; }
+    #trace [data-act="trace-all"] { margin-top: 12px; }
     .trace .r { display: grid; grid-template-columns: 96px 70px 120px 1fr; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--line-2); }
     :target { box-shadow: 0 0 0 3px var(--info-bg), var(--shadow); }
+    .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 14px 0 12px; border-bottom: 1px solid var(--line); }
+    .tabs a { font-size: 13px; font-weight: 600; padding: 8px 12px; color: var(--ink-2); border-bottom: 2px solid transparent; margin-bottom: -1px; }
+    .tabs a:hover { text-decoration: none; color: var(--ink); }
+    .tabs a[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--brand); }
+    .tab-note { font-size: 13px; color: var(--ink-2); background: var(--line-2); border-radius: 10px; padding: 9px 12px; margin-bottom: 12px; }
+    .tab-note[hidden] { display: none; }
+    .grid > section { grid-column: 1 / -1; }
+    .ov { margin: 10px 0 0; padding-left: 18px; line-height: 2; }
+    @keyframes flash { from { background: var(--mint-bg); } to { background: transparent; } }
+    .flash { animation: flash 2.2s ease-out; }
+    @media (prefers-reduced-motion: reduce) { .flash { animation: none; outline: 2px solid var(--brand-2); } }
   </style>
 </head>
 <body>
@@ -34,6 +47,8 @@
   <div class="wrap">
     <h1 id="title">Evidence</h1>
     <p class="muted" id="subtitle">Every claim Pricise makes, with the proof behind it.</p>
+    <nav class="tabs" id="tabs" role="tablist" aria-label="Evidence sections"></nav>
+    <div class="tab-note" id="note" hidden></div>
     <div class="grid" id="grid"></div>
   </div>
   <script type="module" src="evidence.js"></script>
