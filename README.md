@@ -166,4 +166,6 @@ Who built it, and how you can use it.
 
 Team Hat's Off · ChallengeX: Shriganesh, Abel, Josh, Emmanuel
 
+Slides: [PDF](docs/Pricise-ChallengeX.pdf) · [PowerPoint](docs/Pricise-ChallengeX.pptx)
+
 [MIT License](LICENSE). The vendored Meterless engines keep their own [Apache-2.0 license](backend/engines/world_model_ts/LICENSE).
